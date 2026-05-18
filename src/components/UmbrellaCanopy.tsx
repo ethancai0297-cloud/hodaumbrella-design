@@ -88,6 +88,14 @@ export const UmbrellaCanopy = forwardRef<SVGSVGElement, Props>(function Umbrella
             <path d={panelPath(i, ribCount, radius, centerR)} />
           </clipPath>
         ))}
+        <clipPath id="canopy-clip">
+          <polygon
+            points={Array.from({ length: ribCount }, (_, i) => {
+              const a = -Math.PI / 2 + (i - 0.5) * ((Math.PI * 2) / ribCount);
+              return `${Math.cos(a) * radius},${Math.sin(a) * radius}`;
+            }).join(" ")}
+          />
+        </clipPath>
       </defs>
 
       {/* polygon outline of full canopy (hexagon/octagon/decagon) */}

@@ -167,6 +167,55 @@ const DesignEditor = () => {
     reader.readAsDataURL(file);
   };
 
+  // Combo: upload logo and immediately add a text item on the same panels
+  const comboFileInputRef = useRef<HTMLInputElement>(null);
+  const handleUploadCombo = (file: File) => {
+    if (file.size > 12 * 1024 * 1024) {
+      toast({ title: t("art.tooLarge"), description: t("art.tooLargeDesc"), variant: "destructive" });
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const src = String(reader.result);
+      const isDigital = project.printingMethod === "digital";
+      const panels = selectedPanels.length
+        ? selectedPanels
+        : isDigital
+        ? Array.from({ length: project.ribCount }, (_, i) => i)
+        : [0];
+      const logoItem: ArtworkItem = {
+        id: newId(),
+        type: isDigital ? "image" : "logo",
+        src,
+        fileName: file.name,
+        x: 0,
+        y: -0.25,
+        scale: 0.9,
+        rotation: 0,
+        panels,
+        fitMode: "contain",
+        printArea: "single",
+      };
+      const textItem: ArtworkItem = {
+        id: newId(),
+        type: "text",
+        text: "YOUR COMPANY",
+        fontFamily: "'Plus Jakarta Sans', sans-serif",
+        fontSize: 18,
+        color: "#ffffff",
+        x: 0,
+        y: 0.35,
+        scale: 1,
+        rotation: 0,
+        panels,
+      };
+      updateProject((p) => ({ ...p, artworkItems: [...p.artworkItems, logoItem, textItem] }));
+      setSelectedItem(textItem.id);
+      toast({ title: t("art.comboAdded") });
+    };
+    reader.readAsDataURL(file);
+  };
+
   const addText = () => {
     const panels = selectedPanels.length ? selectedPanels : [0];
     const item: ArtworkItem = {
@@ -391,6 +440,17 @@ const DesignEditor = () => {
                 e.target.value = "";
               }}
             />
+            <input
+              ref={comboFileInputRef}
+              type="file"
+              accept="image/png,image/jpeg,image/svg+xml"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) handleUploadCombo(f);
+                e.target.value = "";
+              }}
+            />
             <div className="grid grid-cols-2 gap-2">
               <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
                 <Upload className="h-4 w-4 mr-1" /> {t("art.upload")}
@@ -399,8 +459,19 @@ const DesignEditor = () => {
                 <Plus className="h-4 w-4 mr-1" /> {t("art.addText")}
               </Button>
             </div>
+            <Button
+              variant="default"
+              size="sm"
+              className="w-full mt-2 bg-gradient-hero"
+              onClick={() => comboFileInputRef.current?.click()}
+            >
+              <Upload className="h-4 w-4 mr-1" /> {t("art.combo")}
+            </Button>
             <p className="text-[11px] text-muted-foreground mt-2">
               {t("art.uploadTip")}
+            </p>
+            <p className="text-[11px] text-muted-foreground mt-1">
+              {t("art.comboTip")}
             </p>
           </section>
 

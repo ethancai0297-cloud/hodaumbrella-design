@@ -440,6 +440,17 @@ const DesignEditor = () => {
                 e.target.value = "";
               }}
             />
+            <input
+              ref={comboFileInputRef}
+              type="file"
+              accept="image/png,image/jpeg,image/svg+xml"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) handleUploadCombo(f);
+                e.target.value = "";
+              }}
+            />
             <div className="grid grid-cols-2 gap-2">
               <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
                 <Upload className="h-4 w-4 mr-1" /> {t("art.upload")}
@@ -448,8 +459,19 @@ const DesignEditor = () => {
                 <Plus className="h-4 w-4 mr-1" /> {t("art.addText")}
               </Button>
             </div>
+            <Button
+              variant="default"
+              size="sm"
+              className="w-full mt-2 bg-gradient-hero"
+              onClick={() => comboFileInputRef.current?.click()}
+            >
+              <Upload className="h-4 w-4 mr-1" /> {t("art.combo")}
+            </Button>
             <p className="text-[11px] text-muted-foreground mt-2">
               {t("art.uploadTip")}
+            </p>
+            <p className="text-[11px] text-muted-foreground mt-1">
+              {t("art.comboTip")}
             </p>
           </section>
 

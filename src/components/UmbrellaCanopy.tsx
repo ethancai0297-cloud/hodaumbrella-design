@@ -224,19 +224,13 @@ export const UmbrellaCanopy = forwardRef<SVGSVGElement, Props>(function Umbrella
           />
         ))}
 
-      {/* shine + shade clipped to canopy polygon */}
+      {/* canopy outline only — no shine/shade so uploaded artwork shows true colors */}
       {(() => {
         const pts = Array.from({ length: ribCount }, (_, i) => {
           const a = -Math.PI / 2 + (i - 0.5) * ((Math.PI * 2) / ribCount);
           return `${Math.cos(a) * radius},${Math.sin(a) * radius}`;
         }).join(" ");
-        return (
-          <>
-            <polygon points={pts} fill="url(#canopyShine)" pointerEvents="none" />
-            <polygon points={pts} fill="url(#canopyShade)" pointerEvents="none" />
-            <polygon points={pts} fill="none" stroke={ribStroke} strokeWidth={1.5} pointerEvents="none" />
-          </>
-        );
+        return <polygon points={pts} fill="none" stroke={ribStroke} strokeWidth={1.5} pointerEvents="none" />;
       })()}
       {/* center cap — small tip cover */}
       <circle r={centerR + 2} fill={isLight ? "#1a1a1a" : "#0f1f3d"} />

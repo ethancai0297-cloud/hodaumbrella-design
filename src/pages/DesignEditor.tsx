@@ -33,6 +33,7 @@ import {
 import { getProject, saveProject } from "@/lib/storage";
 import { cn } from "@/lib/utils";
 import { downloadDataUrl, exportPdfSummary, svgToPngDataUrl } from "@/lib/export";
+import { PantoneInput } from "@/components/editor/PantoneInput";
 
 const SILKSCREEN_LIMITS = [1, 2, 4, 8];
 
@@ -361,6 +362,12 @@ const DesignEditor = () => {
                 value={project.fabricColor}
                 onChange={(e) => updateProject({ fabricColor: e.target.value })}
                 className="h-9 text-xs"
+              />
+            </div>
+            <div className="mt-2">
+              <PantoneInput
+                label={t("fabric.pantone") || "Pantone code"}
+                onChange={(hex) => updateProject({ fabricColor: hex })}
               />
             </div>
           </section>

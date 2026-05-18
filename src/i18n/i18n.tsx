@@ -14,7 +14,7 @@ const dict: Dict = {
 
   // Landing hero
   "hero.badge": { en: "MVP for sales & client previews", zh: "为销售与客户预览打造" },
-  "hero.title": { en: "Instant umbrella mockups — without a designer.", zh: "无需设计师，秒出雨伞效果图。" },
+  "hero.title": { en: "Hoda / Tuzh umbrella design generator", zh: "Hoda / Tuzh 雨伞设计生成器" },
   "hero.subtitle": {
     en: "Create umbrella rendering previews for silkscreen logos or full digital print designs. Choose category, rib count, upload artwork and export a quotation-ready mockup in minutes.",
     zh: "为丝印logo或全数码印花设计生成雨伞效果图。选择伞型、骨架数量、上传图案，几分钟内导出可报价的效果图。",

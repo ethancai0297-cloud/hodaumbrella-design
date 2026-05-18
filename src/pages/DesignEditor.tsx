@@ -44,7 +44,7 @@ const newId = () =>
 const DesignEditor = () => {
   const navigate = useNavigate();
   const { id } = useParams();
-
+  const { t } = useI18n();
   const [project, setProject] = useState<DesignProject>(() => ({
     id: newId(),
     projectName: "Untitled umbrella",

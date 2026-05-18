@@ -2,10 +2,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
-import { Textarea } from "@/components/ui/textarea";
 import { ArtworkItem, FitMode, PrintingMethod } from "@/types/design";
 import { Crop, RotateCw, Trash2, Copy, Maximize, ImageIcon, Type } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/i18n/i18n";
 
 interface Props {
   method: PrintingMethod;
@@ -32,14 +32,15 @@ export function ArtworkProperties({
   selectedPanels,
   ribCount,
 }: Props) {
+  const { t } = useI18n();
   const item = items.find((i) => i.id === selectedItemId);
 
   return (
     <div className="space-y-4">
       <div>
-        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">Artwork</h3>
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">{t("art.title")}</h3>
         {items.length === 0 ? (
-          <p className="text-xs text-muted-foreground">No artwork yet. Upload or add text above.</p>
+          <p className="text-xs text-muted-foreground">{t("art.empty")}</p>
         ) : (
           <ul className="space-y-1">
             {items.map((it) => (
@@ -53,7 +54,7 @@ export function ArtworkProperties({
                 >
                   {it.type === "text" ? <Type className="h-3.5 w-3.5" /> : <ImageIcon className="h-3.5 w-3.5" />}
                   <span className="truncate">
-                    {it.type === "text" ? `"${it.text || "Text"}"` : it.fileName || "Image"}
+                    {it.type === "text" ? `"${it.text || t("art.text")}"` : it.fileName || "Image"}
                   </span>
                   <span className="ml-auto text-[10px] text-muted-foreground">{it.panels.length}p</span>
                 </button>
@@ -68,7 +69,7 @@ export function ArtworkProperties({
           {item.type === "text" && (
             <>
               <div>
-                <Label className="text-xs">Text</Label>
+                <Label className="text-xs">{t("art.text")}</Label>
                 <Input
                   value={item.text || ""}
                   onChange={(e) => onUpdate(item.id, { text: e.target.value })}
@@ -77,7 +78,7 @@ export function ArtworkProperties({
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <Label className="text-xs">Font size</Label>
+                  <Label className="text-xs">{t("art.fontSize")}</Label>
                   <Input
                     type="number"
                     value={item.fontSize || 18}
@@ -86,7 +87,7 @@ export function ArtworkProperties({
                   />
                 </div>
                 <div>
-                  <Label className="text-xs">Color</Label>
+                  <Label className="text-xs">{t("art.color")}</Label>
                   <Input
                     type="color"
                     value={item.color || "#ffffff"}
@@ -96,7 +97,7 @@ export function ArtworkProperties({
                 </div>
               </div>
               <div>
-                <Label className="text-xs">Font family</Label>
+                <Label className="text-xs">{t("art.fontFamily")}</Label>
                 <select
                   value={item.fontFamily || "Inter, sans-serif"}
                   onChange={(e) => onUpdate(item.id, { fontFamily: e.target.value })}
@@ -114,7 +115,7 @@ export function ArtworkProperties({
 
           {item.type !== "text" && method === "digital" && (
             <div>
-              <Label className="text-xs">Fit mode</Label>
+              <Label className="text-xs">{t("art.fit")}</Label>
               <div className="grid grid-cols-3 gap-1 mt-1">
                 {(["cover", "contain", "stretch"] as FitMode[]).map((m) => (
                   <button
@@ -133,48 +134,48 @@ export function ArtworkProperties({
           )}
 
           <div>
-            <Label className="text-xs flex justify-between"><span>Scale</span><span className="text-muted-foreground">{item.scale.toFixed(2)}</span></Label>
+            <Label className="text-xs flex justify-between"><span>{t("art.scale")}</span><span className="text-muted-foreground">{item.scale.toFixed(2)}</span></Label>
             <Slider value={[item.scale]} min={0.2} max={3} step={0.05} onValueChange={(v) => onUpdate(item.id, { scale: v[0] })} />
           </div>
           <div>
-            <Label className="text-xs flex justify-between"><span>Rotation</span><span className="text-muted-foreground">{Math.round(item.rotation)}°</span></Label>
+            <Label className="text-xs flex justify-between"><span>{t("art.rotation")}</span><span className="text-muted-foreground">{Math.round(item.rotation)}°</span></Label>
             <Slider value={[item.rotation]} min={-180} max={180} step={1} onValueChange={(v) => onUpdate(item.id, { rotation: v[0] })} />
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <Label className="text-xs">Offset X</Label>
+              <Label className="text-xs">{t("art.offsetX")}</Label>
               <Slider value={[item.x]} min={-1} max={1} step={0.02} onValueChange={(v) => onUpdate(item.id, { x: v[0] })} />
             </div>
             <div>
-              <Label className="text-xs">Offset Y</Label>
+              <Label className="text-xs">{t("art.offsetY")}</Label>
               <Slider value={[item.y]} min={-1} max={1} step={0.02} onValueChange={(v) => onUpdate(item.id, { y: v[0] })} />
             </div>
           </div>
 
           <div className="flex flex-wrap gap-2">
             <Button size="sm" variant="outline" onClick={() => onCenter(item.id)}>
-              <Maximize className="h-3.5 w-3.5 mr-1" /> Center
+              <Maximize className="h-3.5 w-3.5 mr-1" /> {t("art.center")}
             </Button>
             <Button
               size="sm"
               variant="outline"
               onClick={() => onUpdate(item.id, { panels: selectedPanels.length ? selectedPanels : item.panels })}
             >
-              <Crop className="h-3.5 w-3.5 mr-1" /> Apply to selection
+              <Crop className="h-3.5 w-3.5 mr-1" /> {t("art.applySel")}
             </Button>
             <Button size="sm" variant="outline" onClick={() => onDuplicate(item.id)}>
-              <Copy className="h-3.5 w-3.5 mr-1" /> Duplicate
+              <Copy className="h-3.5 w-3.5 mr-1" /> {t("art.duplicate")}
             </Button>
             <Button size="sm" variant="outline" onClick={() => onUpdate(item.id, { rotation: 0 })}>
-              <RotateCw className="h-3.5 w-3.5 mr-1" /> Reset rot
+              <RotateCw className="h-3.5 w-3.5 mr-1" /> {t("art.resetRot")}
             </Button>
             <Button size="sm" variant="destructive" onClick={() => onDelete(item.id)} className="ml-auto">
-              <Trash2 className="h-3.5 w-3.5 mr-1" /> Delete
+              <Trash2 className="h-3.5 w-3.5 mr-1" /> {t("art.delete")}
             </Button>
           </div>
 
           <div className="text-[11px] text-muted-foreground border-t border-border pt-3">
-            On panels: {item.panels.length ? item.panels.map((p) => p + 1).join(", ") : "—"} of {ribCount}
+            {t("art.onPanels")}: {item.panels.length ? item.panels.map((p) => p + 1).join(", ") : "—"} {t("art.of")} {ribCount}
           </div>
         </div>
       )}

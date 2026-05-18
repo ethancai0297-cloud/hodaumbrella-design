@@ -1,7 +1,6 @@
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { UmbrellaCategory, RibCount, PrintingMethod } from "@/types/design";
+import { useI18n } from "@/i18n/i18n";
 
 interface Props {
   category: UmbrellaCategory;
@@ -12,19 +11,20 @@ interface Props {
   onMethod: (v: PrintingMethod) => void;
 }
 
-const cats: { id: UmbrellaCategory; label: string; desc: string }[] = [
-  { id: "folding", label: "Folding", desc: "Compact, travel" },
-  { id: "straight", label: "Straight", desc: "Classic stick" },
-  { id: "golf", label: "Golf", desc: "Oversized canopy" },
-];
-
 const ribs: RibCount[] = [6, 8, 10];
 
 export function WizardPanel({ category, ribCount, method, onCategory, onRibs, onMethod }: Props) {
+  const { t } = useI18n();
+  const cats: { id: UmbrellaCategory; label: string; desc: string }[] = [
+    { id: "folding", label: t("wiz.folding"), desc: t("wiz.folding.desc") },
+    { id: "straight", label: t("wiz.straight"), desc: t("wiz.straight.desc") },
+    { id: "golf", label: t("wiz.golf"), desc: t("wiz.golf.desc") },
+  ];
+
   return (
     <div className="space-y-6">
       <section>
-        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">1. Umbrella category</h3>
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">{t("wiz.category")}</h3>
         <div className="grid grid-cols-3 gap-2">
           {cats.map((c) => (
             <button
@@ -45,7 +45,7 @@ export function WizardPanel({ category, ribCount, method, onCategory, onRibs, on
       </section>
 
       <section>
-        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">2. Rib / panel count</h3>
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">{t("wiz.ribs")}</h3>
         <div className="grid grid-cols-3 gap-2">
           {ribs.map((r) => (
             <button
@@ -65,7 +65,7 @@ export function WizardPanel({ category, ribCount, method, onCategory, onRibs, on
       </section>
 
       <section>
-        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">3. Printing method</h3>
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">{t("wiz.method")}</h3>
         <div className="grid gap-2">
           <button
             onClick={() => onMethod("silkscreen")}
@@ -74,8 +74,8 @@ export function WizardPanel({ category, ribCount, method, onCategory, onRibs, on
               method === "silkscreen" ? "border-primary bg-accent" : "border-border bg-card hover:border-primary/40"
             )}
           >
-            <div className="font-display font-semibold text-sm">Silkscreen</div>
-            <div className="text-[11px] text-muted-foreground">Logos / text on selected panels (1, 2, 4 or 8).</div>
+            <div className="font-display font-semibold text-sm">{t("wiz.silkscreen")}</div>
+            <div className="text-[11px] text-muted-foreground">{t("wiz.silkscreen.desc")}</div>
           </button>
           <button
             onClick={() => onMethod("digital")}
@@ -84,8 +84,8 @@ export function WizardPanel({ category, ribCount, method, onCategory, onRibs, on
               method === "digital" ? "border-primary bg-accent" : "border-border bg-card hover:border-primary/40"
             )}
           >
-            <div className="font-display font-semibold text-sm">Digital print</div>
-            <div className="text-[11px] text-muted-foreground">Full image — single panel or full canopy cover.</div>
+            <div className="font-display font-semibold text-sm">{t("wiz.digital")}</div>
+            <div className="text-[11px] text-muted-foreground">{t("wiz.digital.desc")}</div>
           </button>
         </div>
       </section>

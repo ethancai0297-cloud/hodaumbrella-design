@@ -2,7 +2,7 @@ export type UmbrellaCategory = "folding" | "straight" | "golf";
 export type RibCount = 6 | 8 | 10;
 export type PrintingMethod = "silkscreen" | "digital";
 export type FitMode = "cover" | "contain" | "stretch";
-export type PrintArea = "single" | "selected" | "full";
+export type PrintArea = "single" | "selected" | "full" | "full-canopy";
 export type ArtworkType = "logo" | "text" | "image";
 
 export interface ArtworkItem {

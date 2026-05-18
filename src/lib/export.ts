@@ -124,16 +124,8 @@ export async function exportPdfSummary(project: DesignProject, pngDataUrl: strin
     pdf.text(`Customer: ${project.customerName}`, 40, 142);
   }
 
-  const imgW = pageW - 80;
-  // Preserve the actual aspect ratio of the rendered PNG (it includes a footer band,
-  // so it's taller than wide). Using a square box was squishing the umbrella.
-  const imgProps = pdf.getImageProperties(pngDataUrl);
-  const imgH = (imgProps.height / imgProps.width) * imgW;
-  try {
-    pdf.addImage(pngDataUrl, "PNG", 40, 160, imgW, imgH);
-  } catch {}
-
-  let y = 160 + imgH + 30;
+  // Specification block first, above the rendering
+  let y = project.customerName ? 165 : 150;
   const rows: [string, string][] = [
     ["Category", project.umbrellaCategory],
     ["Rib / panel count", String(project.ribCount)],
@@ -164,7 +156,24 @@ export async function exportPdfSummary(project: DesignProject, pngDataUrl: strin
     y += 16;
   });
 
-  y += 6;
+  // Design rendering below specifications
+  y += 14;
+  const imgW = pageW - 80;
+  const imgProps = pdf.getImageProperties(pngDataUrl);
+  const pageH = pdf.internal.pageSize.getHeight();
+  const maxImgH = pageH - y - 70; // leave room for note + footer
+  let imgH = (imgProps.height / imgProps.width) * imgW;
+  let drawW = imgW;
+  if (imgH > maxImgH) {
+    imgH = maxImgH;
+    drawW = (imgProps.width / imgProps.height) * imgH;
+  }
+  const drawX = 40 + (imgW - drawW) / 2;
+  try {
+    pdf.addImage(pngDataUrl, "PNG", drawX, y, drawW, imgH);
+  } catch {}
+  y += imgH + 18;
+
   pdf.setFont("helvetica", "italic");
   pdf.setTextColor(110, 110, 120);
   pdf.setFontSize(9);

@@ -41,7 +41,7 @@ const dict: Dict = {
   "how.step3": { en: "Select silkscreen or digital print", zh: "选择丝印或数码印花" },
   "how.step4": { en: "Upload artwork, preview & export", zh: "上传图案、预览并导出" },
 
-  "footer.note": { en: "Umbrella Render Studio — sales preview tool. Final production artwork to be confirmed by factory designer.", zh: "雨伞效果图工作室 — 销售预览工具。最终生产稿需由工厂设计师确认。" },
+  "footer.note": { en: "Hoda Umbrella · Tuzh Umbrella — sales preview tool. Final production artwork to be confirmed by factory designer.", zh: "Hoda雨伞 · Tuzh雨伞 — 销售预览工具。最终生产稿需由工厂设计师确认。" },
 
   // Editor — top bar
   "editor.projectName": { en: "Project name", zh: "项目名称" },

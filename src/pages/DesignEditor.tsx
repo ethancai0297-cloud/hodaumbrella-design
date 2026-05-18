@@ -125,7 +125,7 @@ const DesignEditor = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const handleUpload = (file: File) => {
     if (file.size > 12 * 1024 * 1024) {
-      toast({ title: "File too large", description: "Max 12MB.", variant: "destructive" });
+      toast({ title: t("art.tooLarge"), description: t("art.tooLargeDesc"), variant: "destructive" });
       return;
     }
     const reader = new FileReader();

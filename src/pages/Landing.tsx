@@ -63,7 +63,8 @@ const Landing = () => {
               ribCount={8}
               fabricColor="#0f1f3d"
               artwork={[
-                { id: "1", type: "text", text: "ACME", color: "#ffffff", fontSize: 28, x: 0, y: 0, scale: 1.2, rotation: 0, panels: [0, 2, 4, 6] },
+                { id: "name", type: "text", text: "HODA & TUZH", color: "#ffffff", fontSize: 22, fontFamily: "'Plus Jakarta Sans', sans-serif", x: 0, y: -0.15, scale: 1, rotation: 0, panels: [0, 1, 2, 3, 4, 5, 6, 7] },
+                { id: "sub", type: "text", text: "UMBRELLA", color: "#f2c14e", fontSize: 12, fontFamily: "'Plus Jakarta Sans', sans-serif", x: 0, y: 0.15, scale: 1, rotation: 0, panels: [0, 1, 2, 3, 4, 5, 6, 7] },
               ]}
               selectedPanels={[]}
               highlightSelection={false}

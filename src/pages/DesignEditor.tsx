@@ -143,11 +143,7 @@ const DesignEditor = () => {
       };
       img.src = src;
       const isDigital = project.printingMethod === "digital";
-      const panels = selectedPanels.length
-        ? selectedPanels
-        : isDigital
-        ? Array.from({ length: project.ribCount }, (_, i) => i)
-        : [0];
+      const panels = selectedPanels.length ? selectedPanels : [0];
       const item: ArtworkItem = {
         id: newId(),
         type: isDigital ? "image" : "logo",
@@ -158,8 +154,8 @@ const DesignEditor = () => {
         scale: 1,
         rotation: 0,
         panels,
-        fitMode: isDigital ? "cover" : "contain",
-        printArea: isDigital ? "full-canopy" : "single",
+        fitMode: isDigital ? "contain" : "contain",
+        printArea: "single",
       };
       updateProject((p) => ({ ...p, artworkItems: [...p.artworkItems, item] }));
       setSelectedItem(item.id);

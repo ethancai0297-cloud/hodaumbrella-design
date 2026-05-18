@@ -20,6 +20,8 @@ import {
 import { UmbrellaCanopy } from "@/components/UmbrellaCanopy";
 import { WizardPanel } from "@/components/editor/WizardPanel";
 import { ArtworkProperties } from "@/components/editor/ArtworkProperties";
+import { LanguageToggle } from "@/components/LanguageToggle";
+import { useI18n } from "@/i18n/i18n";
 import {
   ArtworkItem,
   DesignProject,

@@ -205,9 +205,9 @@ export const UmbrellaCanopy = forwardRef<SVGSVGElement, Props>(function Umbrella
           </>
         );
       })()}
-      {/* center cap */}
-      <circle r={centerR + 4} fill={isLight ? "#1a1a1a" : "#0f1f3d"} />
-      <circle r={centerR} fill={isLight ? "#333" : "#1f56c3"} />
+      {/* center cap — small tip cover */}
+      <circle r={centerR + 2} fill={isLight ? "#1a1a1a" : "#0f1f3d"} />
+      <circle r={centerR} fill={isLight ? "#444" : "#1f56c3"} />
     </svg>
   );
 });

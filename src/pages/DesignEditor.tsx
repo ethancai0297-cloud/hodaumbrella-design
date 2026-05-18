@@ -135,8 +135,8 @@ const DesignEditor = () => {
       img.onload = () => {
         if (img.width < 600 || img.height < 600) {
           toast({
-            title: "Low resolution image",
-            description: "For best print quality use 1500px or larger.",
+            title: t("art.lowRes"),
+            description: t("art.lowResDesc"),
           });
         }
       };
@@ -161,7 +161,7 @@ const DesignEditor = () => {
       };
       updateProject((p) => ({ ...p, artworkItems: [...p.artworkItems, item] }));
       setSelectedItem(item.id);
-      toast({ title: "Artwork added" });
+      toast({ title: t("art.added") });
     };
     reader.readAsDataURL(file);
   };
@@ -210,7 +210,7 @@ const DesignEditor = () => {
 
   const handleSave = () => {
     saveProject(project);
-    toast({ title: "Project saved", description: "Stored in your browser." });
+    toast({ title: t("editor.saved"), description: t("editor.savedDesc") });
   };
 
   const handleExportPng = async () => {

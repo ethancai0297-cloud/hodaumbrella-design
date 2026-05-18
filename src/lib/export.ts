@@ -125,7 +125,10 @@ export async function exportPdfSummary(project: DesignProject, pngDataUrl: strin
   }
 
   const imgW = pageW - 80;
-  const imgH = imgW;
+  // Preserve the actual aspect ratio of the rendered PNG (it includes a footer band,
+  // so it's taller than wide). Using a square box was squishing the umbrella.
+  const imgProps = pdf.getImageProperties(pngDataUrl);
+  const imgH = (imgProps.height / imgProps.width) * imgW;
   try {
     pdf.addImage(pngDataUrl, "PNG", 40, 160, imgW, imgH);
   } catch {}

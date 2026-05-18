@@ -219,7 +219,7 @@ const DesignEditor = () => {
       const url = await svgToPngDataUrl(svgRef.current, 3);
       downloadDataUrl(url, `${project.projectName.replace(/\s+/g, "_")}.png`);
     } catch (e) {
-      toast({ title: "Export failed", variant: "destructive" });
+      toast({ title: t("editor.exportFail"), variant: "destructive" });
     }
   };
   const handleExportPdf = async () => {
@@ -228,12 +228,12 @@ const DesignEditor = () => {
       const url = await svgToPngDataUrl(svgRef.current, 2);
       await exportPdfSummary(project, url);
     } catch (e) {
-      toast({ title: "PDF export failed", variant: "destructive" });
+      toast({ title: t("editor.pdfFail"), variant: "destructive" });
     }
   };
 
   const handleReset = () => {
-    if (!confirm("Reset all artwork and panel selection?")) return;
+    if (!confirm(t("editor.resetConfirm"))) return;
     updateProject((p) => ({ ...p, artworkItems: [] }));
     setSelectedPanels([]);
     setSelectedItem(null);
@@ -247,7 +247,7 @@ const DesignEditor = () => {
       {/* Top bar */}
       <header className="h-14 border-b border-border bg-card flex items-center px-4 gap-3 shrink-0">
         <Link to="/" className="text-muted-foreground hover:text-foreground transition flex items-center gap-1.5 text-sm">
-          <ArrowLeft className="h-4 w-4" /> Home
+          <ArrowLeft className="h-4 w-4" /> {t("nav.home")}
         </Link>
         <Separator orientation="vertical" className="h-6" />
         <Input
@@ -256,16 +256,17 @@ const DesignEditor = () => {
           className="h-8 max-w-xs font-medium"
         />
         <Input
-          placeholder="Customer name (optional)"
+          placeholder={t("editor.customer")}
           value={project.customerName || ""}
           onChange={(e) => setProject((p) => ({ ...p, customerName: e.target.value }))}
           className="h-8 max-w-xs text-sm"
         />
         <div className="ml-auto flex items-center gap-2">
-          <Button size="sm" variant="ghost" onClick={undo} title="Undo"><RotateCcw className="h-4 w-4" /></Button>
-          <Button size="sm" variant="outline" onClick={handleSave}><Save className="h-4 w-4 mr-1" /> Save</Button>
-          <Button size="sm" variant="outline" onClick={handleExportPng}><FileImage className="h-4 w-4 mr-1" /> PNG</Button>
-          <Button size="sm" className="bg-gradient-hero" onClick={handleExportPdf}><FileText className="h-4 w-4 mr-1" /> PDF</Button>
+          <LanguageToggle />
+          <Button size="sm" variant="ghost" onClick={undo} title={t("editor.undo")}><RotateCcw className="h-4 w-4" /></Button>
+          <Button size="sm" variant="outline" onClick={handleSave}><Save className="h-4 w-4 mr-1" /> {t("editor.save")}</Button>
+          <Button size="sm" variant="outline" onClick={handleExportPng}><FileImage className="h-4 w-4 mr-1" /> {t("editor.png")}</Button>
+          <Button size="sm" className="bg-gradient-hero" onClick={handleExportPdf}><FileText className="h-4 w-4 mr-1" /> {t("editor.pdf")}</Button>
         </div>
       </header>
 
@@ -284,13 +285,13 @@ const DesignEditor = () => {
           <Separator className="my-5" />
 
           <section>
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Fabric color</h3>
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">{t("fabric.title")}</h3>
             <div className="grid grid-cols-4 gap-2">
               {FABRIC_PRESETS.map((c) => (
                 <button
                   key={c.value}
                   onClick={() => updateProject({ fabricColor: c.value })}
-                  title={c.name}
+                  title={t(`color.${c.name}`)}
                   className={cn(
                     "h-9 rounded-md border-2 transition",
                     project.fabricColor === c.value ? "border-primary scale-105" : "border-border"
@@ -319,11 +320,11 @@ const DesignEditor = () => {
         <main className="relative overflow-auto bg-gradient-subtle">
           <div className="absolute top-4 left-4 right-4 flex items-center gap-2 z-10">
             <div className="rounded-lg bg-card border border-border shadow-soft px-3 py-2 text-xs flex items-center gap-3">
-              <span className="text-muted-foreground">Panels</span>
+              <span className="text-muted-foreground">{t("canvas.panels")}</span>
               <span className="font-semibold">{selectedPanels.length}/{project.ribCount}</span>
               <Separator orientation="vertical" className="h-4" />
-              <button onClick={applySelectAll} className="text-primary hover:underline">All</button>
-              <button onClick={clearSelection} className="text-muted-foreground hover:text-foreground">Clear</button>
+              <button onClick={applySelectAll} className="text-primary hover:underline">{t("canvas.all")}</button>
+              <button onClick={clearSelection} className="text-muted-foreground hover:text-foreground">{t("canvas.clear")}</button>
               {project.printingMethod === "silkscreen" && (
                 <>
                   <Separator orientation="vertical" className="h-4" />
@@ -368,12 +369,8 @@ const DesignEditor = () => {
 
           {(silkscreenWarn || digitalWarn) && (
             <div className="absolute bottom-4 left-4 right-4 rounded-lg border border-warning/40 bg-warning/10 text-foreground text-xs px-3 py-2 flex items-start gap-2">
-              <span className="font-semibold text-warning">Note:</span>
-              <span>
-                {silkscreenWarn
-                  ? "Silkscreen is recommended for small-area logo/text — not full-photo artwork. Final artwork must be confirmed by factory designer."
-                  : "Digital print is best for photographic / full-surface designs. Upload at 300dpi for sharp production output."}
-              </span>
+              <span className="font-semibold text-warning">{t("canvas.note")}</span>
+              <span>{silkscreenWarn ? t("canvas.warn.silk") : t("canvas.warn.digital")}</span>
             </div>
           )}
         </main>
@@ -381,7 +378,7 @@ const DesignEditor = () => {
         {/* Right sidebar */}
         <aside className="border-l border-border bg-card overflow-y-auto p-5">
           <section>
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">4. Add artwork</h3>
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">{t("art.add")}</h3>
             <input
               ref={fileInputRef}
               type="file"
@@ -395,14 +392,14 @@ const DesignEditor = () => {
             />
             <div className="grid grid-cols-2 gap-2">
               <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
-                <Upload className="h-4 w-4 mr-1" /> Upload
+                <Upload className="h-4 w-4 mr-1" /> {t("art.upload")}
               </Button>
               <Button variant="outline" size="sm" onClick={addText}>
-                <Plus className="h-4 w-4 mr-1" /> Add text
+                <Plus className="h-4 w-4 mr-1" /> {t("art.addText")}
               </Button>
             </div>
             <p className="text-[11px] text-muted-foreground mt-2">
-              PNG, JPG, SVG. Tip: select panels first, then upload to place automatically.
+              {t("art.uploadTip")}
             </p>
           </section>
 
@@ -424,11 +421,11 @@ const DesignEditor = () => {
           <Separator className="my-5" />
 
           <section className="text-[11px] text-muted-foreground space-y-1.5">
-            <div className="font-semibold text-foreground uppercase tracking-wider text-xs mb-1">Production notes</div>
-            <p>• Rib count equals panel count for the visual layout.</p>
-            <p>• Silkscreen limited to 1, 2, 4 or 8 panels for cost efficiency.</p>
-            <p>• Digital print supports single panel or full-canopy cover.</p>
-            <p>• This preview is for sales confirmation — colors on final fabric may vary.</p>
+            <div className="font-semibold text-foreground uppercase tracking-wider text-xs mb-1">{t("notes.title")}</div>
+            <p>• {t("notes.1")}</p>
+            <p>• {t("notes.2")}</p>
+            <p>• {t("notes.3")}</p>
+            <p>• {t("notes.4")}</p>
           </section>
         </aside>
       </div>

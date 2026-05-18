@@ -125,9 +125,34 @@ export const UmbrellaCanopy = forwardRef<SVGSVGElement, Props>(function Umbrella
         );
       })}
 
-      {/* artwork per panel */}
-      {artwork.map((item) =>
-        item.panels.map((pIdx) => {
+      {/* artwork */}
+      {artwork.map((item) => {
+        // Full-canopy continuous wrap: render once across the whole canopy
+        if (item.type !== "text" && item.printArea === "full-canopy" && item.src) {
+          const fullSize = radius * 2 * item.scale;
+          return (
+            <g key={`${item.id}-full`} clipPath="url(#canopy-clip)">
+              <g transform={`rotate(${item.rotation}) translate(${item.x * radius} ${item.y * radius})`}>
+                <image
+                  href={item.src}
+                  x={-fullSize / 2}
+                  y={-fullSize / 2}
+                  width={fullSize}
+                  height={fullSize}
+                  preserveAspectRatio={
+                    item.fitMode === "stretch"
+                      ? "none"
+                      : item.fitMode === "contain"
+                      ? "xMidYMid meet"
+                      : "xMidYMid slice"
+                  }
+                />
+              </g>
+            </g>
+          );
+        }
+        // Per-panel placement (silkscreen logos, repeated digital, text)
+        return item.panels.map((pIdx) => {
           const c = panelCentroid(pIdx, ribCount, radius, centerR);
           const baseSize = radius * 0.5 * item.scale;
           return (
@@ -165,8 +190,8 @@ export const UmbrellaCanopy = forwardRef<SVGSVGElement, Props>(function Umbrella
               </g>
             </g>
           );
-        })
-      )}
+        });
+      })}
 
       {/* rib lines on top */}
       {panels.map((i) => {

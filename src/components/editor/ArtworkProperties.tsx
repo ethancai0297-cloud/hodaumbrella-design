@@ -2,13 +2,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
-import { ArtworkItem, FitMode, PrintingMethod } from "@/types/design";
-import { Crop, RotateCw, Trash2, Copy, Maximize, ImageIcon, Type } from "lucide-react";
+import { ArtworkItem, FitMode, PANEL_LENGTH_CM, PrintingMethod, UmbrellaCategory } from "@/types/design";
+import { Crop, RotateCw, Trash2, Copy, Maximize, ImageIcon, Type, Ruler } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/i18n/i18n";
 
 interface Props {
   method: PrintingMethod;
+  category: UmbrellaCategory;
   items: ArtworkItem[];
   selectedItemId: string | null;
   onSelect: (id: string | null) => void;

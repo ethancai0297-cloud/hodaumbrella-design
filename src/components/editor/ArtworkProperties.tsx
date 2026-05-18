@@ -6,6 +6,7 @@ import { ArtworkItem, FitMode, PrintingMethod } from "@/types/design";
 import { Crop, RotateCw, Trash2, Copy, Maximize, ImageIcon, Type } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/i18n/i18n";
+import { PantoneInput } from "./PantoneInput";
 
 interface Props {
   method: PrintingMethod;
@@ -96,6 +97,10 @@ export function ArtworkProperties({
                   />
                 </div>
               </div>
+              <PantoneInput
+                label="Pantone code (text color)"
+                onChange={(hex) => onUpdate(item.id, { color: hex })}
+              />
               <div>
                 <Label className="text-xs">{t("art.fontFamily")}</Label>
                 <select

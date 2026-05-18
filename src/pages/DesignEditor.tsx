@@ -141,14 +141,15 @@ const DesignEditor = () => {
         }
       };
       img.src = src;
+      const isDigital = project.printingMethod === "digital";
       const panels = selectedPanels.length
         ? selectedPanels
-        : project.printingMethod === "digital"
+        : isDigital
         ? Array.from({ length: project.ribCount }, (_, i) => i)
         : [0];
       const item: ArtworkItem = {
         id: newId(),
-        type: project.printingMethod === "digital" ? "image" : "logo",
+        type: isDigital ? "image" : "logo",
         src,
         fileName: file.name,
         x: 0,
@@ -156,8 +157,8 @@ const DesignEditor = () => {
         scale: 1,
         rotation: 0,
         panels,
-        fitMode: "contain",
-        printArea: project.printingMethod === "digital" ? "full" : "single",
+        fitMode: isDigital ? "cover" : "contain",
+        printArea: isDigital ? "full-canopy" : "single",
       };
       updateProject((p) => ({ ...p, artworkItems: [...p.artworkItems, item] }));
       setSelectedItem(item.id);

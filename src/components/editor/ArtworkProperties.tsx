@@ -2,14 +2,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
-import { ArtworkItem, FitMode, PANEL_LENGTH_CM, PrintingMethod, UmbrellaCategory } from "@/types/design";
-import { Crop, RotateCw, Trash2, Copy, Maximize, ImageIcon, Type, Ruler } from "lucide-react";
+import { ArtworkItem, FitMode, PrintingMethod } from "@/types/design";
+import { Crop, RotateCw, Trash2, Copy, Maximize, ImageIcon, Type } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/i18n/i18n";
 
 interface Props {
   method: PrintingMethod;
-  category: UmbrellaCategory;
   items: ArtworkItem[];
   selectedItemId: string | null;
   onSelect: (id: string | null) => void;
@@ -23,7 +22,6 @@ interface Props {
 
 export function ArtworkProperties({
   method,
-  category,
   items,
   selectedItemId,
   onSelect,
@@ -36,18 +34,6 @@ export function ArtworkProperties({
 }: Props) {
   const { t } = useI18n();
   const item = items.find((i) => i.id === selectedItemId);
-  const panelLengthCm = PANEL_LENGTH_CM[category];
-  const halfPanelCm = panelLengthCm * 0.5;
-  const cmFromScale = (scale: number) => +(scale * halfPanelCm).toFixed(1);
-  const scaleFromCm = (cm: number) => Math.max(0.05, cm / halfPanelCm);
-  const distFromRimCm = (it: ArtworkItem) =>
-    +(halfPanelCm + it.y * it.scale * halfPanelCm).toFixed(1);
-  const yFromDistRim = (cm: number, scale: number) =>
-    Math.max(-1, Math.min(1, (cm - halfPanelCm) / Math.max(0.0001, scale * halfPanelCm)));
-  const sideOffsetCm = (it: ArtworkItem) =>
-    +(it.x * it.scale * halfPanelCm).toFixed(1);
-  const xFromSide = (cm: number, scale: number) =>
-    Math.max(-1, Math.min(1, cm / Math.max(0.0001, scale * halfPanelCm)));
 
   return (
     <div className="space-y-4">

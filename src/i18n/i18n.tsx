@@ -126,7 +126,7 @@ const dict: Dict = {
   "art.mode.selected": { en: "Selected panels", zh: "选中面板" },
   "art.mode.selectedDesc": {
     en: "Image is printed only on the panels you select. Pick panels on the canvas, then click 'Apply to selection'.",
-    zh: "图案仅印在你选中的面板上。在画布上选择面板，然后点击"应用到选中面板"。",
+    zh: "图案仅印在你选中的面板上。在画布上选择面板，然后点击\"应用到选中面板\"。",
   },
   "art.scale": { en: "Scale", zh: "缩放" },
   "art.rotation": { en: "Rotation", zh: "旋转" },

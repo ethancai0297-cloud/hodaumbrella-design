@@ -408,7 +408,6 @@ const DesignEditor = () => {
 
           <ArtworkProperties
             method={project.printingMethod}
-            category={project.umbrellaCategory}
             items={project.artworkItems}
             selectedItemId={selectedItem}
             onSelect={setSelectedItem}

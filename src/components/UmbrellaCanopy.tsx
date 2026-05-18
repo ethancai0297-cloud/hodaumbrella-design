@@ -12,7 +12,8 @@ interface Props {
   size?: number;
 }
 
-// Build panel polygon points (top view, pie slice with subtle inset)
+// Build panel polygon points (top view) — straight edges between rib tips
+// so 6 ribs render as a hexagon, 8 as octagon, 10 as decagon.
 function panelPath(
   index: number,
   count: number,
@@ -20,17 +21,17 @@ function panelPath(
   centerR: number
 ) {
   const sliceAngle = (Math.PI * 2) / count;
-  const start = -Math.PI / 2 + index * sliceAngle - sliceAngle / 2;
-  const end = start + sliceAngle;
-  const x1 = Math.cos(start) * centerR;
-  const y1 = Math.sin(start) * centerR;
-  const x2 = Math.cos(start) * outerR;
-  const y2 = Math.sin(start) * outerR;
-  const x3 = Math.cos(end) * outerR;
-  const y3 = Math.sin(end) * outerR;
-  const x4 = Math.cos(end) * centerR;
-  const y4 = Math.sin(end) * centerR;
-  return `M ${x1} ${y1} L ${x2} ${y2} A ${outerR} ${outerR} 0 0 1 ${x3} ${y3} L ${x4} ${y4} A ${centerR} ${centerR} 0 0 0 ${x1} ${y1} Z`;
+  const ribA = -Math.PI / 2 + (index - 0.5) * sliceAngle;
+  const ribB = ribA + sliceAngle;
+  const x1 = Math.cos(ribA) * centerR;
+  const y1 = Math.sin(ribA) * centerR;
+  const x2 = Math.cos(ribA) * outerR;
+  const y2 = Math.sin(ribA) * outerR;
+  const x3 = Math.cos(ribB) * outerR;
+  const y3 = Math.sin(ribB) * outerR;
+  const x4 = Math.cos(ribB) * centerR;
+  const y4 = Math.sin(ribB) * centerR;
+  return `M ${x1} ${y1} L ${x2} ${y2} L ${x3} ${y3} L ${x4} ${y4} Z`;
 }
 
 function panelCentroid(index: number, count: number, outerR: number, centerR: number) {

@@ -114,23 +114,61 @@ export function ArtworkProperties({
           )}
 
           {item.type !== "text" && method === "digital" && (
-            <div>
-              <Label className="text-xs">{t("art.fit")}</Label>
-              <div className="grid grid-cols-3 gap-1 mt-1">
-                {(["cover", "contain", "stretch"] as FitMode[]).map((m) => (
-                  <button
-                    key={m}
-                    onClick={() => onUpdate(item.id, { fitMode: m })}
-                    className={cn(
-                      "rounded-md border px-2 py-1.5 text-xs capitalize transition",
-                      item.fitMode === m ? "border-primary bg-accent" : "border-border bg-card hover:bg-muted"
-                    )}
-                  >
-                    {m}
-                  </button>
-                ))}
+            <>
+              <div>
+                <Label className="text-xs">{t("art.printMode")}</Label>
+                <div className="grid grid-cols-2 gap-1 mt-1">
+                  {([
+                    { v: "full-canopy", label: t("art.mode.fullCanopy") },
+                    { v: "single", label: t("art.mode.perPanel") },
+                  ] as { v: "full-canopy" | "single"; label: string }[]).map((m) => {
+                    const active =
+                      (m.v === "full-canopy" && item.printArea === "full-canopy") ||
+                      (m.v === "single" && item.printArea !== "full-canopy");
+                    return (
+                      <button
+                        key={m.v}
+                        onClick={() =>
+                          onUpdate(item.id, {
+                            printArea: m.v,
+                            panels:
+                              m.v === "full-canopy"
+                                ? Array.from({ length: ribCount }, (_, i) => i)
+                                : item.panels,
+                          })
+                        }
+                        className={cn(
+                          "rounded-md border px-2 py-1.5 text-xs transition text-left",
+                          active ? "border-primary bg-accent" : "border-border bg-card hover:bg-muted"
+                        )}
+                      >
+                        {m.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="text-[11px] text-muted-foreground mt-1.5">
+                  {item.printArea === "full-canopy" ? t("art.mode.fullCanopyDesc") : t("art.mode.perPanelDesc")}
+                </p>
               </div>
-            </div>
+              <div>
+                <Label className="text-xs">{t("art.fit")}</Label>
+                <div className="grid grid-cols-3 gap-1 mt-1">
+                  {(["cover", "contain", "stretch"] as FitMode[]).map((m) => (
+                    <button
+                      key={m}
+                      onClick={() => onUpdate(item.id, { fitMode: m })}
+                      className={cn(
+                        "rounded-md border px-2 py-1.5 text-xs capitalize transition",
+                        item.fitMode === m ? "border-primary bg-accent" : "border-border bg-card hover:bg-muted"
+                      )}
+                    >
+                      {m}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </>
           )}
 
           <div>

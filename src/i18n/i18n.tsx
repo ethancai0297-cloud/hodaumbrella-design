@@ -109,6 +109,17 @@ const dict: Dict = {
   "art.color": { en: "Color", zh: "颜色" },
   "art.fontFamily": { en: "Font family", zh: "字体" },
   "art.fit": { en: "Fit mode", zh: "适配模式" },
+  "art.printMode": { en: "Print layout", zh: "印花方式" },
+  "art.mode.fullCanopy": { en: "Full canopy wrap", zh: "整伞连续图案" },
+  "art.mode.perPanel": { en: "Per-panel repeat", zh: "每面板重复" },
+  "art.mode.fullCanopyDesc": {
+    en: "One continuous image spans the whole canopy across all panels.",
+    zh: "一张图案连续覆盖整个伞面，跨越所有面板。",
+  },
+  "art.mode.perPanelDesc": {
+    en: "Same image repeats independently on each selected panel.",
+    zh: "同一图案在每个选中面板上独立重复。",
+  },
   "art.scale": { en: "Scale", zh: "缩放" },
   "art.rotation": { en: "Rotation", zh: "旋转" },
   "art.offsetX": { en: "Offset X", zh: "横向偏移" },

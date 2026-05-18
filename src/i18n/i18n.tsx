@@ -120,8 +120,13 @@ const dict: Dict = {
     zh: "一张图案连续覆盖整个伞面，跨越所有面板。",
   },
   "art.mode.perPanelDesc": {
-    en: "Same image repeats independently on each selected panel.",
-    zh: "同一图案在每个选中面板上独立重复。",
+    en: "Same image repeats independently on every panel.",
+    zh: "同一图案在每个面板上独立重复。",
+  },
+  "art.mode.selected": { en: "Selected panels", zh: "选中面板" },
+  "art.mode.selectedDesc": {
+    en: "Image is printed only on the panels you select. Pick panels on the canvas, then click 'Apply to selection'.",
+    zh: "图案仅印在你选中的面板上。在画布上选择面板，然后点击\"应用到选中面板\"。",
   },
   "art.scale": { en: "Scale", zh: "缩放" },
   "art.rotation": { en: "Rotation", zh: "旋转" },

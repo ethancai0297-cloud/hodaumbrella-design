@@ -122,26 +122,38 @@ export function ArtworkProperties({
             <>
               <div>
                 <Label className="text-xs">{t("art.printMode")}</Label>
-                <div className="grid grid-cols-2 gap-1 mt-1">
+                <div className="grid grid-cols-3 gap-1 mt-1">
                   {([
                     { v: "full-canopy", label: t("art.mode.fullCanopy") },
-                    { v: "single", label: t("art.mode.perPanel") },
-                  ] as { v: "full-canopy" | "single"; label: string }[]).map((m) => {
+                    { v: "repeat", label: t("art.mode.perPanel") },
+                    { v: "selected", label: t("art.mode.selected") },
+                  ] as { v: "full-canopy" | "repeat" | "selected"; label: string }[]).map((m) => {
+                    const allPanels = item.panels.length === ribCount;
                     const active =
                       (m.v === "full-canopy" && item.printArea === "full-canopy") ||
-                      (m.v === "single" && item.printArea !== "full-canopy");
+                      (m.v === "repeat" && item.printArea !== "full-canopy" && allPanels) ||
+                      (m.v === "selected" && item.printArea !== "full-canopy" && !allPanels);
                     return (
                       <button
                         key={m.v}
-                        onClick={() =>
-                          onUpdate(item.id, {
-                            printArea: m.v,
-                            panels:
-                              m.v === "full-canopy"
-                                ? Array.from({ length: ribCount }, (_, i) => i)
-                                : item.panels,
-                          })
-                        }
+                        onClick={() => {
+                          if (m.v === "full-canopy") {
+                            onUpdate(item.id, {
+                              printArea: "full-canopy",
+                              panels: Array.from({ length: ribCount }, (_, i) => i),
+                            });
+                          } else if (m.v === "repeat") {
+                            onUpdate(item.id, {
+                              printArea: "single",
+                              panels: Array.from({ length: ribCount }, (_, i) => i),
+                            });
+                          } else {
+                            onUpdate(item.id, {
+                              printArea: "single",
+                              panels: selectedPanels.length ? selectedPanels : item.panels,
+                            });
+                          }
+                        }}
                         className={cn(
                           "rounded-md border px-2 py-1.5 text-xs transition text-left",
                           active ? "border-primary bg-accent" : "border-border bg-card hover:bg-muted"
@@ -153,7 +165,11 @@ export function ArtworkProperties({
                   })}
                 </div>
                 <p className="text-[11px] text-muted-foreground mt-1.5">
-                  {item.printArea === "full-canopy" ? t("art.mode.fullCanopyDesc") : t("art.mode.perPanelDesc")}
+                  {item.printArea === "full-canopy"
+                    ? t("art.mode.fullCanopyDesc")
+                    : item.panels.length === ribCount
+                    ? t("art.mode.perPanelDesc")
+                    : t("art.mode.selectedDesc")}
                 </p>
               </div>
               <div>

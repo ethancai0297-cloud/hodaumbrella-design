@@ -12,9 +12,11 @@ const Landing = () => {
     <div className="min-h-screen bg-gradient-subtle">
       <header className="border-b border-border/60 bg-background/80 backdrop-blur sticky top-0 z-30">
         <div className="container flex h-16 items-center justify-between gap-4">
-          <Link to="/" className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-md bg-gradient-hero grid place-items-center text-primary-foreground font-display font-bold">U</div>
-            <span className="font-display font-bold tracking-tight text-lg">Umbrella Render Studio</span>
+          <Link to="/" className="flex items-center gap-3">
+            <img src={logo} alt="Hoda & Tuzh Umbrella" className="h-10 w-auto" />
+            <span className="font-display font-bold tracking-tight text-lg leading-tight">
+              Hoda Umbrella<span className="text-muted-foreground"> · </span>Tuzh Umbrella
+            </span>
           </Link>
           <nav className="hidden md:flex items-center gap-6 text-sm text-muted-foreground">
             <a href="#features" className="hover:text-foreground transition">{t("nav.features")}</a>

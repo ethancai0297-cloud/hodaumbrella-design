@@ -47,7 +47,7 @@ export const UmbrellaCanopy = forwardRef<SVGSVGElement, Props>(function Umbrella
 ) {
   // category affects visual radius
   const radius = category === "golf" ? 250 : category === "straight" ? 220 : 200;
-  const centerR = radius * 0.06;
+  const centerR = radius * 0.022;
 
   const panels = useMemo(
     () => Array.from({ length: ribCount }, (_, i) => i),

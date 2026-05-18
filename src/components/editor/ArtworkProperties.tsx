@@ -254,8 +254,11 @@ export function ArtworkProperties({
                       }
                       className="h-8 text-xs"
                     />
-                    <span className="text-[10px] text-muted-foreground">cm</span>
+                    <span className="text-[10px] text-muted-foreground">cm ↑</span>
                   </div>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">
+                    {t("art.cm.fromRimHint")}
+                  </p>
                 </div>
                 <div className="col-span-2">
                   <Label className="text-[11px]">{t("art.cm.sideOffset")}</Label>

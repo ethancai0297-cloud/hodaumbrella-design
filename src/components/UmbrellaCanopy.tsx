@@ -90,9 +90,14 @@ export const UmbrellaCanopy = forwardRef<SVGSVGElement, Props>(function Umbrella
         ))}
       </defs>
 
-      {/* base circle */}
-      <circle r={radius} fill={fabricColor} />
-
+      {/* polygon outline of full canopy (hexagon/octagon/decagon) */}
+      {(() => {
+        const pts = Array.from({ length: ribCount }, (_, i) => {
+          const a = -Math.PI / 2 + (i - 0.5) * ((Math.PI * 2) / ribCount);
+          return `${Math.cos(a) * radius},${Math.sin(a) * radius}`;
+        }).join(" ");
+        return <polygon points={pts} fill={fabricColor} />;
+      })()}
       {/* panels */}
       {panels.map((i) => {
         const selected = selectedPanels.includes(i);
@@ -186,10 +191,20 @@ export const UmbrellaCanopy = forwardRef<SVGSVGElement, Props>(function Umbrella
           />
         ))}
 
-      {/* shine + shade */}
-      <circle r={radius} fill="url(#canopyShine)" pointerEvents="none" />
-      <circle r={radius} fill="url(#canopyShade)" pointerEvents="none" />
-
+      {/* shine + shade clipped to canopy polygon */}
+      {(() => {
+        const pts = Array.from({ length: ribCount }, (_, i) => {
+          const a = -Math.PI / 2 + (i - 0.5) * ((Math.PI * 2) / ribCount);
+          return `${Math.cos(a) * radius},${Math.sin(a) * radius}`;
+        }).join(" ");
+        return (
+          <>
+            <polygon points={pts} fill="url(#canopyShine)" pointerEvents="none" />
+            <polygon points={pts} fill="url(#canopyShade)" pointerEvents="none" />
+            <polygon points={pts} fill="none" stroke={ribStroke} strokeWidth={1.5} pointerEvents="none" />
+          </>
+        );
+      })()}
       {/* center cap */}
       <circle r={centerR + 4} fill={isLight ? "#1a1a1a" : "#0f1f3d"} />
       <circle r={centerR} fill={isLight ? "#333" : "#1f56c3"} />

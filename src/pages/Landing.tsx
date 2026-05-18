@@ -4,6 +4,7 @@ import { UmbrellaCanopy } from "@/components/UmbrellaCanopy";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { useI18n } from "@/i18n/i18n";
 import { ArrowRight, Palette, Image as ImageIcon, FileDown, Sparkles, ShieldCheck, Layers } from "lucide-react";
+import logo from "@/assets/hoda-tuzh-logo.png";
 
 const Landing = () => {
   const { t } = useI18n();

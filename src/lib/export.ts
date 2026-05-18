@@ -185,7 +185,6 @@ export async function exportPdfSummary(project: DesignProject, pngDataUrl: strin
   pdf.text(lines, 40, y);
 
   // Footer
-  const pageH = pdf.internal.pageSize.getHeight();
   pdf.setDrawColor(220);
   pdf.line(40, pageH - 40, pageW - 40, pageH - 40);
   pdf.setFontSize(9);

@@ -134,6 +134,7 @@ const dict: Dict = {
   "art.cm.basedOn": { en: "Based on panel length", zh: "按面板长度计算" },
   "art.cm.logoWidth": { en: "Logo width", zh: "Logo 宽度" },
   "art.cm.fromRim": { en: "Distance from bottom edge (rim)", zh: "距底边（伞边）距离" },
+  "art.cm.fromRimHint": { en: "Measured from the outer bottom line of the panel triangle up toward the tip.", zh: "从面板三角形的外侧底边（伞边）向伞尖方向测量。" },
   "art.cm.sideOffset": { en: "Side offset from rib center", zh: "距面板中线偏移" },
   "art.cm.sideHint": { en: "0 = centered", zh: "0 = 居中" },
   "art.cm.disclaimer": { en: "Approximate values for sales reference. Final placement confirmed by factory.", zh: "数值仅供销售参考，最终位置以工厂确认为准。" },

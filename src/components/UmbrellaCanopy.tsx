@@ -47,7 +47,7 @@ export const UmbrellaCanopy = forwardRef<SVGSVGElement, Props>(function Umbrella
 ) {
   // category affects visual radius
   const radius = category === "golf" ? 250 : category === "straight" ? 220 : 200;
-  const centerR = radius * 0.06;
+  const centerR = radius * 0.022;
 
   const panels = useMemo(
     () => Array.from({ length: ribCount }, (_, i) => i),
@@ -205,9 +205,9 @@ export const UmbrellaCanopy = forwardRef<SVGSVGElement, Props>(function Umbrella
           </>
         );
       })()}
-      {/* center cap */}
-      <circle r={centerR + 4} fill={isLight ? "#1a1a1a" : "#0f1f3d"} />
-      <circle r={centerR} fill={isLight ? "#333" : "#1f56c3"} />
+      {/* center cap — small tip cover */}
+      <circle r={centerR + 2} fill={isLight ? "#1a1a1a" : "#0f1f3d"} />
+      <circle r={centerR} fill={isLight ? "#444" : "#1f56c3"} />
     </svg>
   );
 });

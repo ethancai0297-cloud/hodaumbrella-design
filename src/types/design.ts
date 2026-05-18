@@ -47,3 +47,10 @@ export const FABRIC_PRESETS: { name: string; value: string }[] = [
   { name: "Royal Blue", value: "#1f56c3" },
   { name: "Grey", value: "#6b7280" },
 ];
+
+// Real-world panel slant length (tip → outer rim) in centimeters
+export const PANEL_LENGTH_CM: Record<UmbrellaCategory, number> = {
+  folding: 50,
+  straight: 58,
+  golf: 65,
+};

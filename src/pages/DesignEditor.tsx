@@ -167,6 +167,55 @@ const DesignEditor = () => {
     reader.readAsDataURL(file);
   };
 
+  // Combo: upload logo and immediately add a text item on the same panels
+  const comboFileInputRef = useRef<HTMLInputElement>(null);
+  const handleUploadCombo = (file: File) => {
+    if (file.size > 12 * 1024 * 1024) {
+      toast({ title: t("art.tooLarge"), description: t("art.tooLargeDesc"), variant: "destructive" });
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const src = String(reader.result);
+      const isDigital = project.printingMethod === "digital";
+      const panels = selectedPanels.length
+        ? selectedPanels
+        : isDigital
+        ? Array.from({ length: project.ribCount }, (_, i) => i)
+        : [0];
+      const logoItem: ArtworkItem = {
+        id: newId(),
+        type: isDigital ? "image" : "logo",
+        src,
+        fileName: file.name,
+        x: 0,
+        y: -0.25,
+        scale: 0.9,
+        rotation: 0,
+        panels,
+        fitMode: "contain",
+        printArea: "single",
+      };
+      const textItem: ArtworkItem = {
+        id: newId(),
+        type: "text",
+        text: "YOUR COMPANY",
+        fontFamily: "'Plus Jakarta Sans', sans-serif",
+        fontSize: 18,
+        color: "#ffffff",
+        x: 0,
+        y: 0.35,
+        scale: 1,
+        rotation: 0,
+        panels,
+      };
+      updateProject((p) => ({ ...p, artworkItems: [...p.artworkItems, logoItem, textItem] }));
+      setSelectedItem(textItem.id);
+      toast({ title: t("art.comboAdded") });
+    };
+    reader.readAsDataURL(file);
+  };
+
   const addText = () => {
     const panels = selectedPanels.length ? selectedPanels : [0];
     const item: ArtworkItem = {

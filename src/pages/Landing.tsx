@@ -63,8 +63,8 @@ const Landing = () => {
               ribCount={8}
               fabricColor="#0f1f3d"
               artwork={[
-                { id: "name", type: "text", text: "HODA & TUZH", color: "#ffffff", fontSize: 22, fontFamily: "'Plus Jakarta Sans', sans-serif", x: 0, y: -0.15, scale: 1, rotation: 0, panels: [0, 1, 2, 3, 4, 5, 6, 7] },
-                { id: "sub", type: "text", text: "UMBRELLA", color: "#f2c14e", fontSize: 12, fontFamily: "'Plus Jakarta Sans', sans-serif", x: 0, y: 0.15, scale: 1, rotation: 0, panels: [0, 1, 2, 3, 4, 5, 6, 7] },
+                { id: "name", type: "text", text: "HODA & TUZH", color: "#ffffff", fontSize: 14, fontFamily: "'Plus Jakarta Sans', sans-serif", x: 0, y: 0.45, scale: 0.7, rotation: 180, panels: [0, 1, 2, 3, 4, 5, 6, 7] },
+                { id: "sub", type: "text", text: "UMBRELLA", color: "#f2c14e", fontSize: 8, fontFamily: "'Plus Jakarta Sans', sans-serif", x: 0, y: 0.3, scale: 0.7, rotation: 180, panels: [0, 1, 2, 3, 4, 5, 6, 7] },
               ]}
               selectedPanels={[]}
               highlightSelection={false}

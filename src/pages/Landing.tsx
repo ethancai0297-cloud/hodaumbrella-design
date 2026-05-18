@@ -63,6 +63,7 @@ const Landing = () => {
               ribCount={8}
               fabricColor="#0f1f3d"
               artwork={[
+                { id: "logo", type: "image", src: logo, fileName: "hoda-tuzh", x: 0, y: 0, scale: 0.9, rotation: 180, fitMode: "contain", panels: [0, 1, 2, 3, 4, 5, 6, 7] },
                 { id: "name", type: "text", text: "HODA & TUZH", color: "#ffffff", fontSize: 14, fontFamily: "'Plus Jakarta Sans', sans-serif", x: 0, y: 0.75, scale: 1.2, rotation: 180, panels: [0, 1, 2, 3, 4, 5, 6, 7] },
                 { id: "sub", type: "text", text: "UMBRELLA", color: "#f2c14e", fontSize: 8, fontFamily: "'Plus Jakarta Sans', sans-serif", x: 0, y: 0.9, scale: 1.2, rotation: 180, panels: [0, 1, 2, 3, 4, 5, 6, 7] },
               ]}

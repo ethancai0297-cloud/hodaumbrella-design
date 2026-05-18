@@ -23,6 +23,7 @@ interface Props {
 
 export function ArtworkProperties({
   method,
+  category,
   items,
   selectedItemId,
   onSelect,
@@ -35,6 +36,18 @@ export function ArtworkProperties({
 }: Props) {
   const { t } = useI18n();
   const item = items.find((i) => i.id === selectedItemId);
+  const panelLengthCm = PANEL_LENGTH_CM[category];
+  const halfPanelCm = panelLengthCm * 0.5;
+  const cmFromScale = (scale: number) => +(scale * halfPanelCm).toFixed(1);
+  const scaleFromCm = (cm: number) => Math.max(0.05, cm / halfPanelCm);
+  const distFromRimCm = (it: ArtworkItem) =>
+    +(halfPanelCm + it.y * it.scale * halfPanelCm).toFixed(1);
+  const yFromDistRim = (cm: number, scale: number) =>
+    Math.max(-1, Math.min(1, (cm - halfPanelCm) / Math.max(0.0001, scale * halfPanelCm)));
+  const sideOffsetCm = (it: ArtworkItem) =>
+    +(it.x * it.scale * halfPanelCm).toFixed(1);
+  const xFromSide = (cm: number, scale: number) =>
+    Math.max(-1, Math.min(1, cm / Math.max(0.0001, scale * halfPanelCm)));
 
   return (
     <div className="space-y-4">

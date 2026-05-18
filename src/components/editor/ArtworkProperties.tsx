@@ -2,14 +2,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
-import { ArtworkItem, FitMode, PANEL_LENGTH_CM, PrintingMethod, UmbrellaCategory } from "@/types/design";
-import { Crop, RotateCw, Trash2, Copy, Maximize, ImageIcon, Type, Ruler } from "lucide-react";
+import { ArtworkItem, FitMode, PrintingMethod } from "@/types/design";
+import { Crop, RotateCw, Trash2, Copy, Maximize, ImageIcon, Type } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/i18n/i18n";
 
 interface Props {
   method: PrintingMethod;
-  category: UmbrellaCategory;
   items: ArtworkItem[];
   selectedItemId: string | null;
   onSelect: (id: string | null) => void;
@@ -23,7 +22,6 @@ interface Props {
 
 export function ArtworkProperties({
   method,
-  category,
   items,
   selectedItemId,
   onSelect,
@@ -36,18 +34,6 @@ export function ArtworkProperties({
 }: Props) {
   const { t } = useI18n();
   const item = items.find((i) => i.id === selectedItemId);
-  const panelLengthCm = PANEL_LENGTH_CM[category];
-  const halfPanelCm = panelLengthCm * 0.5;
-  const cmFromScale = (scale: number) => +(scale * halfPanelCm).toFixed(1);
-  const scaleFromCm = (cm: number) => Math.max(0.05, cm / halfPanelCm);
-  const distFromRimCm = (it: ArtworkItem) =>
-    +(halfPanelCm + it.y * it.scale * halfPanelCm).toFixed(1);
-  const yFromDistRim = (cm: number, scale: number) =>
-    Math.max(-1, Math.min(1, (cm - halfPanelCm) / Math.max(0.0001, scale * halfPanelCm)));
-  const sideOffsetCm = (it: ArtworkItem) =>
-    +(it.x * it.scale * halfPanelCm).toFixed(1);
-  const xFromSide = (cm: number, scale: number) =>
-    Math.max(-1, Math.min(1, cm / Math.max(0.0001, scale * halfPanelCm)));
 
   return (
     <div className="space-y-4">
@@ -204,85 +190,6 @@ export function ArtworkProperties({
             </div>
           </div>
 
-          {method === "silkscreen" && (
-            <div className="rounded-md border border-dashed border-primary/40 bg-primary/5 p-3 space-y-3">
-              <div className="flex items-center gap-1.5 text-xs font-semibold text-primary">
-                <Ruler className="h-3.5 w-3.5" /> {t("art.cm.title")}
-              </div>
-              <p className="text-[10px] text-muted-foreground -mt-1">
-                {t("art.cm.basedOn")}: {category} · {panelLengthCm}cm
-              </p>
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <Label className="text-[11px]">{t("art.cm.logoWidth")}</Label>
-                  <div className="flex items-center gap-1">
-                    <Input
-                      type="number"
-                      min={1}
-                      step={0.5}
-                      value={cmFromScale(item.scale)}
-                      onChange={(e) => {
-                        const cm = Number(e.target.value) || 0;
-                        const newScale = scaleFromCm(cm);
-                        // preserve cm-based position when scale changes
-                        const distCm = distFromRimCm(item);
-                        const sideCm = sideOffsetCm(item);
-                        onUpdate(item.id, {
-                          scale: newScale,
-                          y: yFromDistRim(distCm, newScale),
-                          x: xFromSide(sideCm, newScale),
-                        });
-                      }}
-                      className="h-8 text-xs"
-                    />
-                    <span className="text-[10px] text-muted-foreground">cm</span>
-                  </div>
-                </div>
-                <div>
-                  <Label className="text-[11px]">{t("art.cm.fromRim")}</Label>
-                  <div className="flex items-center gap-1">
-                    <Input
-                      type="number"
-                      min={0}
-                      max={panelLengthCm}
-                      step={0.5}
-                      value={distFromRimCm(item)}
-                      onChange={(e) =>
-                        onUpdate(item.id, {
-                          y: yFromDistRim(Number(e.target.value) || 0, item.scale),
-                        })
-                      }
-                      className="h-8 text-xs"
-                    />
-                    <span className="text-[10px] text-muted-foreground">cm ↑</span>
-                  </div>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">
-                    {t("art.cm.fromRimHint")}
-                  </p>
-                </div>
-                <div className="col-span-2">
-                  <Label className="text-[11px]">{t("art.cm.sideOffset")}</Label>
-                  <div className="flex items-center gap-1">
-                    <Input
-                      type="number"
-                      step={0.5}
-                      value={sideOffsetCm(item)}
-                      onChange={(e) =>
-                        onUpdate(item.id, {
-                          x: xFromSide(Number(e.target.value) || 0, item.scale),
-                        })
-                      }
-                      className="h-8 text-xs"
-                    />
-                    <span className="text-[10px] text-muted-foreground">cm ({t("art.cm.sideHint")})</span>
-                  </div>
-                </div>
-              </div>
-              <p className="text-[10px] text-muted-foreground">
-                {t("art.cm.disclaimer")}
-              </p>
-            </div>
-          )}
 
           <div className="flex flex-wrap gap-2">
             <Button size="sm" variant="outline" onClick={() => onCenter(item.id)}>

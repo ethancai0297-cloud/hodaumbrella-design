@@ -229,6 +229,8 @@ export const UmbrellaCanopy = forwardRef<SVGSVGElement, Props>(function Umbrella
             <g key={`${item.id}-${pIdx}`} clipPath={`url(#panel-clip-${pIdx})`}>
               <g
                 transform={`translate(${c.x} ${c.y}) rotate(${c.angle + 90 + item.rotation}) translate(${item.x * baseSize} ${item.y * baseSize})`}
+                onPointerDown={(e) => startDrag(e, item, "panel", c.angle + 90 + item.rotation, c, baseSize)}
+                style={{ cursor: onItemChange ? "move" : undefined, touchAction: "none" }}
               >
                 {item.type === "text" && item.text ? (
                   <text

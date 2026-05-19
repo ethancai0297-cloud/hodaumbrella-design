@@ -133,7 +133,7 @@ export const UmbrellaCanopy = forwardRef<SVGSVGElement, Props>(function Umbrella
 
   return (
     <svg
-      ref={ref}
+      ref={innerRef}
       viewBox={`-300 -300 600 600`}
       width={size}
       height={size}

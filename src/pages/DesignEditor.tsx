@@ -415,6 +415,8 @@ const DesignEditor = () => {
                 artwork={project.artworkItems}
                 selectedPanels={selectedPanels}
                 onPanelClick={togglePanel}
+                onItemSelect={(id) => setSelectedItem(id)}
+                onItemChange={(id, patch) => updateItem(id, patch)}
                 size={620}
               />
             </div>

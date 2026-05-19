@@ -1,5 +1,5 @@
 import { ArtworkItem, RibCount, UmbrellaCategory } from "@/types/design";
-import { forwardRef, useMemo } from "react";
+import { forwardRef, useImperativeHandle, useMemo, useRef } from "react";
 
 interface Props {
   category: UmbrellaCategory;
@@ -8,6 +8,8 @@ interface Props {
   artwork: ArtworkItem[];
   selectedPanels: number[];
   onPanelClick?: (panel: number) => void;
+  onItemSelect?: (id: string) => void;
+  onItemChange?: (id: string, patch: { x: number; y: number }) => void;
   highlightSelection?: boolean;
   size?: number;
 }
@@ -42,12 +44,76 @@ function panelCentroid(index: number, count: number, outerR: number, centerR: nu
 }
 
 export const UmbrellaCanopy = forwardRef<SVGSVGElement, Props>(function UmbrellaCanopy(
-  { category, ribCount, fabricColor, artwork, selectedPanels, onPanelClick, highlightSelection = true, size = 560 },
+  { category, ribCount, fabricColor, artwork, selectedPanels, onPanelClick, onItemSelect, onItemChange, highlightSelection = true, size = 560 },
   ref
 ) {
+  const innerRef = useRef<SVGSVGElement>(null);
+  useImperativeHandle(ref, () => innerRef.current as SVGSVGElement);
+
   // category affects visual radius
   const radius = category === "golf" ? 250 : category === "straight" ? 220 : 200;
   const centerR = radius * 0.022;
+
+  // convert client coords to SVG viewBox coords
+  const toSvgPoint = (clientX: number, clientY: number) => {
+    const svg = innerRef.current;
+    if (!svg) return { x: 0, y: 0 };
+    const pt = svg.createSVGPoint();
+    pt.x = clientX;
+    pt.y = clientY;
+    const ctm = svg.getScreenCTM();
+    if (!ctm) return { x: 0, y: 0 };
+    const p = pt.matrixTransform(ctm.inverse());
+    return { x: p.x, y: p.y };
+  };
+
+  const startDrag = (
+    e: React.PointerEvent<SVGGElement>,
+    item: ArtworkItem,
+    mode: "full" | "panel",
+    panelAngleDeg?: number,
+    panelCenter?: { x: number; y: number },
+    baseSize?: number
+  ) => {
+    if (!onItemChange) return;
+    e.stopPropagation();
+    onItemSelect?.(item.id);
+    const start = toSvgPoint(e.clientX, e.clientY);
+    const startX = item.x;
+    const startY = item.y;
+    (e.target as Element).setPointerCapture?.(e.pointerId);
+
+    const move = (ev: PointerEvent) => {
+      const cur = toSvgPoint(ev.clientX, ev.clientY);
+      let dx = cur.x - start.x;
+      let dy = cur.y - start.y;
+      if (mode === "full") {
+        const a = (-item.rotation * Math.PI) / 180;
+        const rx = dx * Math.cos(a) - dy * Math.sin(a);
+        const ry = dx * Math.sin(a) + dy * Math.cos(a);
+        onItemChange(item.id, {
+          x: Math.max(-1.5, Math.min(1.5, startX + rx / radius)),
+          y: Math.max(-1.5, Math.min(1.5, startY + ry / radius)),
+        });
+      } else {
+        const angle = ((panelAngleDeg || 0) * Math.PI) / 180;
+        const a = -angle;
+        const rx = dx * Math.cos(a) - dy * Math.sin(a);
+        const ry = dx * Math.sin(a) + dy * Math.cos(a);
+        const bs = baseSize || 1;
+        onItemChange(item.id, {
+          x: Math.max(-2, Math.min(2, startX + rx / bs)),
+          y: Math.max(-2, Math.min(2, startY + ry / bs)),
+        });
+      }
+    };
+    const up = () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+  };
 
   const panels = useMemo(
     () => Array.from({ length: ribCount }, (_, i) => i),
@@ -67,7 +133,7 @@ export const UmbrellaCanopy = forwardRef<SVGSVGElement, Props>(function Umbrella
 
   return (
     <svg
-      ref={ref}
+      ref={innerRef}
       viewBox={`-300 -300 600 600`}
       width={size}
       height={size}
@@ -132,7 +198,11 @@ export const UmbrellaCanopy = forwardRef<SVGSVGElement, Props>(function Umbrella
           const fullSize = radius * 2 * item.scale;
           return (
             <g key={`${item.id}-full`} clipPath="url(#canopy-clip)">
-              <g transform={`rotate(${item.rotation}) translate(${item.x * radius} ${item.y * radius})`}>
+              <g
+                transform={`rotate(${item.rotation}) translate(${item.x * radius} ${item.y * radius})`}
+                onPointerDown={(e) => startDrag(e, item, "full")}
+                style={{ cursor: onItemChange ? "move" : undefined, touchAction: "none" }}
+              >
                 <image
                   href={item.src}
                   x={-fullSize / 2}
@@ -159,6 +229,8 @@ export const UmbrellaCanopy = forwardRef<SVGSVGElement, Props>(function Umbrella
             <g key={`${item.id}-${pIdx}`} clipPath={`url(#panel-clip-${pIdx})`}>
               <g
                 transform={`translate(${c.x} ${c.y}) rotate(${c.angle + 90 + item.rotation}) translate(${item.x * baseSize} ${item.y * baseSize})`}
+                onPointerDown={(e) => startDrag(e, item, "panel", c.angle + 90 + item.rotation, c, baseSize)}
+                style={{ cursor: onItemChange ? "move" : undefined, touchAction: "none" }}
               >
                 {item.type === "text" && item.text ? (
                   <text

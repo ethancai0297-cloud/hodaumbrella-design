@@ -1,5 +1,5 @@
 import { ArtworkItem, RibCount, UmbrellaCategory } from "@/types/design";
-import { forwardRef, useMemo } from "react";
+import { forwardRef, useImperativeHandle, useMemo, useRef } from "react";
 
 interface Props {
   category: UmbrellaCategory;
@@ -8,6 +8,8 @@ interface Props {
   artwork: ArtworkItem[];
   selectedPanels: number[];
   onPanelClick?: (panel: number) => void;
+  onItemSelect?: (id: string) => void;
+  onItemChange?: (id: string, patch: { x: number; y: number }) => void;
   highlightSelection?: boolean;
   size?: number;
 }

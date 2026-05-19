@@ -198,7 +198,11 @@ export const UmbrellaCanopy = forwardRef<SVGSVGElement, Props>(function Umbrella
           const fullSize = radius * 2 * item.scale;
           return (
             <g key={`${item.id}-full`} clipPath="url(#canopy-clip)">
-              <g transform={`rotate(${item.rotation}) translate(${item.x * radius} ${item.y * radius})`}>
+              <g
+                transform={`rotate(${item.rotation}) translate(${item.x * radius} ${item.y * radius})`}
+                onPointerDown={(e) => startDrag(e, item, "full")}
+                style={{ cursor: onItemChange ? "move" : undefined, touchAction: "none" }}
+              >
                 <image
                   href={item.src}
                   x={-fullSize / 2}

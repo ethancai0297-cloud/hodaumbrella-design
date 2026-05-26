@@ -305,9 +305,10 @@ export const UmbrellaCanopy = forwardRef<SVGSVGElement, Props>(function Umbrella
         }).join(" ");
         return <polygon points={pts} fill="none" stroke={ribStroke} strokeWidth={1.5} pointerEvents="none" />;
       })()}
-      {/* center cap — small tip cover */}
-      <circle r={centerR + 2} fill={isLight ? "#1a1a1a" : "#0f1f3d"} />
-      <circle r={centerR} fill={isLight ? "#444" : "#1f56c3"} />
+      {/* center cap — hidden when any image/logo artwork is present, black otherwise */}
+      {!artwork.some((a) => (a.type === "image" || a.type === "logo") && a.src) && (
+        <circle r={centerR + 2} fill="#111111" />
+      )}
     </svg>
   );
 });

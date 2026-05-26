@@ -1,40 +1,25 @@
 ## Goal
-Fix two issues sales reported when sending files to the fabric supplier:
-1. Umbrella size specs are off — update rib lengths to match real production.
-2. Add an Illustrator-compatible (`.ai`) export alongside PNG/PDF so the supplier gets a vector file.
+Change the small dot at the center of the umbrella canopy (the "tip cap") so it adapts to context:
 
-## 1. Correct rib-length measurements
+- **Silkscreen mode with no uploaded image** → keep the cap visible and black.
+- **As soon as any image/logo artwork is uploaded** (silkscreen logo, digital print, full-canopy wrap) → make the cap fully transparent so it doesn't cover artwork at the center.
 
-Update the per-category rib length used in specs and (optionally) for visual scale:
+Applies on both the Landing page preview and the Design editor preview.
 
-| Category | Rib length |
-|---|---|
-| Folding | 21" (53.5 cm) |
-| Straight | 23" (58.5 cm) |
-| Golf | 30" (75 cm) |
+## Changes
 
-Changes:
-- `src/types/design.ts` — replace `PANEL_LENGTH_CM` values with `{ folding: 53.5, straight: 58.5, golf: 75 }` and add a matching `PANEL_LENGTH_IN` map (21 / 23 / 30) so we can show both units.
-- `src/lib/export.ts` — extend the PDF Specification block with a new "Rib length" row showing `21" (53.5 cm)` style text per category, plus an approximate canopy diameter computed from rib length.
-- `src/components/UmbrellaCanopy.tsx` — adjust the visual radius constants so the three umbrella types render at proportional sizes that match the real ratio (golf clearly larger than straight, straight larger than folding). Visual only — does not affect artwork placement math meaningfully (still normalised coords).
+### `src/components/UmbrellaCanopy.tsx`
+- Compute `hasImageArtwork = artwork.some(a => (a.type === "image" || a.type === "logo") && a.src)`.
+- At the bottom of the SVG, replace the two center circles (`circle r={centerR+2}` and `circle r={centerR}`) with a single circle:
+  - If `hasImageArtwork` → render with `fill="transparent"` and no stroke (effectively hidden), or skip rendering entirely.
+  - Else → render as a solid black dot (`fill="#111"`), regardless of fabric color (per request: "When it's only silk screen, make it black").
+- Text-only artwork still counts as "no image", so the black dot remains for pure silkscreen text designs.
 
-## 2. Add `.ai` (Illustrator) export
+### `src/pages/Landing.tsx`
+- No code change needed — it consumes the same `UmbrellaCanopy` component, so the behavior follows automatically. If the landing preview has a hardcoded sample with no artwork it will show the black dot; once an image is added it disappears.
 
-Approach: produce a true vector file (not a rasterised PNG). Illustrator opens PDFs saved with the `.ai` extension natively, so we embed the live SVG as vectors into a PDF and save it as `<projectName>.ai`. This keeps text, paths, and logos crisp for the supplier.
+### `src/pages/DesignEditor.tsx`
+- No change needed — same component.
 
-Changes:
-- Install `svg2pdf.js` (works with the existing `jspdf` dep) to render SVG → vector PDF.
-- `src/lib/export.ts` — add `exportAiFile(project, svg)`:
-  - Create a `jsPDF` sized to the canopy bounding box (with a small margin).
-  - Use `svg2pdf` to draw `svgRef.current` as vectors.
-  - Add a small footer line with project name, category, rib length spec, and date.
-  - Save with `.ai` extension.
-- `src/pages/DesignEditor.tsx`:
-  - Add `handleExportAi` that calls `exportAiFile(project, svgRef.current)`.
-  - Add a new "Export .ai" button in the top-bar export group, next to PNG / PDF, using a vector-style icon (e.g. `FileCode` from lucide).
-  - Add i18n strings `editor.exportAi` / `editor.aiFail` in `src/i18n/i18n.tsx` (EN + ZH).
-
-## Notes / non-goals
-- No backend changes; everything runs client-side.
-- Artwork placement, panel logic, drag interactions, Pantone inputs, and digital-printing panel selection are untouched.
-- The `.ai` file is technically a PDF inside; this is the same trick Illustrator itself uses for "PDF-compatible" `.ai` files and is what suppliers expect.
+## Out of scope
+- Rib lines, panel outline, fabric color, artwork placement, drag logic — all untouched.

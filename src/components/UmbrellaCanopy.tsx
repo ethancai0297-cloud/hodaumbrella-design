@@ -50,8 +50,9 @@ export const UmbrellaCanopy = forwardRef<SVGSVGElement, Props>(function Umbrella
   const innerRef = useRef<SVGSVGElement>(null);
   useImperativeHandle(ref, () => innerRef.current as SVGSVGElement);
 
-  // category affects visual radius
-  const radius = category === "golf" ? 250 : category === "straight" ? 220 : 200;
+  // category affects visual radius — proportional to real rib length
+  // (folding 21" → ~178, straight 23" → ~195, golf 30" → 255)
+  const radius = category === "golf" ? 255 : category === "straight" ? 195 : 178;
   const centerR = radius * 0.022;
 
   // convert client coords to SVG viewBox coords

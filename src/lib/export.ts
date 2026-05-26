@@ -1,5 +1,6 @@
 import jsPDF from "jspdf";
-import { DesignProject } from "@/types/design";
+import { svg2pdf } from "svg2pdf.js";
+import { DesignProject, PANEL_LENGTH_CM, PANEL_LENGTH_IN } from "@/types/design";
 import logoUrl from "@/assets/hoda-tuzh-logo.png";
 
 const COMPANY_NAME = "Hoda Umbrella · Tuzh Umbrella";
@@ -126,9 +127,14 @@ export async function exportPdfSummary(project: DesignProject, pngDataUrl: strin
 
   // Specification block first, above the rendering
   let y = project.customerName ? 165 : 150;
+  const ribIn = PANEL_LENGTH_IN[project.umbrellaCategory];
+  const ribCm = PANEL_LENGTH_CM[project.umbrellaCategory];
+  const diaCm = Math.round(ribCm * 2 * 10) / 10;
   const rows: [string, string][] = [
     ["Category", project.umbrellaCategory],
     ["Rib / panel count", String(project.ribCount)],
+    ["Rib length", `${ribIn}" (${ribCm} cm)`],
+    ["Approx. canopy diameter", `${diaCm} cm`],
     ["Printing method", project.printingMethod],
     ["Fabric color", project.fabricColor],
     ["Artwork items", String(project.artworkItems.length)],
@@ -193,4 +199,59 @@ export async function exportPdfSummary(project: DesignProject, pngDataUrl: strin
   pdf.text(new Date().toLocaleDateString(), pageW - 40, pageH - 24, { align: "right" });
 
   pdf.save(`${project.projectName.replace(/\s+/g, "_")}_summary.pdf`);
+}
+
+// Export a vector Illustrator-compatible file (.ai). Illustrator opens
+// PDF-compatible files saved with the .ai extension natively, so we embed
+// the live SVG as vectors using svg2pdf.js. This preserves crisp paths,
+// text and logos for the fabric supplier.
+export async function exportAiFile(project: DesignProject, svg: SVGSVGElement) {
+  // Clone so we don't disturb the on-screen SVG
+  const clone = svg.cloneNode(true) as SVGSVGElement;
+  const vb = svg.viewBox.baseVal;
+  const width = vb && vb.width ? vb.width : svg.clientWidth || 600;
+  const height = vb && vb.height ? vb.height : svg.clientHeight || 600;
+
+  const margin = 36;
+  const footerH = 56;
+  const pageW = width + margin * 2;
+  const pageH = height + margin * 2 + footerH;
+
+  const pdf = new jsPDF({
+    unit: "pt",
+    format: [pageW, pageH],
+    orientation: pageW > pageH ? "landscape" : "portrait",
+  });
+
+  await svg2pdf(clone, pdf, {
+    x: margin,
+    y: margin,
+    width,
+    height,
+  });
+
+  // Spec footer
+  const ribIn = PANEL_LENGTH_IN[project.umbrellaCategory];
+  const ribCm = PANEL_LENGTH_CM[project.umbrellaCategory];
+  const footerY = margin + height + 18;
+  pdf.setFont("helvetica", "bold");
+  pdf.setFontSize(11);
+  pdf.setTextColor(20, 24, 30);
+  pdf.text(project.projectName, margin, footerY);
+  pdf.setFont("helvetica", "normal");
+  pdf.setFontSize(9);
+  pdf.setTextColor(80, 80, 90);
+  const specLine = `${project.umbrellaCategory} · ${project.ribCount} ribs · rib length ${ribIn}" (${ribCm} cm) · ${project.printingMethod}`;
+  pdf.text(specLine, margin, footerY + 14);
+  pdf.setTextColor(140);
+  pdf.text(COMPANY_NAME, margin, footerY + 28);
+  pdf.text(new Date().toLocaleDateString(), pageW - margin, footerY + 28, { align: "right" });
+
+  const blob = pdf.output("blob");
+  const url = URL.createObjectURL(blob);
+  try {
+    downloadDataUrl(url, `${project.projectName.replace(/\s+/g, "_")}.ai`);
+  } finally {
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
 }

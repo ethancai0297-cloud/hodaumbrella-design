@@ -50,10 +50,12 @@ const dict: Dict = {
   "editor.undo": { en: "Undo", zh: "撤销" },
   "editor.png": { en: "PNG", zh: "PNG" },
   "editor.pdf": { en: "PDF", zh: "PDF" },
+  "editor.ai": { en: "AI", zh: "AI" },
   "editor.saved": { en: "Project saved", zh: "项目已保存" },
   "editor.savedDesc": { en: "Stored in your browser.", zh: "已保存到浏览器本地。" },
   "editor.exportFail": { en: "Export failed", zh: "导出失败" },
   "editor.pdfFail": { en: "PDF export failed", zh: "PDF 导出失败" },
+  "editor.aiFail": { en: "AI export failed", zh: "AI 导出失败" },
   "editor.resetConfirm": { en: "Reset all artwork and panel selection?", zh: "重置所有图案和面板选择？" },
 
   // Wizard

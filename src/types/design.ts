@@ -48,9 +48,16 @@ export const FABRIC_PRESETS: { name: string; value: string }[] = [
   { name: "Grey", value: "#6b7280" },
 ];
 
-// Real-world panel slant length (tip → outer rim) in centimeters
+// Real-world rib length (center → tip) in centimeters
 export const PANEL_LENGTH_CM: Record<UmbrellaCategory, number> = {
-  folding: 50,
-  straight: 58,
-  golf: 65,
+  folding: 53.5,
+  straight: 58.5,
+  golf: 75,
+};
+
+// Real-world rib length (center → tip) in inches
+export const PANEL_LENGTH_IN: Record<UmbrellaCategory, number> = {
+  folding: 21,
+  straight: 23,
+  golf: 30,
 };

@@ -8,6 +8,7 @@ import { toast } from "@/hooks/use-toast";
 import {
   ArrowLeft,
   Download,
+  FileCode,
   FileImage,
   FileText,
   Plus,
@@ -32,7 +33,7 @@ import {
 } from "@/types/design";
 import { getProject, saveProject } from "@/lib/storage";
 import { cn } from "@/lib/utils";
-import { downloadDataUrl, exportPdfSummary, svgToPngDataUrl } from "@/lib/export";
+import { downloadDataUrl, exportAiFile, exportPdfSummary, svgToPngDataUrl } from "@/lib/export";
 import { PantoneInput } from "@/components/editor/PantoneInput";
 
 const SILKSCREEN_LIMITS = [1, 2, 4, 8];
@@ -278,6 +279,14 @@ const DesignEditor = () => {
       toast({ title: t("editor.pdfFail"), variant: "destructive" });
     }
   };
+  const handleExportAi = async () => {
+    if (!svgRef.current) return;
+    try {
+      await exportAiFile(project, svgRef.current);
+    } catch (e) {
+      toast({ title: t("editor.aiFail"), variant: "destructive" });
+    }
+  };
 
   const handleReset = () => {
     if (!confirm(t("editor.resetConfirm"))) return;
@@ -313,6 +322,7 @@ const DesignEditor = () => {
           <Button size="sm" variant="ghost" onClick={undo} title={t("editor.undo")}><RotateCcw className="h-4 w-4" /></Button>
           <Button size="sm" variant="outline" onClick={handleSave}><Save className="h-4 w-4 mr-1" /> {t("editor.save")}</Button>
           <Button size="sm" variant="outline" onClick={handleExportPng}><FileImage className="h-4 w-4 mr-1" /> {t("editor.png")}</Button>
+          <Button size="sm" variant="outline" onClick={handleExportAi}><FileCode className="h-4 w-4 mr-1" /> {t("editor.ai")}</Button>
           <Button size="sm" className="bg-gradient-hero" onClick={handleExportPdf}><FileText className="h-4 w-4 mr-1" /> {t("editor.pdf")}</Button>
         </div>
       </header>

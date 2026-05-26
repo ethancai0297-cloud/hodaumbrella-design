@@ -127,9 +127,14 @@ export async function exportPdfSummary(project: DesignProject, pngDataUrl: strin
 
   // Specification block first, above the rendering
   let y = project.customerName ? 165 : 150;
+  const ribIn = PANEL_LENGTH_IN[project.umbrellaCategory];
+  const ribCm = PANEL_LENGTH_CM[project.umbrellaCategory];
+  const diaCm = Math.round(ribCm * 2 * 10) / 10;
   const rows: [string, string][] = [
     ["Category", project.umbrellaCategory],
     ["Rib / panel count", String(project.ribCount)],
+    ["Rib length", `${ribIn}" (${ribCm} cm)`],
+    ["Approx. canopy diameter", `${diaCm} cm`],
     ["Printing method", project.printingMethod],
     ["Fabric color", project.fabricColor],
     ["Artwork items", String(project.artworkItems.length)],

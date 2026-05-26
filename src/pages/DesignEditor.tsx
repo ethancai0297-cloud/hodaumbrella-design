@@ -279,6 +279,14 @@ const DesignEditor = () => {
       toast({ title: t("editor.pdfFail"), variant: "destructive" });
     }
   };
+  const handleExportAi = async () => {
+    if (!svgRef.current) return;
+    try {
+      await exportAiFile(project, svgRef.current);
+    } catch (e) {
+      toast({ title: t("editor.aiFail"), variant: "destructive" });
+    }
+  };
 
   const handleReset = () => {
     if (!confirm(t("editor.resetConfirm"))) return;

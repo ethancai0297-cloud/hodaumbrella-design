@@ -58,6 +58,7 @@ const DesignEditor = () => {
     ribCount: 8,
     printingMethod: "silkscreen",
     fabricColor: "#0f1f3d",
+    panelColors: {},
     artworkItems: [],
     hasPouch: false,
     pouchArtwork: [],
@@ -111,6 +112,17 @@ const DesignEditor = () => {
   // ensure rib count change clears panel selection that's out of range
   useEffect(() => {
     setSelectedPanels((s) => s.filter((p) => p < project.ribCount));
+    // prune out-of-range panelColors entries
+    updateProject((p) => {
+      if (!p.panelColors) return p;
+      const next: Record<number, string> = {};
+      Object.entries(p.panelColors).forEach(([k, v]) => {
+        const idx = Number(k);
+        if (idx < p.ribCount) next[idx] = v;
+      });
+      return { ...p, panelColors: next };
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [project.ribCount]);
 
   const togglePanel = (i: number) => {

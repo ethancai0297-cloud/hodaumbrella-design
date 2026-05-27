@@ -19,6 +19,7 @@ import {
   ZoomOut,
 } from "lucide-react";
 import { UmbrellaCanopy } from "@/components/UmbrellaCanopy";
+import { PouchCanvas } from "@/components/PouchCanvas";
 import { WizardPanel } from "@/components/editor/WizardPanel";
 import { ArtworkProperties } from "@/components/editor/ArtworkProperties";
 import { LanguageToggle } from "@/components/LanguageToggle";
@@ -27,6 +28,8 @@ import {
   ArtworkItem,
   DesignProject,
   FABRIC_PRESETS,
+  POUCH_SIZE_CM,
+  PouchView,
   PrintingMethod,
   RibCount,
   UmbrellaCategory,

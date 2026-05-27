@@ -6,6 +6,7 @@ const withDefaults = (p: DesignProject): DesignProject => ({
   hasPouch: false,
   pouchArtwork: [],
   pouchView: "spread",
+  panelColors: {},
   ...p,
 });
 

@@ -1,5 +1,5 @@
 export type UmbrellaCategory = "folding" | "straight" | "golf";
-export type RibCount = 6 | 8 | 10;
+export type RibCount = 6 | 7 | 8 | 10;
 export type PrintingMethod = "silkscreen" | "digital";
 export type FitMode = "cover" | "contain" | "stretch";
 export type PrintArea = "single" | "selected" | "full" | "full-canopy";
@@ -34,6 +34,7 @@ export interface DesignProject {
   ribCount: RibCount;
   printingMethod: PrintingMethod;
   fabricColor: string;
+  panelColors?: Record<number, string>;
   artworkItems: ArtworkItem[];
   hasPouch?: boolean;
   pouchArtwork?: ArtworkItem[];

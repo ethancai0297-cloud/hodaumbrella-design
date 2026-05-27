@@ -285,6 +285,30 @@ export async function exportAiFile(project: DesignProject, svg: SVGSVGElement, p
   pdf.text(COMPANY_NAME, margin, footerY + 28);
   pdf.text(new Date().toLocaleDateString(), pageW - margin, footerY + 28, { align: "right" });
 
+  // Optional second page: pouch vector
+  if (pouchSvg && project.hasPouch) {
+    const pClone = pouchSvg.cloneNode(true) as SVGSVGElement;
+    const pvb = pouchSvg.viewBox.baseVal;
+    const pw = pvb && pvb.width ? pvb.width : pouchSvg.clientWidth || 400;
+    const ph = pvb && pvb.height ? pvb.height : pouchSvg.clientHeight || 600;
+    const pPageW = pw + margin * 2;
+    const pPageH = ph + margin * 2 + footerH;
+    pdf.addPage([pPageW, pPageH], pPageW > pPageH ? "landscape" : "portrait");
+    await svg2pdf(pClone, pdf, { x: margin, y: margin, width: pw, height: ph });
+    const ps = POUCH_SIZE_CM[project.umbrellaCategory];
+    const fY = margin + ph + 18;
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(11);
+    pdf.setTextColor(20, 24, 30);
+    pdf.text(`${project.projectName} — pouch`, margin, fY);
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(9);
+    pdf.setTextColor(80, 80, 90);
+    pdf.text(`front ${ps.w} × ${ps.h} cm · spread ${ps.w * 2} × ${ps.h} cm`, margin, fY + 14);
+    pdf.setTextColor(140);
+    pdf.text(COMPANY_NAME, margin, fY + 28);
+  }
+
   const blob = pdf.output("blob");
   const url = URL.createObjectURL(blob);
   try {

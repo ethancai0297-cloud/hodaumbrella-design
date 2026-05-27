@@ -1,6 +1,6 @@
 import jsPDF from "jspdf";
 import { svg2pdf } from "svg2pdf.js";
-import { DesignProject, PANEL_LENGTH_CM, PANEL_LENGTH_IN } from "@/types/design";
+import { DesignProject, PANEL_LENGTH_CM, PANEL_LENGTH_IN, POUCH_SIZE_CM } from "@/types/design";
 import logoUrl from "@/assets/hoda-tuzh-logo.png";
 
 const COMPANY_NAME = "Hoda Umbrella · Tuzh Umbrella";

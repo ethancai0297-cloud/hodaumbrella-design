@@ -351,10 +351,16 @@ const DesignEditor = () => {
             category={project.umbrellaCategory}
             ribCount={project.ribCount}
             method={project.printingMethod}
+            hasPouch={!!project.hasPouch}
             onCategory={(v) => updateProject({ umbrellaCategory: v })}
             onRibs={(v) => updateProject({ ribCount: v })}
             onMethod={(v) => updateProject({ printingMethod: v })}
+            onHasPouch={(v) => {
+              updateProject({ hasPouch: v, pouchArtwork: project.pouchArtwork || [], pouchView: project.pouchView || "spread" });
+              if (!v && activeSurface === "pouch") setActiveSurface("canopy");
+            }}
           />
+
 
           <Separator className="my-5" />
 

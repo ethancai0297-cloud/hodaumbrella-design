@@ -291,7 +291,11 @@ const DesignEditor = () => {
     if (!svgRef.current) return;
     try {
       const url = await svgToPngDataUrl(svgRef.current, 2);
-      await exportPdfSummary(project, url);
+      const pouchUrl =
+        project.hasPouch && pouchSvgRef.current
+          ? await svgToPngDataUrl(pouchSvgRef.current, 2)
+          : undefined;
+      await exportPdfSummary(project, url, pouchUrl);
     } catch (e) {
       toast({ title: t("editor.pdfFail"), variant: "destructive" });
     }
@@ -299,7 +303,7 @@ const DesignEditor = () => {
   const handleExportAi = async () => {
     if (!svgRef.current) return;
     try {
-      await exportAiFile(project, svgRef.current);
+      await exportAiFile(project, svgRef.current, project.hasPouch ? pouchSvgRef.current : null);
     } catch (e) {
       toast({ title: t("editor.aiFail"), variant: "destructive" });
     }

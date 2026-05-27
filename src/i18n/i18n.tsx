@@ -72,6 +72,13 @@ const dict: Dict = {
   "wiz.silkscreen.desc": { en: "Logos / text on selected panels (1, 2, 4 or 8).", zh: "在所选面板上印 logo / 文字（1、2、4 或 8 面）。" },
   "wiz.digital": { en: "Digital print", zh: "数码印花" },
   "wiz.digital.desc": { en: "Full image — single panel or full canopy cover.", zh: "整图 — 单面板或整伞覆盖。" },
+  "wiz.pouch": { en: "4. Pouch (optional)", zh: "4. 伞套（可选）" },
+  "wiz.pouch.add": { en: "Add pouch design", zh: "添加伞套设计" },
+  "wiz.pouch.desc": { en: "Design the fabric case for folded umbrellas.", zh: "为折叠伞设计配套伞套。" },
+  "surface.canopy": { en: "Canopy", zh: "伞面" },
+  "surface.pouch": { en: "Pouch", zh: "伞套" },
+  "pouch.spread": { en: "Spread", zh: "展开" },
+  "pouch.front": { en: "Front", zh: "正面" },
 
   // Fabric
   "fabric.title": { en: "Fabric color", zh: "伞布颜色" },

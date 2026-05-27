@@ -2,10 +2,17 @@ import { DesignProject } from "@/types/design";
 
 const KEY = "urs:projects";
 
+const withDefaults = (p: DesignProject): DesignProject => ({
+  hasPouch: false,
+  pouchArtwork: [],
+  pouchView: "spread",
+  ...p,
+});
+
 export const loadProjects = (): DesignProject[] => {
   try {
     const raw = localStorage.getItem(KEY);
-    return raw ? JSON.parse(raw) : [];
+    return raw ? (JSON.parse(raw) as DesignProject[]).map(withDefaults) : [];
   } catch {
     return [];
   }

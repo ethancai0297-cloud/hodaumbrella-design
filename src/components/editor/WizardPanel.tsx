@@ -6,14 +6,16 @@ interface Props {
   category: UmbrellaCategory;
   ribCount: RibCount;
   method: PrintingMethod;
+  hasPouch: boolean;
   onCategory: (v: UmbrellaCategory) => void;
   onRibs: (v: RibCount) => void;
   onMethod: (v: PrintingMethod) => void;
+  onHasPouch: (v: boolean) => void;
 }
 
 const ribs: RibCount[] = [6, 8, 10];
 
-export function WizardPanel({ category, ribCount, method, onCategory, onRibs, onMethod }: Props) {
+export function WizardPanel({ category, ribCount, method, hasPouch, onCategory, onRibs, onMethod, onHasPouch }: Props) {
   const { t } = useI18n();
   const cats: { id: UmbrellaCategory; label: string; desc: string }[] = [
     { id: "folding", label: t("wiz.folding"), desc: t("wiz.folding.desc") },
@@ -88,6 +90,35 @@ export function WizardPanel({ category, ribCount, method, onCategory, onRibs, on
             <div className="text-[11px] text-muted-foreground">{t("wiz.digital.desc")}</div>
           </button>
         </div>
+      </section>
+
+      <section>
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">{t("wiz.pouch")}</h3>
+        <button
+          onClick={() => onHasPouch(!hasPouch)}
+          className={cn(
+            "w-full rounded-lg border px-3 py-3 text-left transition flex items-center gap-3",
+            hasPouch ? "border-primary bg-accent" : "border-border bg-card hover:border-primary/40"
+          )}
+        >
+          <div
+            className={cn(
+              "h-5 w-9 rounded-full relative transition",
+              hasPouch ? "bg-primary" : "bg-muted"
+            )}
+          >
+            <div
+              className={cn(
+                "absolute top-0.5 h-4 w-4 rounded-full bg-card shadow-soft transition",
+                hasPouch ? "left-[18px]" : "left-0.5"
+              )}
+            />
+          </div>
+          <div className="flex-1">
+            <div className="font-display font-semibold text-sm">{t("wiz.pouch.add")}</div>
+            <div className="text-[11px] text-muted-foreground">{t("wiz.pouch.desc")}</div>
+          </div>
+        </button>
       </section>
     </div>
   );

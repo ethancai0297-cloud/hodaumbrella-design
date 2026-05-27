@@ -19,6 +19,7 @@ import {
   ZoomOut,
 } from "lucide-react";
 import { UmbrellaCanopy } from "@/components/UmbrellaCanopy";
+import { PouchCanvas } from "@/components/PouchCanvas";
 import { WizardPanel } from "@/components/editor/WizardPanel";
 import { ArtworkProperties } from "@/components/editor/ArtworkProperties";
 import { LanguageToggle } from "@/components/LanguageToggle";
@@ -27,6 +28,8 @@ import {
   ArtworkItem,
   DesignProject,
   FABRIC_PRESETS,
+  POUCH_SIZE_CM,
+  PouchView,
   PrintingMethod,
   RibCount,
   UmbrellaCategory,
@@ -56,6 +59,9 @@ const DesignEditor = () => {
     printingMethod: "silkscreen",
     fabricColor: "#0f1f3d",
     artworkItems: [],
+    hasPouch: false,
+    pouchArtwork: [],
+    pouchView: "spread",
     createdAt: Date.now(),
     updatedAt: Date.now(),
   }));
@@ -63,7 +69,9 @@ const DesignEditor = () => {
   const [selectedPanels, setSelectedPanels] = useState<number[]>([]);
   const [selectedItem, setSelectedItem] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1);
+  const [activeSurface, setActiveSurface] = useState<"canopy" | "pouch">("canopy");
   const svgRef = useRef<SVGSVGElement>(null);
+  const pouchSvgRef = useRef<SVGSVGElement>(null);
 
   // load existing
   useEffect(() => {
@@ -123,6 +131,18 @@ const DesignEditor = () => {
   };
   const clearSelection = () => setSelectedPanels([]);
 
+  const itemsKey: "artworkItems" | "pouchArtwork" =
+    activeSurface === "pouch" ? "pouchArtwork" : "artworkItems";
+  const currentItems: ArtworkItem[] =
+    (activeSurface === "pouch" ? project.pouchArtwork : project.artworkItems) || [];
+
+  const setItems = (updater: (items: ArtworkItem[]) => ArtworkItem[]) => {
+    updateProject((p) => {
+      const cur = (activeSurface === "pouch" ? p.pouchArtwork : p.artworkItems) || [];
+      return { ...p, [itemsKey]: updater(cur) } as DesignProject;
+    });
+  };
+
   // upload artwork
   const fileInputRef = useRef<HTMLInputElement>(null);
   const handleUpload = (file: File) => {
@@ -158,7 +178,7 @@ const DesignEditor = () => {
         fitMode: isDigital ? "contain" : "contain",
         printArea: "single",
       };
-      updateProject((p) => ({ ...p, artworkItems: [...p.artworkItems, item] }));
+      setItems((items) => [...items, item]);
       setSelectedItem(item.id);
       toast({ title: t("art.added") });
     };
@@ -207,7 +227,7 @@ const DesignEditor = () => {
         rotation: 0,
         panels,
       };
-      updateProject((p) => ({ ...p, artworkItems: [...p.artworkItems, logoItem, textItem] }));
+      setItems((items) => [...items, logoItem, textItem]);
       setSelectedItem(textItem.id);
       toast({ title: t("art.comboAdded") });
     };
@@ -229,29 +249,26 @@ const DesignEditor = () => {
       rotation: 0,
       panels,
     };
-    updateProject((p) => ({ ...p, artworkItems: [...p.artworkItems, item] }));
+    setItems((items) => [...items, item]);
     setSelectedItem(item.id);
   };
 
   const updateItem = (itemId: string, patch: Partial<ArtworkItem>) => {
-    updateProject((p) => ({
-      ...p,
-      artworkItems: p.artworkItems.map((a) => (a.id === itemId ? { ...a, ...patch } : a)),
-    }));
+    setItems((items) => items.map((a) => (a.id === itemId ? { ...a, ...patch } : a)));
   };
   const deleteItem = (itemId: string) => {
-    updateProject((p) => ({ ...p, artworkItems: p.artworkItems.filter((a) => a.id !== itemId) }));
+    setItems((items) => items.filter((a) => a.id !== itemId));
     setSelectedItem(null);
   };
   const duplicateItem = (itemId: string) => {
-    const orig = project.artworkItems.find((a) => a.id === itemId);
+    const orig = currentItems.find((a) => a.id === itemId);
     if (!orig) return;
     const copy: ArtworkItem = {
       ...orig,
       id: newId(),
       panels: selectedPanels.length ? selectedPanels : orig.panels,
     };
-    updateProject((p) => ({ ...p, artworkItems: [...p.artworkItems, copy] }));
+    setItems((items) => [...items, copy]);
     setSelectedItem(copy.id);
   };
   const centerItem = (itemId: string) => updateItem(itemId, { x: 0, y: 0 });
@@ -274,7 +291,11 @@ const DesignEditor = () => {
     if (!svgRef.current) return;
     try {
       const url = await svgToPngDataUrl(svgRef.current, 2);
-      await exportPdfSummary(project, url);
+      const pouchUrl =
+        project.hasPouch && pouchSvgRef.current
+          ? await svgToPngDataUrl(pouchSvgRef.current, 2)
+          : undefined;
+      await exportPdfSummary(project, url, pouchUrl);
     } catch (e) {
       toast({ title: t("editor.pdfFail"), variant: "destructive" });
     }
@@ -282,7 +303,7 @@ const DesignEditor = () => {
   const handleExportAi = async () => {
     if (!svgRef.current) return;
     try {
-      await exportAiFile(project, svgRef.current);
+      await exportAiFile(project, svgRef.current, project.hasPouch ? pouchSvgRef.current : null);
     } catch (e) {
       toast({ title: t("editor.aiFail"), variant: "destructive" });
     }
@@ -290,8 +311,12 @@ const DesignEditor = () => {
 
   const handleReset = () => {
     if (!confirm(t("editor.resetConfirm"))) return;
-    updateProject((p) => ({ ...p, artworkItems: [] }));
-    setSelectedPanels([]);
+    if (activeSurface === "pouch") {
+      updateProject((p) => ({ ...p, pouchArtwork: [] }));
+    } else {
+      updateProject((p) => ({ ...p, artworkItems: [] }));
+      setSelectedPanels([]);
+    }
     setSelectedItem(null);
   };
 
@@ -334,10 +359,16 @@ const DesignEditor = () => {
             category={project.umbrellaCategory}
             ribCount={project.ribCount}
             method={project.printingMethod}
+            hasPouch={!!project.hasPouch}
             onCategory={(v) => updateProject({ umbrellaCategory: v })}
             onRibs={(v) => updateProject({ ribCount: v })}
             onMethod={(v) => updateProject({ printingMethod: v })}
+            onHasPouch={(v) => {
+              updateProject({ hasPouch: v, pouchArtwork: project.pouchArtwork || [], pouchView: project.pouchView || "spread" });
+              if (!v && activeSurface === "pouch") setActiveSurface("canopy");
+            }}
           />
+
 
           <Separator className="my-5" />
 
@@ -415,22 +446,90 @@ const DesignEditor = () => {
             </div>
           </div>
 
+          {project.hasPouch && (
+            <div className="absolute top-16 left-1/2 -translate-x-1/2 z-10 rounded-lg bg-card border border-border shadow-soft p-1 flex items-center gap-1 text-xs">
+              <button
+                onClick={() => { setActiveSurface("canopy"); setSelectedItem(null); }}
+                className={cn(
+                  "px-3 py-1.5 rounded-md transition",
+                  activeSurface === "canopy" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
+                )}
+              >
+                {t("surface.canopy")}
+              </button>
+              <button
+                onClick={() => { setActiveSurface("pouch"); setSelectedItem(null); }}
+                className={cn(
+                  "px-3 py-1.5 rounded-md transition",
+                  activeSurface === "pouch" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
+                )}
+              >
+                {t("surface.pouch")}
+              </button>
+              {activeSurface === "pouch" && (
+                <>
+                  <Separator orientation="vertical" className="h-5 mx-1" />
+                  <button
+                    onClick={() => updateProject({ pouchView: "spread" })}
+                    className={cn(
+                      "px-2 py-1 rounded text-[11px] transition",
+                      (project.pouchView || "spread") === "spread" ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-muted"
+                    )}
+                  >
+                    {t("pouch.spread")}
+                  </button>
+                  <button
+                    onClick={() => updateProject({ pouchView: "front" })}
+                    className={cn(
+                      "px-2 py-1 rounded text-[11px] transition",
+                      project.pouchView === "front" ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-muted"
+                    )}
+                  >
+                    {t("pouch.front")}
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+
           <div className="min-h-full grid place-items-center p-12 pt-20">
             <div style={{ transform: `scale(${zoom})`, transformOrigin: "center" }}>
-              <UmbrellaCanopy
-                ref={svgRef}
-                category={project.umbrellaCategory}
-                ribCount={project.ribCount}
-                fabricColor={project.fabricColor}
-                artwork={project.artworkItems}
-                selectedPanels={selectedPanels}
-                onPanelClick={togglePanel}
-                onItemSelect={(id) => setSelectedItem(id)}
-                onItemChange={(id, patch) => updateItem(id, patch)}
-                size={620}
-              />
+              <div style={{ display: activeSurface === "canopy" ? "block" : "none" }}>
+                <UmbrellaCanopy
+                  ref={svgRef}
+                  category={project.umbrellaCategory}
+                  ribCount={project.ribCount}
+                  fabricColor={project.fabricColor}
+                  artwork={project.artworkItems}
+                  selectedPanels={selectedPanels}
+                  onPanelClick={togglePanel}
+                  onItemSelect={(id) => setSelectedItem(id)}
+                  onItemChange={(id, patch) =>
+                    activeSurface === "canopy" && updateItem(id, patch)
+                  }
+                  size={620}
+                />
+              </div>
+              {project.hasPouch && (
+                <div style={{ display: activeSurface === "pouch" ? "block" : "none" }}>
+                  <PouchCanvas
+                    ref={pouchSvgRef}
+                    category={project.umbrellaCategory}
+                    view={project.pouchView || "spread"}
+                    fabricColor={project.fabricColor}
+                    artwork={project.pouchArtwork || []}
+                    onItemSelect={(id) => setSelectedItem(id)}
+                    onItemChange={(id, patch) =>
+                      activeSurface === "pouch" && updateItem(id, patch)
+                    }
+                    size={520}
+                  />
+                </div>
+              )}
             </div>
           </div>
+
+
 
           {(silkscreenWarn || digitalWarn) && (
             <div className="absolute bottom-4 left-4 right-4 rounded-lg border border-warning/40 bg-warning/10 text-foreground text-xs px-3 py-2 flex items-start gap-2">
@@ -493,17 +592,18 @@ const DesignEditor = () => {
           <Separator className="my-5" />
 
           <ArtworkProperties
-            method={project.printingMethod}
-            items={project.artworkItems}
+            method={activeSurface === "pouch" ? "silkscreen" : project.printingMethod}
+            items={currentItems}
             selectedItemId={selectedItem}
             onSelect={setSelectedItem}
             onUpdate={updateItem}
             onDelete={deleteItem}
             onDuplicate={duplicateItem}
             onCenter={centerItem}
-            selectedPanels={selectedPanels}
-            ribCount={project.ribCount}
+            selectedPanels={activeSurface === "pouch" ? [] : selectedPanels}
+            ribCount={activeSurface === "pouch" ? 1 : project.ribCount}
           />
+
 
           <Separator className="my-5" />
 

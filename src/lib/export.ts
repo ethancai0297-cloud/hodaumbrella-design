@@ -1,6 +1,6 @@
 import jsPDF from "jspdf";
 import { svg2pdf } from "svg2pdf.js";
-import { DesignProject, PANEL_LENGTH_CM, PANEL_LENGTH_IN } from "@/types/design";
+import { DesignProject, PANEL_LENGTH_CM, PANEL_LENGTH_IN, POUCH_SIZE_CM } from "@/types/design";
 import logoUrl from "@/assets/hoda-tuzh-logo.png";
 
 const COMPANY_NAME = "Hoda Umbrella · Tuzh Umbrella";
@@ -89,7 +89,7 @@ async function imageToDataUrl(src: string): Promise<{ data: string; w: number; h
   }
 }
 
-export async function exportPdfSummary(project: DesignProject, pngDataUrl: string) {
+export async function exportPdfSummary(project: DesignProject, pngDataUrl: string, pouchPngDataUrl?: string) {
   const pdf = new jsPDF({ unit: "pt", format: "a4" });
   const pageW = pdf.internal.pageSize.getWidth();
 
@@ -146,6 +146,13 @@ export async function exportPdfSummary(project: DesignProject, pngDataUrl: strin
         .join(", ") || "—",
     ],
   ];
+  if (project.hasPouch) {
+    const ps = POUCH_SIZE_CM[project.umbrellaCategory];
+    rows.push(["Pouch (front)", `${ps.w} × ${ps.h} cm`]);
+    rows.push(["Pouch (spread)", `${ps.w * 2} × ${ps.h} cm`]);
+    rows.push(["Pouch artwork items", String((project.pouchArtwork || []).length)]);
+  }
+
 
   pdf.setTextColor(20, 24, 30);
   pdf.setFontSize(12);
@@ -198,6 +205,37 @@ export async function exportPdfSummary(project: DesignProject, pngDataUrl: strin
   pdf.text(COMPANY_NAME, 40, pageH - 24);
   pdf.text(new Date().toLocaleDateString(), pageW - 40, pageH - 24, { align: "right" });
 
+  // Optional second page: pouch preview
+  if (pouchPngDataUrl && project.hasPouch) {
+    pdf.addPage();
+    const ps = POUCH_SIZE_CM[project.umbrellaCategory];
+    pdf.setFillColor(15, 31, 61);
+    pdf.rect(0, 0, pageW, 60, "F");
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(14);
+    pdf.text("Pouch artwork — spread layout", 40, 38);
+
+    pdf.setTextColor(20, 24, 30);
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(10);
+    pdf.text(`Front face: ${ps.w} × ${ps.h} cm   ·   Spread: ${ps.w * 2} × ${ps.h} cm`, 40, 90);
+
+    const pImgProps = pdf.getImageProperties(pouchPngDataUrl);
+    const pImgW = pageW - 80;
+    const pImgH = (pImgProps.height / pImgProps.width) * pImgW;
+    try {
+      pdf.addImage(pouchPngDataUrl, "PNG", 40, 110, pImgW, Math.min(pImgH, pageH - 180));
+    } catch {}
+
+    pdf.setDrawColor(220);
+    pdf.line(40, pageH - 40, pageW - 40, pageH - 40);
+    pdf.setFontSize(9);
+    pdf.setTextColor(140);
+    pdf.text(COMPANY_NAME, 40, pageH - 24);
+    pdf.text(new Date().toLocaleDateString(), pageW - 40, pageH - 24, { align: "right" });
+  }
+
   pdf.save(`${project.projectName.replace(/\s+/g, "_")}_summary.pdf`);
 }
 
@@ -205,7 +243,7 @@ export async function exportPdfSummary(project: DesignProject, pngDataUrl: strin
 // PDF-compatible files saved with the .ai extension natively, so we embed
 // the live SVG as vectors using svg2pdf.js. This preserves crisp paths,
 // text and logos for the fabric supplier.
-export async function exportAiFile(project: DesignProject, svg: SVGSVGElement) {
+export async function exportAiFile(project: DesignProject, svg: SVGSVGElement, pouchSvg?: SVGSVGElement | null) {
   // Clone so we don't disturb the on-screen SVG
   const clone = svg.cloneNode(true) as SVGSVGElement;
   const vb = svg.viewBox.baseVal;
@@ -246,6 +284,30 @@ export async function exportAiFile(project: DesignProject, svg: SVGSVGElement) {
   pdf.setTextColor(140);
   pdf.text(COMPANY_NAME, margin, footerY + 28);
   pdf.text(new Date().toLocaleDateString(), pageW - margin, footerY + 28, { align: "right" });
+
+  // Optional second page: pouch vector
+  if (pouchSvg && project.hasPouch) {
+    const pClone = pouchSvg.cloneNode(true) as SVGSVGElement;
+    const pvb = pouchSvg.viewBox.baseVal;
+    const pw = pvb && pvb.width ? pvb.width : pouchSvg.clientWidth || 400;
+    const ph = pvb && pvb.height ? pvb.height : pouchSvg.clientHeight || 600;
+    const pPageW = pw + margin * 2;
+    const pPageH = ph + margin * 2 + footerH;
+    pdf.addPage([pPageW, pPageH], pPageW > pPageH ? "landscape" : "portrait");
+    await svg2pdf(pClone, pdf, { x: margin, y: margin, width: pw, height: ph });
+    const ps = POUCH_SIZE_CM[project.umbrellaCategory];
+    const fY = margin + ph + 18;
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(11);
+    pdf.setTextColor(20, 24, 30);
+    pdf.text(`${project.projectName} — pouch`, margin, fY);
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(9);
+    pdf.setTextColor(80, 80, 90);
+    pdf.text(`front ${ps.w} × ${ps.h} cm · spread ${ps.w * 2} × ${ps.h} cm`, margin, fY + 14);
+    pdf.setTextColor(140);
+    pdf.text(COMPANY_NAME, margin, fY + 28);
+  }
 
   const blob = pdf.output("blob");
   const url = URL.createObjectURL(blob);

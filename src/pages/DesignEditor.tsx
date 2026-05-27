@@ -227,7 +227,7 @@ const DesignEditor = () => {
         rotation: 0,
         panels,
       };
-      updateProject((p) => ({ ...p, artworkItems: [...p.artworkItems, logoItem, textItem] }));
+      setItems((items) => [...items, logoItem, textItem]);
       setSelectedItem(textItem.id);
       toast({ title: t("art.comboAdded") });
     };
@@ -249,29 +249,26 @@ const DesignEditor = () => {
       rotation: 0,
       panels,
     };
-    updateProject((p) => ({ ...p, artworkItems: [...p.artworkItems, item] }));
+    setItems((items) => [...items, item]);
     setSelectedItem(item.id);
   };
 
   const updateItem = (itemId: string, patch: Partial<ArtworkItem>) => {
-    updateProject((p) => ({
-      ...p,
-      artworkItems: p.artworkItems.map((a) => (a.id === itemId ? { ...a, ...patch } : a)),
-    }));
+    setItems((items) => items.map((a) => (a.id === itemId ? { ...a, ...patch } : a)));
   };
   const deleteItem = (itemId: string) => {
-    updateProject((p) => ({ ...p, artworkItems: p.artworkItems.filter((a) => a.id !== itemId) }));
+    setItems((items) => items.filter((a) => a.id !== itemId));
     setSelectedItem(null);
   };
   const duplicateItem = (itemId: string) => {
-    const orig = project.artworkItems.find((a) => a.id === itemId);
+    const orig = currentItems.find((a) => a.id === itemId);
     if (!orig) return;
     const copy: ArtworkItem = {
       ...orig,
       id: newId(),
       panels: selectedPanels.length ? selectedPanels : orig.panels,
     };
-    updateProject((p) => ({ ...p, artworkItems: [...p.artworkItems, copy] }));
+    setItems((items) => [...items, copy]);
     setSelectedItem(copy.id);
   };
   const centerItem = (itemId: string) => updateItem(itemId, { x: 0, y: 0 });

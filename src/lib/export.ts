@@ -146,6 +146,13 @@ export async function exportPdfSummary(project: DesignProject, pngDataUrl: strin
         .join(", ") || "—",
     ],
   ];
+  if (project.hasPouch) {
+    const ps = POUCH_SIZE_CM[project.umbrellaCategory];
+    rows.push(["Pouch (front)", `${ps.w} × ${ps.h} cm`]);
+    rows.push(["Pouch (spread)", `${ps.w * 2} × ${ps.h} cm`]);
+    rows.push(["Pouch artwork items", String((project.pouchArtwork || []).length)]);
+  }
+
 
   pdf.setTextColor(20, 24, 30);
   pdf.setFontSize(12);

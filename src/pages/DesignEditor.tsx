@@ -131,6 +131,18 @@ const DesignEditor = () => {
   };
   const clearSelection = () => setSelectedPanels([]);
 
+  const itemsKey: "artworkItems" | "pouchArtwork" =
+    activeSurface === "pouch" ? "pouchArtwork" : "artworkItems";
+  const currentItems: ArtworkItem[] =
+    (activeSurface === "pouch" ? project.pouchArtwork : project.artworkItems) || [];
+
+  const setItems = (updater: (items: ArtworkItem[]) => ArtworkItem[]) => {
+    updateProject((p) => {
+      const cur = (activeSurface === "pouch" ? p.pouchArtwork : p.artworkItems) || [];
+      return { ...p, [itemsKey]: updater(cur) } as DesignProject;
+    });
+  };
+
   // upload artwork
   const fileInputRef = useRef<HTMLInputElement>(null);
   const handleUpload = (file: File) => {

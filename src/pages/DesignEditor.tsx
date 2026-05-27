@@ -494,7 +494,7 @@ const DesignEditor = () => {
 
           <div className="min-h-full grid place-items-center p-12 pt-20">
             <div style={{ transform: `scale(${zoom})`, transformOrigin: "center" }}>
-              {activeSurface === "canopy" ? (
+              <div style={{ display: activeSurface === "canopy" ? "block" : "none" }}>
                 <UmbrellaCanopy
                   ref={svgRef}
                   category={project.umbrellaCategory}
@@ -504,23 +504,31 @@ const DesignEditor = () => {
                   selectedPanels={selectedPanels}
                   onPanelClick={togglePanel}
                   onItemSelect={(id) => setSelectedItem(id)}
-                  onItemChange={(id, patch) => updateItem(id, patch)}
+                  onItemChange={(id, patch) =>
+                    activeSurface === "canopy" && updateItem(id, patch)
+                  }
                   size={620}
                 />
-              ) : (
-                <PouchCanvas
-                  ref={pouchSvgRef}
-                  category={project.umbrellaCategory}
-                  view={project.pouchView || "spread"}
-                  fabricColor={project.fabricColor}
-                  artwork={project.pouchArtwork || []}
-                  onItemSelect={(id) => setSelectedItem(id)}
-                  onItemChange={(id, patch) => updateItem(id, patch)}
-                  size={520}
-                />
+              </div>
+              {project.hasPouch && (
+                <div style={{ display: activeSurface === "pouch" ? "block" : "none" }}>
+                  <PouchCanvas
+                    ref={pouchSvgRef}
+                    category={project.umbrellaCategory}
+                    view={project.pouchView || "spread"}
+                    fabricColor={project.fabricColor}
+                    artwork={project.pouchArtwork || []}
+                    onItemSelect={(id) => setSelectedItem(id)}
+                    onItemChange={(id, patch) =>
+                      activeSurface === "pouch" && updateItem(id, patch)
+                    }
+                    size={520}
+                  />
+                </div>
               )}
             </div>
           </div>
+
 
 
           {(silkscreenWarn || digitalWarn) && (

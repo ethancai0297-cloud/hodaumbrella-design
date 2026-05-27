@@ -6,14 +6,16 @@ interface Props {
   category: UmbrellaCategory;
   ribCount: RibCount;
   method: PrintingMethod;
+  hasPouch: boolean;
   onCategory: (v: UmbrellaCategory) => void;
   onRibs: (v: RibCount) => void;
   onMethod: (v: PrintingMethod) => void;
+  onHasPouch: (v: boolean) => void;
 }
 
 const ribs: RibCount[] = [6, 8, 10];
 
-export function WizardPanel({ category, ribCount, method, onCategory, onRibs, onMethod }: Props) {
+export function WizardPanel({ category, ribCount, method, hasPouch, onCategory, onRibs, onMethod, onHasPouch }: Props) {
   const { t } = useI18n();
   const cats: { id: UmbrellaCategory; label: string; desc: string }[] = [
     { id: "folding", label: t("wiz.folding"), desc: t("wiz.folding.desc") },

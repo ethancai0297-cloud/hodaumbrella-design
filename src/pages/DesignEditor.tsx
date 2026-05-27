@@ -178,7 +178,7 @@ const DesignEditor = () => {
         fitMode: isDigital ? "contain" : "contain",
         printArea: "single",
       };
-      updateProject((p) => ({ ...p, artworkItems: [...p.artworkItems, item] }));
+      setItems((items) => [...items, item]);
       setSelectedItem(item.id);
       toast({ title: t("art.added") });
     };

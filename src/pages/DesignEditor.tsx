@@ -383,40 +383,75 @@ const DesignEditor = () => {
           <Separator className="my-5" />
 
           <section>
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">{t("fabric.title")}</h3>
-            <div className="grid grid-cols-4 gap-2">
-              {FABRIC_PRESETS.map((c) => (
+            <div className="flex items-baseline justify-between mb-3">
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t("fabric.title")}</h3>
+              {project.panelColors && Object.keys(project.panelColors).length > 0 && (
                 <button
-                  key={c.value}
-                  onClick={() => updateProject({ fabricColor: c.value })}
-                  title={t(`color.${c.name}`)}
-                  className={cn(
-                    "h-9 rounded-md border-2 transition",
-                    project.fabricColor === c.value ? "border-primary scale-105" : "border-border"
-                  )}
-                  style={{ background: c.value }}
-                />
-              ))}
+                  onClick={() => updateProject({ panelColors: {} })}
+                  className="text-[11px] text-primary hover:underline"
+                >
+                  {t("fabric.resetPanels")}
+                </button>
+              )}
             </div>
-            <div className="mt-2 flex items-center gap-2">
-              <Input
-                type="color"
-                value={project.fabricColor}
-                onChange={(e) => updateProject({ fabricColor: e.target.value })}
-                className="h-9 w-14 p-1"
-              />
-              <Input
-                value={project.fabricColor}
-                onChange={(e) => updateProject({ fabricColor: e.target.value })}
-                className="h-9 text-xs"
-              />
-            </div>
-            <div className="mt-2">
-              <PantoneInput
-                label={t("fabric.pantone") || "Pantone code"}
-                onChange={(hex) => updateProject({ fabricColor: hex })}
-              />
-            </div>
+            <p className="text-[11px] text-muted-foreground mb-2">
+              {selectedPanels.length
+                ? t("fabric.applyToSelected").replace("{n}", String(selectedPanels.length))
+                : t("fabric.applyToAll")}
+            </p>
+            {(() => {
+              const applyColor = (hex: string) => {
+                if (selectedPanels.length) {
+                  updateProject((p) => {
+                    const next = { ...(p.panelColors || {}) };
+                    selectedPanels.forEach((i) => { next[i] = hex; });
+                    return { ...p, panelColors: next };
+                  });
+                } else {
+                  updateProject({ fabricColor: hex });
+                }
+              };
+              const activeColor = selectedPanels.length
+                ? (project.panelColors?.[selectedPanels[0]] || project.fabricColor)
+                : project.fabricColor;
+              return (
+                <>
+                  <div className="grid grid-cols-4 gap-2">
+                    {FABRIC_PRESETS.map((c) => (
+                      <button
+                        key={c.value}
+                        onClick={() => applyColor(c.value)}
+                        title={t(`color.${c.name}`)}
+                        className={cn(
+                          "h-9 rounded-md border-2 transition",
+                          activeColor === c.value ? "border-primary scale-105" : "border-border"
+                        )}
+                        style={{ background: c.value }}
+                      />
+                    ))}
+                  </div>
+                  <div className="mt-2 flex items-center gap-2">
+                    <Input
+                      type="color"
+                      value={activeColor}
+                      onChange={(e) => applyColor(e.target.value)}
+                      className="h-9 w-14 p-1"
+                    />
+                    <Input
+                      value={activeColor}
+                      onChange={(e) => applyColor(e.target.value)}
+                      className="h-9 text-xs"
+                    />
+                  </div>
+                  <div className="mt-2">
+                    <PantoneInput
+                      label={t("fabric.pantone") || "Pantone code"}
+                      onChange={(hex) => applyColor(hex)}
+                    />
+                  </div>
+                </>
+              );
+            })()}
           </section>
         </aside>
 

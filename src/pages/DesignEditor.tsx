@@ -545,6 +545,7 @@ const DesignEditor = () => {
                   category={project.umbrellaCategory}
                   ribCount={project.ribCount}
                   fabricColor={project.fabricColor}
+                  panelColors={project.panelColors}
                   artwork={project.artworkItems}
                   selectedPanels={selectedPanels}
                   onPanelClick={togglePanel}

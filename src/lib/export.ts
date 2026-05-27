@@ -89,7 +89,7 @@ async function imageToDataUrl(src: string): Promise<{ data: string; w: number; h
   }
 }
 
-export async function exportPdfSummary(project: DesignProject, pngDataUrl: string) {
+export async function exportPdfSummary(project: DesignProject, pngDataUrl: string, pouchPngDataUrl?: string) {
   const pdf = new jsPDF({ unit: "pt", format: "a4" });
   const pageW = pdf.internal.pageSize.getWidth();
 

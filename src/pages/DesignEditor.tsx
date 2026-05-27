@@ -59,6 +59,9 @@ const DesignEditor = () => {
     printingMethod: "silkscreen",
     fabricColor: "#0f1f3d",
     artworkItems: [],
+    hasPouch: false,
+    pouchArtwork: [],
+    pouchView: "spread",
     createdAt: Date.now(),
     updatedAt: Date.now(),
   }));
@@ -66,7 +69,9 @@ const DesignEditor = () => {
   const [selectedPanels, setSelectedPanels] = useState<number[]>([]);
   const [selectedItem, setSelectedItem] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1);
+  const [activeSurface, setActiveSurface] = useState<"canopy" | "pouch">("canopy");
   const svgRef = useRef<SVGSVGElement>(null);
+  const pouchSvgRef = useRef<SVGSVGElement>(null);
 
   // load existing
   useEffect(() => {

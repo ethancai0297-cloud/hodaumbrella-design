@@ -48,7 +48,7 @@ export function WizardPanel({ category, ribCount, method, hasPouch, onCategory, 
 
       <section>
         <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">{t("wiz.ribs")}</h3>
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-4 gap-2">
           {ribs.map((r) => (
             <button
               key={r}

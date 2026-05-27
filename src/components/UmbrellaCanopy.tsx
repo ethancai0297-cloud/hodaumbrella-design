@@ -5,6 +5,7 @@ interface Props {
   category: UmbrellaCategory;
   ribCount: RibCount;
   fabricColor: string;
+  panelColors?: Record<number, string>;
   artwork: ArtworkItem[];
   selectedPanels: number[];
   onPanelClick?: (panel: number) => void;
@@ -44,7 +45,7 @@ function panelCentroid(index: number, count: number, outerR: number, centerR: nu
 }
 
 export const UmbrellaCanopy = forwardRef<SVGSVGElement, Props>(function UmbrellaCanopy(
-  { category, ribCount, fabricColor, artwork, selectedPanels, onPanelClick, onItemSelect, onItemChange, highlightSelection = true, size = 560 },
+  { category, ribCount, fabricColor, panelColors, artwork, selectedPanels, onPanelClick, onItemSelect, onItemChange, highlightSelection = true, size = 560 },
   ref
 ) {
   const innerRef = useRef<SVGSVGElement>(null);

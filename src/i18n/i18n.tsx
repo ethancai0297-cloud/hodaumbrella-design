@@ -22,7 +22,7 @@ const dict: Dict = {
   "hero.cta.start": { en: "Start Design", zh: "开始设计" },
   "hero.cta.projects": { en: "My Projects", zh: "我的项目" },
   "hero.tag.factory": { en: "Factory-confirmed workflow", zh: "工厂确认流程" },
-  "hero.tag.ribs": { en: "6 / 8 / 10 rib panels", zh: "6 / 8 / 10 骨面板" },
+  "hero.tag.ribs": { en: "6 / 7 / 8 / 10 rib panels", zh: "6 / 7 / 8 / 10 骨面板" },
 
   // Features
   "feat.title": { en: "Everything sales teams need to close faster", zh: "销售团队成交所需的一切" },
@@ -37,7 +37,7 @@ const dict: Dict = {
   // How it works
   "how.title": { en: "How it works", zh: "使用流程" },
   "how.step1": { en: "Choose category — folding, straight or golf", zh: "选择伞型 — 折叠、直杆或高尔夫" },
-  "how.step2": { en: "Pick rib count — 6, 8 or 10 panels", zh: "选择骨数 — 6、8 或 10 面板" },
+  "how.step2": { en: "Pick rib count — 6, 7, 8 or 10 panels", zh: "选择骨数 — 6、7、8 或 10 面板" },
   "how.step3": { en: "Select silkscreen or digital print", zh: "选择丝印或数码印花" },
   "how.step4": { en: "Upload artwork, preview & export", zh: "上传图案、预览并导出" },
 
@@ -82,6 +82,9 @@ const dict: Dict = {
 
   // Fabric
   "fabric.title": { en: "Fabric color", zh: "伞布颜色" },
+  "fabric.applyToAll": { en: "No panels selected — color applies to all panels.", zh: "未选择面板 — 颜色将应用到全部面板。" },
+  "fabric.applyToSelected": { en: "Color applies to {n} selected panel(s).", zh: "颜色将应用到 {n} 个选中面板。" },
+  "fabric.resetPanels": { en: "Reset panel colors", zh: "重置面板颜色" },
   "color.Black": { en: "Black", zh: "黑色" },
   "color.Navy": { en: "Navy", zh: "藏青" },
   "color.White": { en: "White", zh: "白色" },

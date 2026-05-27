@@ -13,7 +13,7 @@ interface Props {
   onHasPouch: (v: boolean) => void;
 }
 
-const ribs: RibCount[] = [6, 8, 10];
+const ribs: RibCount[] = [6, 7, 8, 10];
 
 export function WizardPanel({ category, ribCount, method, hasPouch, onCategory, onRibs, onMethod, onHasPouch }: Props) {
   const { t } = useI18n();

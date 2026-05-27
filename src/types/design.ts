@@ -24,6 +24,8 @@ export interface ArtworkItem {
   printArea?: PrintArea; // for digital
 }
 
+export type PouchView = "spread" | "front";
+
 export interface DesignProject {
   id: string;
   projectName: string;
@@ -33,9 +35,19 @@ export interface DesignProject {
   printingMethod: PrintingMethod;
   fabricColor: string;
   artworkItems: ArtworkItem[];
+  hasPouch?: boolean;
+  pouchArtwork?: ArtworkItem[];
+  pouchView?: PouchView;
   createdAt: number;
   updatedAt: number;
 }
+
+// Real-world pouch sizes (front face W × H in cm). Spread layout is 2× width.
+export const POUCH_SIZE_CM: Record<UmbrellaCategory, { w: number; h: number }> = {
+  folding: { w: 8, h: 24 },
+  straight: { w: 9, h: 27 },
+  golf: { w: 11, h: 34 },
+};
 
 export const FABRIC_PRESETS: { name: string; value: string }[] = [
   { name: "Black", value: "#111418" },

@@ -576,17 +576,18 @@ const DesignEditor = () => {
           <Separator className="my-5" />
 
           <ArtworkProperties
-            method={project.printingMethod}
-            items={project.artworkItems}
+            method={activeSurface === "pouch" ? "silkscreen" : project.printingMethod}
+            items={currentItems}
             selectedItemId={selectedItem}
             onSelect={setSelectedItem}
             onUpdate={updateItem}
             onDelete={deleteItem}
             onDuplicate={duplicateItem}
             onCenter={centerItem}
-            selectedPanels={selectedPanels}
-            ribCount={project.ribCount}
+            selectedPanels={activeSurface === "pouch" ? [] : selectedPanels}
+            ribCount={activeSurface === "pouch" ? 1 : project.ribCount}
           />
+
 
           <Separator className="my-5" />
 

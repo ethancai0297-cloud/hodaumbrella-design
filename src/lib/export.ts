@@ -205,6 +205,37 @@ export async function exportPdfSummary(project: DesignProject, pngDataUrl: strin
   pdf.text(COMPANY_NAME, 40, pageH - 24);
   pdf.text(new Date().toLocaleDateString(), pageW - 40, pageH - 24, { align: "right" });
 
+  // Optional second page: pouch preview
+  if (pouchPngDataUrl && project.hasPouch) {
+    pdf.addPage();
+    const ps = POUCH_SIZE_CM[project.umbrellaCategory];
+    pdf.setFillColor(15, 31, 61);
+    pdf.rect(0, 0, pageW, 60, "F");
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(14);
+    pdf.text("Pouch artwork — spread layout", 40, 38);
+
+    pdf.setTextColor(20, 24, 30);
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(10);
+    pdf.text(`Front face: ${ps.w} × ${ps.h} cm   ·   Spread: ${ps.w * 2} × ${ps.h} cm`, 40, 90);
+
+    const pImgProps = pdf.getImageProperties(pouchPngDataUrl);
+    const pImgW = pageW - 80;
+    const pImgH = (pImgProps.height / pImgProps.width) * pImgW;
+    try {
+      pdf.addImage(pouchPngDataUrl, "PNG", 40, 110, pImgW, Math.min(pImgH, pageH - 180));
+    } catch {}
+
+    pdf.setDrawColor(220);
+    pdf.line(40, pageH - 40, pageW - 40, pageH - 40);
+    pdf.setFontSize(9);
+    pdf.setTextColor(140);
+    pdf.text(COMPANY_NAME, 40, pageH - 24);
+    pdf.text(new Date().toLocaleDateString(), pageW - 40, pageH - 24, { align: "right" });
+  }
+
   pdf.save(`${project.projectName.replace(/\s+/g, "_")}_summary.pdf`);
 }
 
@@ -212,7 +243,7 @@ export async function exportPdfSummary(project: DesignProject, pngDataUrl: strin
 // PDF-compatible files saved with the .ai extension natively, so we embed
 // the live SVG as vectors using svg2pdf.js. This preserves crisp paths,
 // text and logos for the fabric supplier.
-export async function exportAiFile(project: DesignProject, svg: SVGSVGElement) {
+export async function exportAiFile(project: DesignProject, svg: SVGSVGElement, pouchSvg?: SVGSVGElement | null) {
   // Clone so we don't disturb the on-screen SVG
   const clone = svg.cloneNode(true) as SVGSVGElement;
   const vb = svg.viewBox.baseVal;

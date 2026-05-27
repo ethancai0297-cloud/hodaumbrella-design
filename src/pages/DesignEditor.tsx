@@ -112,17 +112,15 @@ const DesignEditor = () => {
   // ensure rib count change clears panel selection that's out of range
   useEffect(() => {
     setSelectedPanels((s) => s.filter((p) => p < project.ribCount));
-    // prune out-of-range panelColors entries
-    updateProject((p) => {
+    setProject((p) => {
       if (!p.panelColors) return p;
-      const next: Record<number, string> = {};
-      Object.entries(p.panelColors).forEach(([k, v]) => {
-        const idx = Number(k);
-        if (idx < p.ribCount) next[idx] = v;
-      });
+      const keys = Object.keys(p.panelColors);
+      const stale = keys.filter((k) => Number(k) >= p.ribCount);
+      if (!stale.length) return p;
+      const next = { ...p.panelColors };
+      stale.forEach((k) => delete next[Number(k)]);
       return { ...p, panelColors: next };
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [project.ribCount]);
 
   const togglePanel = (i: number) => {

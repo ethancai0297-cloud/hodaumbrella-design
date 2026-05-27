@@ -438,22 +438,82 @@ const DesignEditor = () => {
             </div>
           </div>
 
+          {project.hasPouch && (
+            <div className="absolute top-16 left-1/2 -translate-x-1/2 z-10 rounded-lg bg-card border border-border shadow-soft p-1 flex items-center gap-1 text-xs">
+              <button
+                onClick={() => { setActiveSurface("canopy"); setSelectedItem(null); }}
+                className={cn(
+                  "px-3 py-1.5 rounded-md transition",
+                  activeSurface === "canopy" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
+                )}
+              >
+                {t("surface.canopy")}
+              </button>
+              <button
+                onClick={() => { setActiveSurface("pouch"); setSelectedItem(null); }}
+                className={cn(
+                  "px-3 py-1.5 rounded-md transition",
+                  activeSurface === "pouch" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
+                )}
+              >
+                {t("surface.pouch")}
+              </button>
+              {activeSurface === "pouch" && (
+                <>
+                  <Separator orientation="vertical" className="h-5 mx-1" />
+                  <button
+                    onClick={() => updateProject({ pouchView: "spread" })}
+                    className={cn(
+                      "px-2 py-1 rounded text-[11px] transition",
+                      (project.pouchView || "spread") === "spread" ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-muted"
+                    )}
+                  >
+                    {t("pouch.spread")}
+                  </button>
+                  <button
+                    onClick={() => updateProject({ pouchView: "front" })}
+                    className={cn(
+                      "px-2 py-1 rounded text-[11px] transition",
+                      project.pouchView === "front" ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-muted"
+                    )}
+                  >
+                    {t("pouch.front")}
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+
           <div className="min-h-full grid place-items-center p-12 pt-20">
             <div style={{ transform: `scale(${zoom})`, transformOrigin: "center" }}>
-              <UmbrellaCanopy
-                ref={svgRef}
-                category={project.umbrellaCategory}
-                ribCount={project.ribCount}
-                fabricColor={project.fabricColor}
-                artwork={project.artworkItems}
-                selectedPanels={selectedPanels}
-                onPanelClick={togglePanel}
-                onItemSelect={(id) => setSelectedItem(id)}
-                onItemChange={(id, patch) => updateItem(id, patch)}
-                size={620}
-              />
+              {activeSurface === "canopy" ? (
+                <UmbrellaCanopy
+                  ref={svgRef}
+                  category={project.umbrellaCategory}
+                  ribCount={project.ribCount}
+                  fabricColor={project.fabricColor}
+                  artwork={project.artworkItems}
+                  selectedPanels={selectedPanels}
+                  onPanelClick={togglePanel}
+                  onItemSelect={(id) => setSelectedItem(id)}
+                  onItemChange={(id, patch) => updateItem(id, patch)}
+                  size={620}
+                />
+              ) : (
+                <PouchCanvas
+                  ref={pouchSvgRef}
+                  category={project.umbrellaCategory}
+                  view={project.pouchView || "spread"}
+                  fabricColor={project.fabricColor}
+                  artwork={project.pouchArtwork || []}
+                  onItemSelect={(id) => setSelectedItem(id)}
+                  onItemChange={(id, patch) => updateItem(id, patch)}
+                  size={520}
+                />
+              )}
             </div>
           </div>
+
 
           {(silkscreenWarn || digitalWarn) && (
             <div className="absolute bottom-4 left-4 right-4 rounded-lg border border-warning/40 bg-warning/10 text-foreground text-xs px-3 py-2 flex items-start gap-2">

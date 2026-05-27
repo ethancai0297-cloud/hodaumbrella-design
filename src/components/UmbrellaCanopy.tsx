@@ -177,11 +177,12 @@ export const UmbrellaCanopy = forwardRef<SVGSVGElement, Props>(function Umbrella
       {/* panels */}
       {panels.map((i) => {
         const selected = selectedPanels.includes(i);
+        const fill = panelColors?.[i] || fabricColor;
         return (
           <path
             key={i}
             d={panelPath(i, ribCount, radius, centerR)}
-            fill={fabricColor}
+            fill={fill}
             stroke={ribStroke}
             strokeWidth={1.2}
             className={onPanelClick ? "cursor-pointer transition-opacity" : ""}

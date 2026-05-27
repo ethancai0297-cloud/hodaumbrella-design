@@ -307,8 +307,12 @@ const DesignEditor = () => {
 
   const handleReset = () => {
     if (!confirm(t("editor.resetConfirm"))) return;
-    updateProject((p) => ({ ...p, artworkItems: [] }));
-    setSelectedPanels([]);
+    if (activeSurface === "pouch") {
+      updateProject((p) => ({ ...p, pouchArtwork: [] }));
+    } else {
+      updateProject((p) => ({ ...p, artworkItems: [] }));
+      setSelectedPanels([]);
+    }
     setSelectedItem(null);
   };
 

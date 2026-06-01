@@ -99,7 +99,7 @@ export const UmbrellaCanopy = forwardRef<SVGSVGElement, Props>(function Umbrella
 
   // Vented mode: outer full canopy with central vent hole; inner is a small cap on top.
   const ventHoleR = radius * 0.32; // hole punched in outer canopy
-  const innerCapR = radius * 0.42; // cap radius (slightly larger than hole -> visible cover with air gap)
+  const innerCapR = radius * 0.72; // cap radius — extends ~70% to the rim for a true tiered look
 
   const toSvgPoint = (clientX: number, clientY: number) => {
     const svg = innerRef.current;

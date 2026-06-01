@@ -725,8 +725,10 @@ const DesignEditor = () => {
                     size={520}
                   />
                 </div>
+              )}
             </div>
           </div>
+
 
           {/* Hidden inner-only canopy for export (rendered as full standalone canopy) */}
           {project.hasDoubleLayer && project.umbrellaCategory === "golf" && (

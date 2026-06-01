@@ -615,10 +615,10 @@ const DesignEditor = () => {
             </div>
           </div>
 
-          {project.hasPouch && (
+          {(project.hasPouch || (project.hasDoubleLayer && project.umbrellaCategory === "golf")) && (
             <div className="absolute top-16 left-1/2 -translate-x-1/2 z-10 rounded-lg bg-card border border-border shadow-soft p-1 flex items-center gap-1 text-xs">
               <button
-                onClick={() => { setActiveSurface("canopy"); setSelectedItem(null); }}
+                onClick={() => { setActiveSurface("canopy"); setSelectedItem(null); setSelectedPanels([]); }}
                 className={cn(
                   "px-3 py-1.5 rounded-md transition",
                   activeSurface === "canopy" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
@@ -626,15 +626,28 @@ const DesignEditor = () => {
               >
                 {t("surface.canopy")}
               </button>
-              <button
-                onClick={() => { setActiveSurface("pouch"); setSelectedItem(null); }}
-                className={cn(
-                  "px-3 py-1.5 rounded-md transition",
-                  activeSurface === "pouch" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
-                )}
-              >
-                {t("surface.pouch")}
-              </button>
+              {project.hasDoubleLayer && project.umbrellaCategory === "golf" && (
+                <button
+                  onClick={() => { setActiveSurface("inner"); setSelectedItem(null); setSelectedPanels([]); }}
+                  className={cn(
+                    "px-3 py-1.5 rounded-md transition",
+                    activeSurface === "inner" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
+                  )}
+                >
+                  {t("surface.inner")}
+                </button>
+              )}
+              {project.hasPouch && (
+                <button
+                  onClick={() => { setActiveSurface("pouch"); setSelectedItem(null); setSelectedPanels([]); }}
+                  className={cn(
+                    "px-3 py-1.5 rounded-md transition",
+                    activeSurface === "pouch" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
+                  )}
+                >
+                  {t("surface.pouch")}
+                </button>
+              )}
               {activeSurface === "pouch" && (
                 <>
                   <Separator orientation="vertical" className="h-5 mx-1" />
@@ -663,21 +676,38 @@ const DesignEditor = () => {
 
           <div className="min-h-full grid place-items-center p-12 pt-20">
             <div style={{ transform: `scale(${zoom})`, transformOrigin: "center" }}>
-              <div style={{ display: activeSurface === "canopy" ? "block" : "none" }}>
+              <div style={{ display: activeSurface === "pouch" ? "none" : "block" }}>
                 <UmbrellaCanopy
                   ref={svgRef}
                   category={project.umbrellaCategory}
                   ribCount={project.ribCount}
                   fabricColor={project.fabricColor}
                   panelColors={project.panelColors}
+                  capColor={project.capColor}
                   artwork={project.artworkItems}
-                  selectedPanels={selectedPanels}
-                  onPanelClick={togglePanel}
+                  selectedPanels={activeSurface === "canopy" ? selectedPanels : []}
+                  onPanelClick={activeSurface === "canopy" ? togglePanel : undefined}
                   onItemSelect={(id) => setSelectedItem(id)}
                   onItemChange={(id, patch) =>
                     activeSurface === "canopy" && updateItem(id, patch)
                   }
                   size={620}
+                  innerLayer={
+                    project.hasDoubleLayer && project.umbrellaCategory === "golf"
+                      ? {
+                          fabricColor: project.innerLayer?.fabricColor || "#f5f6f8",
+                          panelColors: project.innerLayer?.panelColors,
+                          artwork: project.innerLayer?.artworkItems || [],
+                          selectedPanels: activeSurface === "inner" ? selectedPanels : [],
+                        }
+                      : undefined
+                  }
+                  activeLayer={activeSurface === "inner" ? "inner" : "outer"}
+                  onInnerPanelClick={activeSurface === "inner" ? togglePanel : undefined}
+                  onInnerItemSelect={(id) => setSelectedItem(id)}
+                  onInnerItemChange={(id, patch) =>
+                    activeSurface === "inner" && updateItem(id, patch)
+                  }
                 />
               </div>
               {project.hasPouch && (

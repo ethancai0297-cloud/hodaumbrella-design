@@ -1,47 +1,57 @@
 ## Goal
-1. Make the center cap color user-selectable (FABRIC_PRESETS swatches + custom hex input).
-2. For 30" golf umbrellas, add a "double layer" option: an outer vented canopy over an inner canopy, each with independently customizable per-panel colors and artwork.
+Fix the double-layer golf umbrella so it matches real-world styles:
+1. **Vented** — main canopy is full-size with a central vent opening; a smaller top cap sits above it (covering the vent center) with a visible air gap. Both split into the same number of panels, ribs aligned.
+2. **Double canopy** — two full-size canopies of identical radius, both split into the same panel count, edited independently.
+
+Today's behavior (outer rendered as a thin ring, inner shown underneath) is wrong and gets replaced.
 
 ## Changes
 
-### 1. Cap color
-- `src/types/design.ts`: add `capColor?: string` to `DesignProject` (default `#111111`).
-- `src/lib/storage.ts`: include `capColor: "#111111"` in `withDefaults`.
-- `src/components/UmbrellaCanopy.tsx`: accept `capColor` prop; use it instead of hardcoded `#111111` for the center cap circle. Keep the existing "hide cap when full-canopy image present" logic.
-- `src/pages/DesignEditor.tsx`: new "Cap color" section in the right panel showing the same `FABRIC_PRESETS` swatches plus a small hex input (`<input type="color">` + text field). Pass `capColor` to `UmbrellaCanopy`.
-- `src/lib/export.ts`: pass `capColor` through to canopy exports.
-- `src/i18n/i18n.tsx`: add `cap.title`, `cap.custom` strings.
+### 1. Data model — `src/types/design.ts`
+- Add `doubleLayerStyle?: "vented" | "double"` (default `"vented"`) to `DesignProject`.
+- Keep existing `hasDoubleLayer` and `innerLayer` shape.
 
-### 2. Double-layer golf umbrella
-- `src/types/design.ts`:
-  - Add `hasDoubleLayer?: boolean`.
-  - Add `innerLayer?: { fabricColor: string; panelColors?: Record<number, string>; artworkItems: ArtworkItem[] }`.
-  - Only meaningful when `umbrellaCategory === "golf"`.
-- `src/lib/storage.ts`: default `hasDoubleLayer: false`, `innerLayer: { fabricColor: "#f5f6f8", panelColors: {}, artworkItems: [] }`.
-- `src/components/editor/WizardPanel.tsx`: when `category === "golf"`, show a new toggle "Double-layer canopy" (same toggle style as the pouch toggle). Hidden for folding/straight. Wire `hasDoubleLayer` + `onHasDoubleLayer`.
-- `src/components/UmbrellaCanopy.tsx`:
-  - Add optional props `innerLayer?: { fabricColor, panelColors, artwork }`, `showAsOuterVented?: boolean`, and `ventRingRatio` (default `0.78`).
-  - When `showAsOuterVented` is true: render outer canopy panels with an inner cut-out ring (use a clip-path that is the outer polygon minus a smaller polygon at `ventRingRatio * radius`) so the inner layer shows through as a vent. The vent gap reveals the inner layer geometry.
-  - Inner layer is rendered as a second, smaller canopy (radius * `ventRingRatio` minus a small overlap so it peeks through) drawn first, using the same `panelPath`/rib logic with its own `fabricColor`, `panelColors`, and `artwork`. Reuse the same `panelCentroid` math for inner artwork placement.
-  - Selection still works on outer panels by default. Inner-layer interaction is driven by a new `activeLayer` prop (`"outer" | "inner"`); when `"inner"`, click handlers target inner panels and the outer is rendered with `pointerEvents: none` overlay.
-- `src/pages/DesignEditor.tsx`:
-  - Extend `activeSurface` state to include `"inner-canopy"` (existing values are `"canopy"` and `"pouch"`); only available when `hasDoubleLayer && category === "golf"`.
-  - Add a tab in the top-center surface switcher: Canopy | Inner Layer | Pouch (Pouch and Inner Layer only show when their respective toggles are on; Inner Layer only when category is golf).
-  - Route panel-color swatch picks, fabric color picks, and artwork CRUD (add/update/delete/select) to the correct layer based on `activeSurface`. Reuse the existing artwork helpers by parameterizing them with a `(get, set)` accessor for the active layer's `{ fabricColor, panelColors, artworkItems, selectedPanels }`.
-  - When user switches `category` away from golf, force `hasDoubleLayer = false` and `activeSurface = "canopy"`.
-  - Keep both SVG refs mounted (display toggle) for export, same pattern as pouch.
-- `src/lib/export.ts`:
-  - When `hasDoubleLayer && category === "golf"`, add a second canopy page to the PDF/AI export: "Inner layer" rendered as a normal full canopy (no vent) showing inner panel colors and artwork, plus pass `capColor` through.
-  - Outer-layer export uses `showAsOuterVented` and includes the inner layer beneath, so the printed proof matches the on-screen composite.
-- `src/i18n/i18n.tsx`: add `wiz.doubleLayer`, `wiz.doubleLayer.desc`, `surface.outer`, `surface.inner`, `surface.pouch`.
+### 2. Storage — `src/lib/storage.ts`
+- Default `doubleLayerStyle: "vented"` in `withDefaults`.
 
-### 3. UX notes
-- Cap color picker lives directly under the existing "Fabric color" section. The hex input mirrors selected swatch and vice versa.
-- Inner-layer editing mirrors outer-layer: same per-panel selection model, same swatches, same artwork tools — only the data target changes via `activeSurface`.
-- Vent ring thickness is fixed (≈22% of radius) for a clean visual; no UI to tune it.
+### 3. Wizard — `src/components/editor/WizardPanel.tsx`
+- When `hasDoubleLayer && category === "golf"`, show a small segmented control under the existing toggle: **Vented top cap** | **Double canopy**.
+- Wire `doubleLayerStyle` + setter.
+
+### 4. Canopy renderer — `src/components/UmbrellaCanopy.tsx`
+Replace the current "outer ring over inner smaller canopy" composite with two style branches:
+
+**Vented (`doubleLayerStyle === "vented"`):**
+- Outer = full canopy at `radius`, split into `ribCount` panels (existing `panelPath`), with a circular vent hole punched in the center. Implement via a `<mask>`: white full polygon minus a black circle at `radius * 0.32` (vent opening). All outer panels clip through this mask so the vent shows through.
+- Inner = a smaller "top cap" canopy at `radius * 0.42` (slightly larger than the vent so it overlaps the outer by ~10 px, creating the visible cover-with-air-gap look). Same `ribCount`, same angular split → rib seams align with outer.
+- Inner is drawn ON TOP of outer (z-order flipped vs. today). Drop shadow under inner to imply the air gap.
+- Cap circle stays at the very center, on top of inner.
+
+**Double (`doubleLayerStyle === "double"`):**
+- Inner radius = outer radius (both full size, same panel split).
+- Only one layer is visible at a time in the editor — driven by `activeLayer`. Render the active layer full-size; render the other layer as a faint dimmed preview (or hidden, controlled by an `editMode` flag) so the user can edit each cleanly.
+- Both ribs/panels obviously align since same count and radius.
+
+Shared:
+- Inner layer always uses `ribCount` panels (today already true) — confirm panel paths, rib lines, and centroids all use `ribCount`, not a different count.
+- Selection, artwork placement, drag math reuse existing `renderLayer` helper; only `outerR` / `innerR` per layer change.
+- Remove `ventInnerR` / `innerOuterR` ring-cutout logic; replace with the mask-based vent for vented style.
+- Add `doubleLayerStyle` prop; default behaves like today's single layer when `hasInner` is false.
+
+### 5. Editor — `src/pages/DesignEditor.tsx`
+- Pass `doubleLayerStyle` to `UmbrellaCanopy`.
+- When `doubleLayerStyle === "double"`, the Outer/Inner tab switch also controls which layer is rendered visibly (other layer dimmed at ~25% opacity for spatial reference).
+- Force `doubleLayerStyle = "vented"` whenever `hasDoubleLayer` is toggled on for the first time.
+
+### 6. Export — `src/lib/export.ts`
+- Vented: single composite page (outer with vent + inner cap on top) + a second page showing the inner cap flat for the printer.
+- Double: two full-canopy pages (Outer, Inner), each rendered without the dim/preview overlay.
+
+### 7. i18n — `src/i18n/i18n.tsx`
+- Add `wiz.layerStyle`, `wiz.layerStyle.vented`, `wiz.layerStyle.double`.
 
 ## Out of scope
-- Double layer for folding/straight categories.
-- Per-rib structural detail (vent shape stays a simple inner polygon cut-out).
-- Different cap shapes/materials, only color.
-- Independent pouch for inner layer.
+- Adjustable vent hole size / cap overlap (fixed ratios).
+- Animated air-gap shadow.
+- Per-panel structural shapes (still flat triangles).
+- Double-layer for folding/straight categories.

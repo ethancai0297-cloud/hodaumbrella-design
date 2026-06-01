@@ -408,6 +408,7 @@ const DesignEditor = () => {
             method={project.printingMethod}
             hasPouch={!!project.hasPouch}
             hasDoubleLayer={!!project.hasDoubleLayer}
+            doubleLayerStyle={project.doubleLayerStyle || "vented"}
             onCategory={(v) => {
               updateProject((p) => ({
                 ...p,
@@ -426,10 +427,12 @@ const DesignEditor = () => {
               updateProject((p) => ({
                 ...p,
                 hasDoubleLayer: v,
+                doubleLayerStyle: p.doubleLayerStyle || "vented",
                 innerLayer: p.innerLayer || DEFAULT_INNER,
               }));
               if (!v && activeSurface === "inner") setActiveSurface("canopy");
             }}
+            onDoubleLayerStyle={(v) => updateProject({ doubleLayerStyle: v })}
           />
 
 
@@ -702,6 +705,7 @@ const DesignEditor = () => {
                         }
                       : undefined
                   }
+                  doubleLayerStyle={project.doubleLayerStyle || "vented"}
                   activeLayer={activeSurface === "inner" ? "inner" : "outer"}
                   onInnerPanelClick={activeSurface === "inner" ? togglePanel : undefined}
                   onInnerItemSelect={(id) => setSelectedItem(id)}

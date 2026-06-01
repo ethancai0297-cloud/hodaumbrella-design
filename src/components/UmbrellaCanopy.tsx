@@ -1,4 +1,4 @@
-import { ArtworkItem, RibCount, UmbrellaCategory } from "@/types/design";
+import { ArtworkItem, DoubleLayerStyle, RibCount, UmbrellaCategory } from "@/types/design";
 import { forwardRef, useImperativeHandle, useMemo, useRef } from "react";
 
 export interface InnerLayerProps {
@@ -23,6 +23,7 @@ interface Props {
   size?: number;
   // Double-layer (golf)
   innerLayer?: InnerLayerProps;
+  doubleLayerStyle?: DoubleLayerStyle;
   activeLayer?: "outer" | "inner";
   onInnerPanelClick?: (panel: number) => void;
   onInnerItemSelect?: (id: string) => void;
@@ -80,6 +81,7 @@ export const UmbrellaCanopy = forwardRef<SVGSVGElement, Props>(function Umbrella
     highlightSelection = true,
     size = 560,
     innerLayer,
+    doubleLayerStyle = "vented",
     activeLayer = "outer",
     onInnerPanelClick,
     onInnerItemSelect,
@@ -94,9 +96,10 @@ export const UmbrellaCanopy = forwardRef<SVGSVGElement, Props>(function Umbrella
   const radius = category === "golf" ? 255 : category === "straight" ? 195 : 178;
   const centerR = radius * 0.022;
   const hasInner = !!innerLayer && !forceSingleLayer;
-  // outer ring inner edge / inner canopy outer edge (with overlap so inner peeks through)
-  const ventInnerR = radius * 0.7; // outer ring stops here
-  const innerOuterR = radius * 0.78; // inner canopy extends to here
+
+  // Vented mode: outer full canopy with central vent hole; inner is a small cap on top.
+  const ventHoleR = radius * 0.32; // hole punched in outer canopy
+  const innerCapR = radius * 0.42; // cap radius (slightly larger than hole -> visible cover with air gap)
 
   const toSvgPoint = (clientX: number, clientY: number) => {
     const svg = innerRef.current;
@@ -159,9 +162,6 @@ export const UmbrellaCanopy = forwardRef<SVGSVGElement, Props>(function Umbrella
       window.addEventListener("pointerup", up);
     };
 
-  const startDragOuter = makeStartDrag(onItemChange, onItemSelect, radius);
-  const startDragInner = makeStartDrag(onInnerItemChange, onInnerItemSelect, innerOuterR);
-
   const panels = useMemo(
     () => Array.from({ length: ribCount }, (_, i) => i),
     [ribCount]
@@ -177,13 +177,12 @@ export const UmbrellaCanopy = forwardRef<SVGSVGElement, Props>(function Umbrella
   const ribStrokeFor = (hex: string) =>
     lightnessOf(hex) > 160 ? "rgba(0,0,0,0.22)" : "rgba(255,255,255,0.28)";
 
-  const ribStroke = ribStrokeFor(fabricColor);
-
   // Render helper for a single layer (panels + artwork + rib lines + selection)
   const renderLayer = (opts: {
     keyPrefix: string;
     outerR: number;
     innerR: number;
+    ventHoleR?: number;
     fabric: string;
     pColors?: Record<number, string>;
     art: ArtworkItem[];
@@ -191,11 +190,13 @@ export const UmbrellaCanopy = forwardRef<SVGSVGElement, Props>(function Umbrella
     onClick?: (panel: number) => void;
     interactive: boolean;
     startDrag: ReturnType<typeof makeStartDrag>;
+    opacity?: number;
   }) => {
     const {
       keyPrefix,
       outerR,
       innerR,
+      ventHoleR: vHole,
       fabric,
       pColors,
       art,
@@ -203,11 +204,14 @@ export const UmbrellaCanopy = forwardRef<SVGSVGElement, Props>(function Umbrella
       onClick,
       interactive,
       startDrag,
+      opacity = 1,
     } = opts;
     const stroke = ribStrokeFor(fabric);
     const clipId = `${keyPrefix}-canopy-clip`;
+    const maskId = `${keyPrefix}-vent-mask`;
+    const useMask = vHole != null && vHole > 0;
     return (
-      <g pointerEvents={interactive ? "auto" : "none"}>
+      <g pointerEvents={interactive ? "auto" : "none"} opacity={opacity}>
         <defs>
           {panels.map((i) => (
             <clipPath id={`${keyPrefix}-panel-clip-${i}`} key={i}>
@@ -217,139 +221,226 @@ export const UmbrellaCanopy = forwardRef<SVGSVGElement, Props>(function Umbrella
           <clipPath id={clipId}>
             <polygon points={polyPoints(ribCount, outerR)} />
           </clipPath>
+          {useMask && (
+            <mask id={maskId}>
+              <polygon points={polyPoints(ribCount, outerR)} fill="white" />
+              <circle r={vHole} fill="black" />
+            </mask>
+          )}
         </defs>
-        {/* base polygon */}
-        <polygon points={polyPoints(ribCount, outerR)} fill={fabric} />
-        {/* panels */}
-        {panels.map((i) => {
-          const selected = selPanels.includes(i);
-          const fill = pColors?.[i] || fabric;
-          return (
-            <path
-              key={`${keyPrefix}-p-${i}`}
-              d={panelPath(i, ribCount, outerR, innerR)}
-              fill={fill}
-              stroke={stroke}
-              strokeWidth={1.2}
-              className={onClick ? "cursor-pointer transition-opacity" : ""}
-              onClick={() => onClick?.(i)}
-              style={{
-                opacity: highlightSelection && selPanels.length && !selected ? 0.92 : 1,
-              }}
-            />
-          );
-        })}
-        {/* artwork */}
-        {art.map((item) => {
-          if (item.type !== "text" && item.printArea === "full-canopy" && item.src) {
-            const fullSize = outerR * 2 * item.scale;
+        <g mask={useMask ? `url(#${maskId})` : undefined}>
+          {/* base polygon */}
+          <polygon points={polyPoints(ribCount, outerR)} fill={fabric} />
+          {/* panels */}
+          {panels.map((i) => {
+            const selected = selPanels.includes(i);
+            const fill = pColors?.[i] || fabric;
             return (
-              <g key={`${keyPrefix}-${item.id}-full`} clipPath={`url(#${clipId})`}>
-                <g
-                  transform={`rotate(${item.rotation}) translate(${item.x * outerR} ${item.y * outerR})`}
-                  onPointerDown={(e) => startDrag(e, item, "full")}
-                  style={{ cursor: interactive ? "move" : undefined, touchAction: "none" }}
-                >
-                  <image
-                    href={item.src}
-                    x={-fullSize / 2}
-                    y={-fullSize / 2}
-                    width={fullSize}
-                    height={fullSize}
-                    preserveAspectRatio={
-                      item.fitMode === "stretch"
-                        ? "none"
-                        : item.fitMode === "contain"
-                        ? "xMidYMid meet"
-                        : "xMidYMid slice"
-                    }
-                  />
-                </g>
-              </g>
+              <path
+                key={`${keyPrefix}-p-${i}`}
+                d={panelPath(i, ribCount, outerR, innerR)}
+                fill={fill}
+                stroke={stroke}
+                strokeWidth={1.2}
+                className={onClick ? "cursor-pointer transition-opacity" : ""}
+                onClick={() => onClick?.(i)}
+                style={{
+                  opacity: highlightSelection && selPanels.length && !selected ? 0.92 : 1,
+                }}
+              />
             );
-          }
-          return item.panels.map((pIdx) => {
-            const c = panelCentroid(pIdx, ribCount, outerR, innerR);
-            const baseSize = outerR * 0.5 * item.scale;
-            return (
-              <g key={`${keyPrefix}-${item.id}-${pIdx}`} clipPath={`url(#${keyPrefix}-panel-clip-${pIdx})`}>
-                <g
-                  transform={`translate(${c.x} ${c.y}) rotate(${c.angle + 90 + item.rotation}) translate(${item.x * baseSize} ${item.y * baseSize})`}
-                  onPointerDown={(e) => startDrag(e, item, "panel", c.angle + 90 + item.rotation, c, baseSize)}
-                  style={{ cursor: interactive ? "move" : undefined, touchAction: "none" }}
-                >
-                  {item.type === "text" && item.text ? (
-                    <text
-                      textAnchor="middle"
-                      dominantBaseline="middle"
-                      fontFamily={item.fontFamily || "Inter, sans-serif"}
-                      fontSize={(item.fontSize || 18) * item.scale}
-                      fontWeight={700}
-                      fill={item.color || "#ffffff"}
-                    >
-                      {item.text}
-                    </text>
-                  ) : item.src ? (
+          })}
+          {/* artwork */}
+          {art.map((item) => {
+            if (item.type !== "text" && item.printArea === "full-canopy" && item.src) {
+              const fullSize = outerR * 2 * item.scale;
+              return (
+                <g key={`${keyPrefix}-${item.id}-full`} clipPath={`url(#${clipId})`}>
+                  <g
+                    transform={`rotate(${item.rotation}) translate(${item.x * outerR} ${item.y * outerR})`}
+                    onPointerDown={(e) => startDrag(e, item, "full")}
+                    style={{ cursor: interactive ? "move" : undefined, touchAction: "none" }}
+                  >
                     <image
                       href={item.src}
-                      x={-baseSize / 2}
-                      y={-baseSize / 2}
-                      width={baseSize}
-                      height={baseSize}
+                      x={-fullSize / 2}
+                      y={-fullSize / 2}
+                      width={fullSize}
+                      height={fullSize}
                       preserveAspectRatio={
                         item.fitMode === "stretch"
                           ? "none"
-                          : item.fitMode === "cover"
-                          ? "xMidYMid slice"
-                          : "xMidYMid meet"
+                          : item.fitMode === "contain"
+                          ? "xMidYMid meet"
+                          : "xMidYMid slice"
                       }
                     />
-                  ) : null}
+                  </g>
                 </g>
-              </g>
+              );
+            }
+            return item.panels.map((pIdx) => {
+              const c = panelCentroid(pIdx, ribCount, outerR, innerR);
+              const baseSize = outerR * 0.5 * item.scale;
+              return (
+                <g key={`${keyPrefix}-${item.id}-${pIdx}`} clipPath={`url(#${keyPrefix}-panel-clip-${pIdx})`}>
+                  <g
+                    transform={`translate(${c.x} ${c.y}) rotate(${c.angle + 90 + item.rotation}) translate(${item.x * baseSize} ${item.y * baseSize})`}
+                    onPointerDown={(e) => startDrag(e, item, "panel", c.angle + 90 + item.rotation, c, baseSize)}
+                    style={{ cursor: interactive ? "move" : undefined, touchAction: "none" }}
+                  >
+                    {item.type === "text" && item.text ? (
+                      <text
+                        textAnchor="middle"
+                        dominantBaseline="middle"
+                        fontFamily={item.fontFamily || "Inter, sans-serif"}
+                        fontSize={(item.fontSize || 18) * item.scale}
+                        fontWeight={700}
+                        fill={item.color || "#ffffff"}
+                      >
+                        {item.text}
+                      </text>
+                    ) : item.src ? (
+                      <image
+                        href={item.src}
+                        x={-baseSize / 2}
+                        y={-baseSize / 2}
+                        width={baseSize}
+                        height={baseSize}
+                        preserveAspectRatio={
+                          item.fitMode === "stretch"
+                            ? "none"
+                            : item.fitMode === "cover"
+                            ? "xMidYMid slice"
+                            : "xMidYMid meet"
+                        }
+                      />
+                    ) : null}
+                  </g>
+                </g>
+              );
+            });
+          })}
+          {/* rib lines */}
+          {panels.map((i) => {
+            const sliceAngle = (Math.PI * 2) / ribCount;
+            const a = -Math.PI / 2 + i * sliceAngle - sliceAngle / 2;
+            return (
+              <line
+                key={`${keyPrefix}-rib-${i}`}
+                x1={Math.cos(a) * innerR}
+                y1={Math.sin(a) * innerR}
+                x2={Math.cos(a) * outerR}
+                y2={Math.sin(a) * outerR}
+                stroke={stroke}
+                strokeWidth={1.5}
+              />
             );
-          });
-        })}
-        {/* rib lines */}
-        {panels.map((i) => {
-          const sliceAngle = (Math.PI * 2) / ribCount;
-          const a = -Math.PI / 2 + i * sliceAngle - sliceAngle / 2;
-          return (
-            <line
-              key={`${keyPrefix}-rib-${i}`}
-              x1={Math.cos(a) * innerR}
-              y1={Math.sin(a) * innerR}
-              x2={Math.cos(a) * outerR}
-              y2={Math.sin(a) * outerR}
-              stroke={stroke}
-              strokeWidth={1.5}
-            />
-          );
-        })}
-        {/* selection overlay */}
-        {highlightSelection &&
-          selPanels.map((i) => (
-            <path
-              key={`${keyPrefix}-sel-${i}`}
-              d={panelPath(i, ribCount, outerR, innerR)}
-              fill="none"
-              stroke="hsl(214 95% 55%)"
-              strokeWidth={3}
-              strokeDasharray="6 4"
-              pointerEvents="none"
-            />
-          ))}
-        {/* outline */}
-        <polygon
-          points={polyPoints(ribCount, outerR)}
-          fill="none"
-          stroke={stroke}
-          strokeWidth={1.5}
-          pointerEvents="none"
-        />
+          })}
+          {/* selection overlay */}
+          {highlightSelection &&
+            selPanels.map((i) => (
+              <path
+                key={`${keyPrefix}-sel-${i}`}
+                d={panelPath(i, ribCount, outerR, innerR)}
+                fill="none"
+                stroke="hsl(214 95% 55%)"
+                strokeWidth={3}
+                strokeDasharray="6 4"
+                pointerEvents="none"
+              />
+            ))}
+          {/* outline */}
+          <polygon
+            points={polyPoints(ribCount, outerR)}
+            fill="none"
+            stroke={stroke}
+            strokeWidth={1.5}
+            pointerEvents="none"
+          />
+        </g>
       </g>
     );
   };
+
+  // Build layer render plans
+  const outerLayerProps = {
+    keyPrefix: "outer",
+    outerR: radius,
+    innerR: centerR,
+    fabric: fabricColor,
+    pColors: panelColors,
+    art: artwork,
+    selPanels: selectedPanels,
+    onClick: onPanelClick,
+    startDrag: makeStartDrag(onItemChange, onItemSelect, radius),
+  };
+
+  let content: React.ReactNode;
+  if (hasInner && doubleLayerStyle === "vented") {
+    // Outer: full canopy with vent hole; inner: small cap on top
+    const innerStartDrag = makeStartDrag(onInnerItemChange, onInnerItemSelect, innerCapR);
+    content = (
+      <>
+        {renderLayer({
+          ...outerLayerProps,
+          ventHoleR: ventHoleR,
+          onClick: activeLayer === "outer" ? onPanelClick : undefined,
+          interactive: activeLayer === "outer",
+        })}
+        {/* shadow ring under cap to imply air gap */}
+        <circle r={innerCapR + 4} fill="rgba(0,0,0,0.18)" pointerEvents="none" />
+        {renderLayer({
+          keyPrefix: "inner",
+          outerR: innerCapR,
+          innerR: centerR,
+          fabric: innerLayer!.fabricColor,
+          pColors: innerLayer!.panelColors,
+          art: innerLayer!.artwork,
+          selPanels: innerLayer!.selectedPanels || [],
+          onClick: activeLayer === "inner" ? onInnerPanelClick : undefined,
+          interactive: activeLayer === "inner",
+          startDrag: innerStartDrag,
+        })}
+      </>
+    );
+  } else if (hasInner && doubleLayerStyle === "double") {
+    // Two full-size canopies; dim non-active, draw active on top
+    const innerStartDrag = makeStartDrag(onInnerItemChange, onInnerItemSelect, radius);
+    const innerProps = {
+      keyPrefix: "inner",
+      outerR: radius,
+      innerR: centerR,
+      fabric: innerLayer!.fabricColor,
+      pColors: innerLayer!.panelColors,
+      art: innerLayer!.artwork,
+      selPanels: innerLayer!.selectedPanels || [],
+      onClick: activeLayer === "inner" ? onInnerPanelClick : undefined,
+      interactive: activeLayer === "inner",
+      startDrag: innerStartDrag,
+    };
+    if (activeLayer === "inner") {
+      content = (
+        <>
+          {renderLayer({ ...outerLayerProps, onClick: undefined, interactive: false, opacity: 0.25 })}
+          {renderLayer(innerProps)}
+        </>
+      );
+    } else {
+      content = (
+        <>
+          {renderLayer({ ...innerProps, onClick: undefined, interactive: false, opacity: 0.25 })}
+          {renderLayer({ ...outerLayerProps, interactive: true })}
+        </>
+      );
+    }
+  } else {
+    content = renderLayer({ ...outerLayerProps, interactive: true });
+  }
+
+  // Center cap is hidden when any image/logo artwork is present on the top layer
+  const topArt = hasInner && doubleLayerStyle === "vented" ? innerLayer!.artwork : artwork;
+  const hasImg = topArt.some((a) => (a.type === "image" || a.type === "logo") && a.src);
 
   return (
     <svg
@@ -360,57 +451,8 @@ export const UmbrellaCanopy = forwardRef<SVGSVGElement, Props>(function Umbrella
       className="select-none"
       style={{ filter: "drop-shadow(0 24px 40px rgba(15,31,61,0.18))" }}
     >
-      {hasInner ? (
-        <>
-          {/* Inner layer (drawn first, sits under the outer ring) */}
-          {renderLayer({
-            keyPrefix: "inner",
-            outerR: innerOuterR,
-            innerR: centerR,
-            fabric: innerLayer!.fabricColor,
-            pColors: innerLayer!.panelColors,
-            art: innerLayer!.artwork,
-            selPanels: innerLayer!.selectedPanels || [],
-            onClick: activeLayer === "inner" ? onInnerPanelClick : undefined,
-            interactive: activeLayer === "inner",
-            startDrag: startDragInner,
-          })}
-          {/* Outer layer rendered as a ring: panels span from ventInnerR to radius */}
-          {renderLayer({
-            keyPrefix: "outer",
-            outerR: radius,
-            innerR: ventInnerR,
-            fabric: fabricColor,
-            pColors: panelColors,
-            art: artwork,
-            selPanels: selectedPanels,
-            onClick: activeLayer === "outer" ? onPanelClick : undefined,
-            interactive: activeLayer === "outer",
-            startDrag: startDragOuter,
-          })}
-        </>
-      ) : (
-        renderLayer({
-          keyPrefix: "outer",
-          outerR: radius,
-          innerR: centerR,
-          fabric: fabricColor,
-          pColors: panelColors,
-          art: artwork,
-          selPanels: selectedPanels,
-          onClick: onPanelClick,
-          interactive: true,
-          startDrag: startDragOuter,
-        })
-      )}
-
-      {/* center cap — hidden when any image/logo artwork is present on the relevant top layer */}
-      {(() => {
-        const topArt = hasInner ? innerLayer!.artwork : artwork;
-        const hasImg = topArt.some((a) => (a.type === "image" || a.type === "logo") && a.src);
-        if (hasImg) return null;
-        return <circle r={centerR + 2} fill={capColor} />;
-      })()}
+      {content}
+      {!hasImg && <circle r={centerR + 2} fill={capColor} />}
     </svg>
   );
 });

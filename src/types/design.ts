@@ -24,6 +24,7 @@ export interface ArtworkItem {
 }
 
 export type PouchView = "spread" | "front";
+export type DoubleLayerStyle = "vented" | "double";
 
 export interface InnerLayerData {
   fabricColor: string;
@@ -46,6 +47,7 @@ export interface DesignProject {
   pouchArtwork?: ArtworkItem[];
   pouchView?: PouchView;
   hasDoubleLayer?: boolean;
+  doubleLayerStyle?: DoubleLayerStyle;
   innerLayer?: InnerLayerData;
   createdAt: number;
   updatedAt: number;

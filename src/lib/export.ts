@@ -67,6 +67,78 @@ export async function svgToPngDataUrl(svg: SVGSVGElement, scale = 2): Promise<st
   }
 }
 
+async function svgToImageAndSize(svg: SVGSVGElement): Promise<{ img: HTMLImageElement; w: number; h: number; revoke: () => void }> {
+  const xml = new XMLSerializer().serializeToString(svg);
+  const blob = new Blob([xml], { type: "image/svg+xml;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const i = new Image();
+    i.onload = () => resolve(i);
+    i.onerror = reject;
+    i.src = url;
+  });
+  const w = svg.viewBox.baseVal.width || svg.clientWidth;
+  const h = svg.viewBox.baseVal.height || svg.clientHeight;
+  return { img, w, h, revoke: () => URL.revokeObjectURL(url) };
+}
+
+export async function svgPairToPngDataUrl(
+  outer: SVGSVGElement,
+  inner: SVGSVGElement,
+  scale = 2
+): Promise<string> {
+  const a = await svgToImageAndSize(outer);
+  const b = await svgToImageAndSize(inner);
+  try {
+    const gap = 24;
+    const labelH = 36;
+    const cellW = Math.max(a.w, b.w);
+    const cellH = Math.max(a.h, b.h);
+    const w = (cellW * 2 + gap) * scale;
+    const h = (cellH + labelH) * scale;
+    const footerH = Math.round(70 * scale);
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h + footerH;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("no ctx");
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.fillStyle = "#0f1f3d";
+    ctx.font = `600 ${Math.round(18 * scale)}px Inter, sans-serif`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("Outside view", (cellW / 2) * scale, (labelH / 2) * scale);
+    ctx.fillText("Inside view", (cellW + gap + cellW / 2) * scale, (labelH / 2) * scale);
+
+    ctx.drawImage(a.img, 0, labelH * scale, cellW * scale, cellH * scale);
+    ctx.drawImage(b.img, (cellW + gap) * scale, labelH * scale, cellW * scale, cellH * scale);
+
+    ctx.fillStyle = "#0f1f3d";
+    ctx.fillRect(0, h, w, footerH);
+    try {
+      const logo = await loadImage(logoUrl);
+      const logoH = footerH * 0.7;
+      const logoW = (logo.width / logo.height) * logoH;
+      ctx.drawImage(logo, 20 * scale, h + (footerH - logoH) / 2, logoW, logoH);
+    } catch {}
+    ctx.fillStyle = "#ffffff";
+    ctx.textBaseline = "middle";
+    ctx.textAlign = "right";
+    ctx.font = `600 ${Math.round(18 * scale)}px Inter, sans-serif`;
+    ctx.fillText(COMPANY_NAME, w - 20 * scale, h + footerH / 2 - 10 * scale);
+    ctx.font = `400 ${Math.round(11 * scale)}px Inter, sans-serif`;
+    ctx.fillStyle = "rgba(255,255,255,0.7)";
+    ctx.fillText(COMPANY_TAGLINE + " — Double-layer outside / inside", w - 20 * scale, h + footerH / 2 + 12 * scale);
+
+    return canvas.toDataURL("image/png");
+  } finally {
+    a.revoke();
+    b.revoke();
+  }
+}
+
 export function downloadDataUrl(dataUrl: string, filename: string) {
   const a = document.createElement("a");
   a.href = dataUrl;
@@ -176,6 +248,13 @@ export async function exportPdfSummary(
 
   // Design rendering below specifications
   y += 14;
+  if (project.hasDoubleLayer && project.umbrellaCategory === "golf") {
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(11);
+    pdf.setTextColor(20, 24, 30);
+    pdf.text("Outside view (outer canopy)", 40, y);
+    y += 14;
+  }
   const imgW = pageW - 80;
   const imgProps = pdf.getImageProperties(pngDataUrl);
   const pageH = pdf.internal.pageSize.getHeight();
@@ -249,7 +328,7 @@ export async function exportPdfSummary(
     pdf.setTextColor(255, 255, 255);
     pdf.setFont("helvetica", "bold");
     pdf.setFontSize(14);
-    pdf.text("Inner layer — full canopy", 40, 38);
+    pdf.text("Inside view (inner layer) — full canopy", 40, 38);
 
     pdf.setTextColor(20, 24, 30);
     pdf.setFont("helvetica", "normal");
@@ -315,7 +394,10 @@ export async function exportAiFile(
   pdf.setFont("helvetica", "bold");
   pdf.setFontSize(11);
   pdf.setTextColor(20, 24, 30);
-  pdf.text(project.projectName, margin, footerY);
+  const outerTitle = project.hasDoubleLayer && project.umbrellaCategory === "golf"
+    ? `${project.projectName} — outside view (outer canopy)`
+    : project.projectName;
+  pdf.text(outerTitle, margin, footerY);
   pdf.setFont("helvetica", "normal");
   pdf.setFontSize(9);
   pdf.setTextColor(80, 80, 90);
@@ -363,7 +445,7 @@ export async function exportAiFile(
     pdf.setFont("helvetica", "bold");
     pdf.setFontSize(11);
     pdf.setTextColor(20, 24, 30);
-    pdf.text(`${project.projectName} — inner layer`, margin, fY);
+    pdf.text(`${project.projectName} — inside view (inner layer)`, margin, fY);
     pdf.setFont("helvetica", "normal");
     pdf.setFontSize(9);
     pdf.setTextColor(80, 80, 90);

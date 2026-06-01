@@ -36,7 +36,7 @@ import {
 } from "@/types/design";
 import { getProject, saveProject } from "@/lib/storage";
 import { cn } from "@/lib/utils";
-import { downloadDataUrl, exportAiFile, exportPdfSummary, svgToPngDataUrl } from "@/lib/export";
+import { downloadDataUrl, exportAiFile, exportPdfSummary, svgPairToPngDataUrl, svgToPngDataUrl } from "@/lib/export";
 import { PantoneInput } from "@/components/editor/PantoneInput";
 
 const SILKSCREEN_LIMITS = [1, 2, 4, 8];
@@ -311,8 +311,12 @@ const DesignEditor = () => {
   const handleExportPng = async () => {
     if (!svgRef.current) return;
     try {
-      const url = await svgToPngDataUrl(svgRef.current, 3);
-      downloadDataUrl(url, `${project.projectName.replace(/\s+/g, "_")}.png`);
+      const isDouble = project.hasDoubleLayer && project.umbrellaCategory === "golf" && innerOnlySvgRef.current;
+      const url = isDouble
+        ? await svgPairToPngDataUrl(svgRef.current, innerOnlySvgRef.current!, 3)
+        : await svgToPngDataUrl(svgRef.current, 3);
+      const suffix = isDouble ? "_outside_inside" : "";
+      downloadDataUrl(url, `${project.projectName.replace(/\s+/g, "_")}${suffix}.png`);
     } catch (e) {
       toast({ title: t("editor.exportFail"), variant: "destructive" });
     }

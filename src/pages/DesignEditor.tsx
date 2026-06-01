@@ -59,10 +59,13 @@ const DesignEditor = () => {
     printingMethod: "silkscreen",
     fabricColor: "#0f1f3d",
     panelColors: {},
+    capColor: "#111111",
     artworkItems: [],
     hasPouch: false,
     pouchArtwork: [],
     pouchView: "spread",
+    hasDoubleLayer: false,
+    innerLayer: { fabricColor: "#f5f6f8", panelColors: {}, artworkItems: [] },
     createdAt: Date.now(),
     updatedAt: Date.now(),
   }));
@@ -70,9 +73,10 @@ const DesignEditor = () => {
   const [selectedPanels, setSelectedPanels] = useState<number[]>([]);
   const [selectedItem, setSelectedItem] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1);
-  const [activeSurface, setActiveSurface] = useState<"canopy" | "pouch">("canopy");
+  const [activeSurface, setActiveSurface] = useState<"canopy" | "inner" | "pouch">("canopy");
   const svgRef = useRef<SVGSVGElement>(null);
   const pouchSvgRef = useRef<SVGSVGElement>(null);
+  const innerOnlySvgRef = useRef<SVGSVGElement>(null);
 
   // load existing
   useEffect(() => {

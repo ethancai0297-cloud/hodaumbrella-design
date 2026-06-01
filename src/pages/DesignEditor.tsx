@@ -59,10 +59,13 @@ const DesignEditor = () => {
     printingMethod: "silkscreen",
     fabricColor: "#0f1f3d",
     panelColors: {},
+    capColor: "#111111",
     artworkItems: [],
     hasPouch: false,
     pouchArtwork: [],
     pouchView: "spread",
+    hasDoubleLayer: false,
+    innerLayer: { fabricColor: "#f5f6f8", panelColors: {}, artworkItems: [] },
     createdAt: Date.now(),
     updatedAt: Date.now(),
   }));
@@ -70,9 +73,10 @@ const DesignEditor = () => {
   const [selectedPanels, setSelectedPanels] = useState<number[]>([]);
   const [selectedItem, setSelectedItem] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1);
-  const [activeSurface, setActiveSurface] = useState<"canopy" | "pouch">("canopy");
+  const [activeSurface, setActiveSurface] = useState<"canopy" | "inner" | "pouch">("canopy");
   const svgRef = useRef<SVGSVGElement>(null);
   const pouchSvgRef = useRef<SVGSVGElement>(null);
+  const innerOnlySvgRef = useRef<SVGSVGElement>(null);
 
   // load existing
   useEffect(() => {
@@ -113,20 +117,26 @@ const DesignEditor = () => {
   useEffect(() => {
     setSelectedPanels((s) => s.filter((p) => p < project.ribCount));
     setProject((p) => {
-      if (!p.panelColors) return p;
-      const keys = Object.keys(p.panelColors);
-      const stale = keys.filter((k) => Number(k) >= p.ribCount);
-      if (!stale.length) return p;
-      const next = { ...p.panelColors };
-      stale.forEach((k) => delete next[Number(k)]);
-      return { ...p, panelColors: next };
+      const prune = (m?: Record<number, string>) => {
+        if (!m) return m;
+        const stale = Object.keys(m).filter((k) => Number(k) >= p.ribCount);
+        if (!stale.length) return m;
+        const next = { ...m };
+        stale.forEach((k) => delete next[Number(k)]);
+        return next;
+      };
+      const nextPanelColors = prune(p.panelColors);
+      const nextInner = p.innerLayer
+        ? { ...p.innerLayer, panelColors: prune(p.innerLayer.panelColors) }
+        : p.innerLayer;
+      if (nextPanelColors === p.panelColors && nextInner === p.innerLayer) return p;
+      return { ...p, panelColors: nextPanelColors, innerLayer: nextInner };
     });
   }, [project.ribCount]);
 
   const togglePanel = (i: number) => {
     setSelectedPanels((s) => {
       if (s.includes(i)) return s.filter((p) => p !== i);
-      // silkscreen max 8
       const next = [...s, i].sort((a, b) => a - b);
       if (project.printingMethod === "silkscreen" && next.length > 8) {
         toast({ title: "Silkscreen max 8 panels" });
@@ -141,15 +151,25 @@ const DesignEditor = () => {
   };
   const clearSelection = () => setSelectedPanels([]);
 
-  const itemsKey: "artworkItems" | "pouchArtwork" =
-    activeSurface === "pouch" ? "pouchArtwork" : "artworkItems";
+  const DEFAULT_INNER = { fabricColor: "#f5f6f8", panelColors: {}, artworkItems: [] };
+
   const currentItems: ArtworkItem[] =
-    (activeSurface === "pouch" ? project.pouchArtwork : project.artworkItems) || [];
+    activeSurface === "pouch"
+      ? project.pouchArtwork || []
+      : activeSurface === "inner"
+      ? project.innerLayer?.artworkItems || []
+      : project.artworkItems;
 
   const setItems = (updater: (items: ArtworkItem[]) => ArtworkItem[]) => {
     updateProject((p) => {
-      const cur = (activeSurface === "pouch" ? p.pouchArtwork : p.artworkItems) || [];
-      return { ...p, [itemsKey]: updater(cur) } as DesignProject;
+      if (activeSurface === "pouch") {
+        return { ...p, pouchArtwork: updater(p.pouchArtwork || []) };
+      }
+      if (activeSurface === "inner") {
+        const inner = p.innerLayer || DEFAULT_INNER;
+        return { ...p, innerLayer: { ...inner, artworkItems: updater(inner.artworkItems) } };
+      }
+      return { ...p, artworkItems: updater(p.artworkItems) };
     });
   };
 
@@ -305,7 +325,11 @@ const DesignEditor = () => {
         project.hasPouch && pouchSvgRef.current
           ? await svgToPngDataUrl(pouchSvgRef.current, 2)
           : undefined;
-      await exportPdfSummary(project, url, pouchUrl);
+      const innerUrl =
+        project.hasDoubleLayer && project.umbrellaCategory === "golf" && innerOnlySvgRef.current
+          ? await svgToPngDataUrl(innerOnlySvgRef.current, 2)
+          : undefined;
+      await exportPdfSummary(project, url, pouchUrl, innerUrl);
     } catch (e) {
       toast({ title: t("editor.pdfFail"), variant: "destructive" });
     }
@@ -313,7 +337,14 @@ const DesignEditor = () => {
   const handleExportAi = async () => {
     if (!svgRef.current) return;
     try {
-      await exportAiFile(project, svgRef.current, project.hasPouch ? pouchSvgRef.current : null);
+      const innerSvg =
+        project.hasDoubleLayer && project.umbrellaCategory === "golf" ? innerOnlySvgRef.current : null;
+      await exportAiFile(
+        project,
+        svgRef.current,
+        project.hasPouch ? pouchSvgRef.current : null,
+        innerSvg
+      );
     } catch (e) {
       toast({ title: t("editor.aiFail"), variant: "destructive" });
     }
@@ -323,6 +354,12 @@ const DesignEditor = () => {
     if (!confirm(t("editor.resetConfirm"))) return;
     if (activeSurface === "pouch") {
       updateProject((p) => ({ ...p, pouchArtwork: [] }));
+    } else if (activeSurface === "inner") {
+      updateProject((p) => ({
+        ...p,
+        innerLayer: { ...(p.innerLayer || DEFAULT_INNER), artworkItems: [] },
+      }));
+      setSelectedPanels([]);
     } else {
       updateProject((p) => ({ ...p, artworkItems: [] }));
       setSelectedPanels([]);
@@ -370,88 +407,175 @@ const DesignEditor = () => {
             ribCount={project.ribCount}
             method={project.printingMethod}
             hasPouch={!!project.hasPouch}
-            onCategory={(v) => updateProject({ umbrellaCategory: v })}
+            hasDoubleLayer={!!project.hasDoubleLayer}
+            onCategory={(v) => {
+              updateProject((p) => ({
+                ...p,
+                umbrellaCategory: v,
+                hasDoubleLayer: v === "golf" ? p.hasDoubleLayer : false,
+              }));
+              if (v !== "golf" && activeSurface === "inner") setActiveSurface("canopy");
+            }}
             onRibs={(v) => updateProject({ ribCount: v })}
             onMethod={(v) => updateProject({ printingMethod: v })}
             onHasPouch={(v) => {
               updateProject({ hasPouch: v, pouchArtwork: project.pouchArtwork || [], pouchView: project.pouchView || "spread" });
               if (!v && activeSurface === "pouch") setActiveSurface("canopy");
             }}
+            onHasDoubleLayer={(v) => {
+              updateProject((p) => ({
+                ...p,
+                hasDoubleLayer: v,
+                innerLayer: p.innerLayer || DEFAULT_INNER,
+              }));
+              if (!v && activeSurface === "inner") setActiveSurface("canopy");
+            }}
           />
 
 
           <Separator className="my-5" />
 
-          <section>
-            <div className="flex items-baseline justify-between mb-3">
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t("fabric.title")}</h3>
-              {project.panelColors && Object.keys(project.panelColors).length > 0 && (
-                <button
-                  onClick={() => updateProject({ panelColors: {} })}
-                  className="text-[11px] text-primary hover:underline"
-                >
-                  {t("fabric.resetPanels")}
-                </button>
-              )}
-            </div>
-            <p className="text-[11px] text-muted-foreground mb-2">
-              {selectedPanels.length
-                ? t("fabric.applyToSelected").replace("{n}", String(selectedPanels.length))
-                : t("fabric.applyToAll")}
-            </p>
-            {(() => {
-              const applyColor = (hex: string) => {
-                if (selectedPanels.length) {
-                  updateProject((p) => {
-                    const next = { ...(p.panelColors || {}) };
+          {(() => {
+            const isInner = activeSurface === "inner";
+            const isPouch = activeSurface === "pouch";
+            const layerFabric = isInner
+              ? project.innerLayer?.fabricColor || "#f5f6f8"
+              : project.fabricColor;
+            const layerPanelColors = isInner
+              ? project.innerLayer?.panelColors
+              : project.panelColors;
+            const hasPanelOverrides = !!layerPanelColors && Object.keys(layerPanelColors).length > 0;
+
+            const applyColor = (hex: string) => {
+              if (isPouch) {
+                updateProject({ fabricColor: hex });
+                return;
+              }
+              if (selectedPanels.length) {
+                updateProject((p) => {
+                  if (isInner) {
+                    const inner = p.innerLayer || DEFAULT_INNER;
+                    const next = { ...(inner.panelColors || {}) };
                     selectedPanels.forEach((i) => { next[i] = hex; });
-                    return { ...p, panelColors: next };
-                  });
-                } else {
-                  updateProject({ fabricColor: hex });
-                }
-              };
-              const activeColor = selectedPanels.length
-                ? (project.panelColors?.[selectedPanels[0]] || project.fabricColor)
-                : project.fabricColor;
-              return (
-                <>
-                  <div className="grid grid-cols-4 gap-2">
-                    {FABRIC_PRESETS.map((c) => (
-                      <button
-                        key={c.value}
-                        onClick={() => applyColor(c.value)}
-                        title={t(`color.${c.name}`)}
-                        className={cn(
-                          "h-9 rounded-md border-2 transition",
-                          activeColor === c.value ? "border-primary scale-105" : "border-border"
-                        )}
-                        style={{ background: c.value }}
-                      />
-                    ))}
-                  </div>
-                  <div className="mt-2 flex items-center gap-2">
-                    <Input
-                      type="color"
-                      value={activeColor}
-                      onChange={(e) => applyColor(e.target.value)}
-                      className="h-9 w-14 p-1"
+                    return { ...p, innerLayer: { ...inner, panelColors: next } };
+                  }
+                  const next = { ...(p.panelColors || {}) };
+                  selectedPanels.forEach((i) => { next[i] = hex; });
+                  return { ...p, panelColors: next };
+                });
+              } else if (isInner) {
+                updateProject((p) => ({
+                  ...p,
+                  innerLayer: { ...(p.innerLayer || DEFAULT_INNER), fabricColor: hex },
+                }));
+              } else {
+                updateProject({ fabricColor: hex });
+              }
+            };
+
+            const resetPanels = () => {
+              if (isInner) {
+                updateProject((p) => ({
+                  ...p,
+                  innerLayer: { ...(p.innerLayer || DEFAULT_INNER), panelColors: {} },
+                }));
+              } else {
+                updateProject({ panelColors: {} });
+              }
+            };
+
+            const activeColor = selectedPanels.length
+              ? (layerPanelColors?.[selectedPanels[0]] || layerFabric)
+              : layerFabric;
+
+            return (
+              <section>
+                <div className="flex items-baseline justify-between mb-3">
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    {t("fabric.title")}
+                    {isInner && <span className="ml-1 text-primary normal-case">· {t("surface.inner")}</span>}
+                  </h3>
+                  {hasPanelOverrides && !isPouch && (
+                    <button onClick={resetPanels} className="text-[11px] text-primary hover:underline">
+                      {t("fabric.resetPanels")}
+                    </button>
+                  )}
+                </div>
+                <p className="text-[11px] text-muted-foreground mb-2">
+                  {isPouch
+                    ? t("fabric.applyToAll")
+                    : selectedPanels.length
+                    ? t("fabric.applyToSelected").replace("{n}", String(selectedPanels.length))
+                    : t("fabric.applyToAll")}
+                </p>
+                <div className="grid grid-cols-4 gap-2">
+                  {FABRIC_PRESETS.map((c) => (
+                    <button
+                      key={c.value}
+                      onClick={() => applyColor(c.value)}
+                      title={t(`color.${c.name}`)}
+                      className={cn(
+                        "h-9 rounded-md border-2 transition",
+                        activeColor === c.value ? "border-primary scale-105" : "border-border"
+                      )}
+                      style={{ background: c.value }}
                     />
-                    <Input
-                      value={activeColor}
-                      onChange={(e) => applyColor(e.target.value)}
-                      className="h-9 text-xs"
-                    />
-                  </div>
-                  <div className="mt-2">
-                    <PantoneInput
-                      label={t("fabric.pantone") || "Pantone code"}
-                      onChange={(hex) => applyColor(hex)}
-                    />
-                  </div>
-                </>
-              );
-            })()}
+                  ))}
+                </div>
+                <div className="mt-2 flex items-center gap-2">
+                  <Input
+                    type="color"
+                    value={activeColor}
+                    onChange={(e) => applyColor(e.target.value)}
+                    className="h-9 w-14 p-1"
+                  />
+                  <Input
+                    value={activeColor}
+                    onChange={(e) => applyColor(e.target.value)}
+                    className="h-9 text-xs"
+                  />
+                </div>
+                <div className="mt-2">
+                  <PantoneInput
+                    label={t("fabric.pantone") || "Pantone code"}
+                    onChange={(hex) => applyColor(hex)}
+                  />
+                </div>
+              </section>
+            );
+          })()}
+
+          <Separator className="my-5" />
+
+          <section>
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">{t("cap.title")}</h3>
+            <div className="grid grid-cols-4 gap-2">
+              {FABRIC_PRESETS.map((c) => (
+                <button
+                  key={c.value}
+                  onClick={() => updateProject({ capColor: c.value })}
+                  title={t(`color.${c.name}`)}
+                  className={cn(
+                    "h-9 rounded-md border-2 transition",
+                    (project.capColor || "#111111") === c.value ? "border-primary scale-105" : "border-border"
+                  )}
+                  style={{ background: c.value }}
+                />
+              ))}
+            </div>
+            <div className="mt-2 flex items-center gap-2">
+              <Input
+                type="color"
+                value={project.capColor || "#111111"}
+                onChange={(e) => updateProject({ capColor: e.target.value })}
+                className="h-9 w-14 p-1"
+              />
+              <Input
+                value={project.capColor || "#111111"}
+                onChange={(e) => updateProject({ capColor: e.target.value })}
+                className="h-9 text-xs"
+              />
+            </div>
           </section>
         </aside>
 
@@ -491,10 +615,10 @@ const DesignEditor = () => {
             </div>
           </div>
 
-          {project.hasPouch && (
+          {(project.hasPouch || (project.hasDoubleLayer && project.umbrellaCategory === "golf")) && (
             <div className="absolute top-16 left-1/2 -translate-x-1/2 z-10 rounded-lg bg-card border border-border shadow-soft p-1 flex items-center gap-1 text-xs">
               <button
-                onClick={() => { setActiveSurface("canopy"); setSelectedItem(null); }}
+                onClick={() => { setActiveSurface("canopy"); setSelectedItem(null); setSelectedPanels([]); }}
                 className={cn(
                   "px-3 py-1.5 rounded-md transition",
                   activeSurface === "canopy" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
@@ -502,15 +626,28 @@ const DesignEditor = () => {
               >
                 {t("surface.canopy")}
               </button>
-              <button
-                onClick={() => { setActiveSurface("pouch"); setSelectedItem(null); }}
-                className={cn(
-                  "px-3 py-1.5 rounded-md transition",
-                  activeSurface === "pouch" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
-                )}
-              >
-                {t("surface.pouch")}
-              </button>
+              {project.hasDoubleLayer && project.umbrellaCategory === "golf" && (
+                <button
+                  onClick={() => { setActiveSurface("inner"); setSelectedItem(null); setSelectedPanels([]); }}
+                  className={cn(
+                    "px-3 py-1.5 rounded-md transition",
+                    activeSurface === "inner" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
+                  )}
+                >
+                  {t("surface.inner")}
+                </button>
+              )}
+              {project.hasPouch && (
+                <button
+                  onClick={() => { setActiveSurface("pouch"); setSelectedItem(null); setSelectedPanels([]); }}
+                  className={cn(
+                    "px-3 py-1.5 rounded-md transition",
+                    activeSurface === "pouch" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
+                  )}
+                >
+                  {t("surface.pouch")}
+                </button>
+              )}
               {activeSurface === "pouch" && (
                 <>
                   <Separator orientation="vertical" className="h-5 mx-1" />
@@ -539,21 +676,38 @@ const DesignEditor = () => {
 
           <div className="min-h-full grid place-items-center p-12 pt-20">
             <div style={{ transform: `scale(${zoom})`, transformOrigin: "center" }}>
-              <div style={{ display: activeSurface === "canopy" ? "block" : "none" }}>
+              <div style={{ display: activeSurface === "pouch" ? "none" : "block" }}>
                 <UmbrellaCanopy
                   ref={svgRef}
                   category={project.umbrellaCategory}
                   ribCount={project.ribCount}
                   fabricColor={project.fabricColor}
                   panelColors={project.panelColors}
+                  capColor={project.capColor}
                   artwork={project.artworkItems}
-                  selectedPanels={selectedPanels}
-                  onPanelClick={togglePanel}
+                  selectedPanels={activeSurface === "canopy" ? selectedPanels : []}
+                  onPanelClick={activeSurface === "canopy" ? togglePanel : undefined}
                   onItemSelect={(id) => setSelectedItem(id)}
                   onItemChange={(id, patch) =>
                     activeSurface === "canopy" && updateItem(id, patch)
                   }
                   size={620}
+                  innerLayer={
+                    project.hasDoubleLayer && project.umbrellaCategory === "golf"
+                      ? {
+                          fabricColor: project.innerLayer?.fabricColor || "#f5f6f8",
+                          panelColors: project.innerLayer?.panelColors,
+                          artwork: project.innerLayer?.artworkItems || [],
+                          selectedPanels: activeSurface === "inner" ? selectedPanels : [],
+                        }
+                      : undefined
+                  }
+                  activeLayer={activeSurface === "inner" ? "inner" : "outer"}
+                  onInnerPanelClick={activeSurface === "inner" ? togglePanel : undefined}
+                  onInnerItemSelect={(id) => setSelectedItem(id)}
+                  onInnerItemChange={(id, patch) =>
+                    activeSurface === "inner" && updateItem(id, patch)
+                  }
                 />
               </div>
               {project.hasPouch && (
@@ -574,6 +728,26 @@ const DesignEditor = () => {
               )}
             </div>
           </div>
+
+
+          {/* Hidden inner-only canopy for export (rendered as full standalone canopy) */}
+          {project.hasDoubleLayer && project.umbrellaCategory === "golf" && (
+            <div style={{ position: "absolute", left: -99999, top: -99999, pointerEvents: "none" }} aria-hidden>
+              <UmbrellaCanopy
+                ref={innerOnlySvgRef}
+                category={project.umbrellaCategory}
+                ribCount={project.ribCount}
+                fabricColor={project.innerLayer?.fabricColor || "#f5f6f8"}
+                panelColors={project.innerLayer?.panelColors}
+                capColor={project.capColor}
+                artwork={project.innerLayer?.artworkItems || []}
+                selectedPanels={[]}
+                highlightSelection={false}
+                size={620}
+              />
+            </div>
+          )}
+
 
 
 

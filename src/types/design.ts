@@ -8,23 +8,28 @@ export type ArtworkType = "logo" | "text" | "image";
 export interface ArtworkItem {
   id: string;
   type: ArtworkType;
-  // For image/logo: data URL. For text: rendered as text.
   src?: string;
   fileName?: string;
   text?: string;
   fontFamily?: string;
   fontSize?: number;
   color?: string;
-  x: number; // -1..1 within panel (0 = center)
+  x: number;
   y: number;
-  scale: number; // relative size
-  rotation: number; // degrees
-  panels: number[]; // panel indices the item is applied to
+  scale: number;
+  rotation: number;
+  panels: number[];
   fitMode?: FitMode;
-  printArea?: PrintArea; // for digital
+  printArea?: PrintArea;
 }
 
 export type PouchView = "spread" | "front";
+
+export interface InnerLayerData {
+  fabricColor: string;
+  panelColors?: Record<number, string>;
+  artworkItems: ArtworkItem[];
+}
 
 export interface DesignProject {
   id: string;
@@ -35,15 +40,17 @@ export interface DesignProject {
   printingMethod: PrintingMethod;
   fabricColor: string;
   panelColors?: Record<number, string>;
+  capColor?: string;
   artworkItems: ArtworkItem[];
   hasPouch?: boolean;
   pouchArtwork?: ArtworkItem[];
   pouchView?: PouchView;
+  hasDoubleLayer?: boolean;
+  innerLayer?: InnerLayerData;
   createdAt: number;
   updatedAt: number;
 }
 
-// Real-world pouch sizes (front face W × H in cm). Spread layout is 2× width.
 export const POUCH_SIZE_CM: Record<UmbrellaCategory, { w: number; h: number }> = {
   folding: { w: 8, h: 24 },
   straight: { w: 9, h: 27 },
@@ -61,14 +68,12 @@ export const FABRIC_PRESETS: { name: string; value: string }[] = [
   { name: "Grey", value: "#6b7280" },
 ];
 
-// Real-world rib length (center → tip) in centimeters
 export const PANEL_LENGTH_CM: Record<UmbrellaCategory, number> = {
   folding: 53.5,
   straight: 58.5,
   golf: 75,
 };
 
-// Real-world rib length (center → tip) in inches
 export const PANEL_LENGTH_IN: Record<UmbrellaCategory, number> = {
   folding: 21,
   straight: 23,

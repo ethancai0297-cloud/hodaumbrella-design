@@ -7,6 +7,9 @@ const withDefaults = (p: DesignProject): DesignProject => ({
   pouchArtwork: [],
   pouchView: "spread",
   panelColors: {},
+  capColor: "#111111",
+  hasDoubleLayer: false,
+  innerLayer: { fabricColor: "#f5f6f8", panelColors: {}, artworkItems: [] },
   ...p,
 });
 

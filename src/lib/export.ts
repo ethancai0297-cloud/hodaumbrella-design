@@ -89,7 +89,12 @@ async function imageToDataUrl(src: string): Promise<{ data: string; w: number; h
   }
 }
 
-export async function exportPdfSummary(project: DesignProject, pngDataUrl: string, pouchPngDataUrl?: string) {
+export async function exportPdfSummary(
+  project: DesignProject,
+  pngDataUrl: string,
+  pouchPngDataUrl?: string,
+  innerLayerPngDataUrl?: string
+) {
   const pdf = new jsPDF({ unit: "pt", format: "a4" });
   const pageW = pdf.internal.pageSize.getWidth();
 
@@ -236,6 +241,36 @@ export async function exportPdfSummary(project: DesignProject, pngDataUrl: strin
     pdf.text(new Date().toLocaleDateString(), pageW - 40, pageH - 24, { align: "right" });
   }
 
+  // Optional inner-layer page (double-layer golf)
+  if (innerLayerPngDataUrl && project.hasDoubleLayer && project.umbrellaCategory === "golf") {
+    pdf.addPage();
+    pdf.setFillColor(15, 31, 61);
+    pdf.rect(0, 0, pageW, 60, "F");
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(14);
+    pdf.text("Inner layer — full canopy", 40, 38);
+
+    pdf.setTextColor(20, 24, 30);
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(10);
+    pdf.text(`Fabric: ${project.innerLayer?.fabricColor || "—"}`, 40, 90);
+
+    const iProps = pdf.getImageProperties(innerLayerPngDataUrl);
+    const iW = pageW - 80;
+    const iH = (iProps.height / iProps.width) * iW;
+    try {
+      pdf.addImage(innerLayerPngDataUrl, "PNG", 40, 110, iW, Math.min(iH, pageH - 180));
+    } catch {}
+
+    pdf.setDrawColor(220);
+    pdf.line(40, pageH - 40, pageW - 40, pageH - 40);
+    pdf.setFontSize(9);
+    pdf.setTextColor(140);
+    pdf.text(COMPANY_NAME, 40, pageH - 24);
+    pdf.text(new Date().toLocaleDateString(), pageW - 40, pageH - 24, { align: "right" });
+  }
+
   pdf.save(`${project.projectName.replace(/\s+/g, "_")}_summary.pdf`);
 }
 
@@ -243,7 +278,12 @@ export async function exportPdfSummary(project: DesignProject, pngDataUrl: strin
 // PDF-compatible files saved with the .ai extension natively, so we embed
 // the live SVG as vectors using svg2pdf.js. This preserves crisp paths,
 // text and logos for the fabric supplier.
-export async function exportAiFile(project: DesignProject, svg: SVGSVGElement, pouchSvg?: SVGSVGElement | null) {
+export async function exportAiFile(
+  project: DesignProject,
+  svg: SVGSVGElement,
+  pouchSvg?: SVGSVGElement | null,
+  innerSvg?: SVGSVGElement | null
+) {
   // Clone so we don't disturb the on-screen SVG
   const clone = svg.cloneNode(true) as SVGSVGElement;
   const vb = svg.viewBox.baseVal;
@@ -305,6 +345,29 @@ export async function exportAiFile(project: DesignProject, svg: SVGSVGElement, p
     pdf.setFontSize(9);
     pdf.setTextColor(80, 80, 90);
     pdf.text(`front ${ps.w} × ${ps.h} cm · spread ${ps.w * 2} × ${ps.h} cm`, margin, fY + 14);
+    pdf.setTextColor(140);
+    pdf.text(COMPANY_NAME, margin, fY + 28);
+  }
+
+  // Optional inner-layer vector page
+  if (innerSvg && project.hasDoubleLayer && project.umbrellaCategory === "golf") {
+    const iClone = innerSvg.cloneNode(true) as SVGSVGElement;
+    const ivb = innerSvg.viewBox.baseVal;
+    const iw = ivb && ivb.width ? ivb.width : innerSvg.clientWidth || 600;
+    const ih = ivb && ivb.height ? ivb.height : innerSvg.clientHeight || 600;
+    const iPageW = iw + margin * 2;
+    const iPageH = ih + margin * 2 + footerH;
+    pdf.addPage([iPageW, iPageH], iPageW > iPageH ? "landscape" : "portrait");
+    await svg2pdf(iClone, pdf, { x: margin, y: margin, width: iw, height: ih });
+    const fY = margin + ih + 18;
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(11);
+    pdf.setTextColor(20, 24, 30);
+    pdf.text(`${project.projectName} — inner layer`, margin, fY);
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(9);
+    pdf.setTextColor(80, 80, 90);
+    pdf.text(`golf · ${project.ribCount} ribs · inner fabric ${project.innerLayer?.fabricColor || "—"}`, margin, fY + 14);
     pdf.setTextColor(140);
     pdf.text(COMPANY_NAME, margin, fY + 28);
   }

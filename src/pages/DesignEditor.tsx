@@ -407,88 +407,175 @@ const DesignEditor = () => {
             ribCount={project.ribCount}
             method={project.printingMethod}
             hasPouch={!!project.hasPouch}
-            onCategory={(v) => updateProject({ umbrellaCategory: v })}
+            hasDoubleLayer={!!project.hasDoubleLayer}
+            onCategory={(v) => {
+              updateProject((p) => ({
+                ...p,
+                umbrellaCategory: v,
+                hasDoubleLayer: v === "golf" ? p.hasDoubleLayer : false,
+              }));
+              if (v !== "golf" && activeSurface === "inner") setActiveSurface("canopy");
+            }}
             onRibs={(v) => updateProject({ ribCount: v })}
             onMethod={(v) => updateProject({ printingMethod: v })}
             onHasPouch={(v) => {
               updateProject({ hasPouch: v, pouchArtwork: project.pouchArtwork || [], pouchView: project.pouchView || "spread" });
               if (!v && activeSurface === "pouch") setActiveSurface("canopy");
             }}
+            onHasDoubleLayer={(v) => {
+              updateProject((p) => ({
+                ...p,
+                hasDoubleLayer: v,
+                innerLayer: p.innerLayer || DEFAULT_INNER,
+              }));
+              if (!v && activeSurface === "inner") setActiveSurface("canopy");
+            }}
           />
 
 
           <Separator className="my-5" />
 
-          <section>
-            <div className="flex items-baseline justify-between mb-3">
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t("fabric.title")}</h3>
-              {project.panelColors && Object.keys(project.panelColors).length > 0 && (
-                <button
-                  onClick={() => updateProject({ panelColors: {} })}
-                  className="text-[11px] text-primary hover:underline"
-                >
-                  {t("fabric.resetPanels")}
-                </button>
-              )}
-            </div>
-            <p className="text-[11px] text-muted-foreground mb-2">
-              {selectedPanels.length
-                ? t("fabric.applyToSelected").replace("{n}", String(selectedPanels.length))
-                : t("fabric.applyToAll")}
-            </p>
-            {(() => {
-              const applyColor = (hex: string) => {
-                if (selectedPanels.length) {
-                  updateProject((p) => {
-                    const next = { ...(p.panelColors || {}) };
+          {(() => {
+            const isInner = activeSurface === "inner";
+            const isPouch = activeSurface === "pouch";
+            const layerFabric = isInner
+              ? project.innerLayer?.fabricColor || "#f5f6f8"
+              : project.fabricColor;
+            const layerPanelColors = isInner
+              ? project.innerLayer?.panelColors
+              : project.panelColors;
+            const hasPanelOverrides = !!layerPanelColors && Object.keys(layerPanelColors).length > 0;
+
+            const applyColor = (hex: string) => {
+              if (isPouch) {
+                updateProject({ fabricColor: hex });
+                return;
+              }
+              if (selectedPanels.length) {
+                updateProject((p) => {
+                  if (isInner) {
+                    const inner = p.innerLayer || DEFAULT_INNER;
+                    const next = { ...(inner.panelColors || {}) };
                     selectedPanels.forEach((i) => { next[i] = hex; });
-                    return { ...p, panelColors: next };
-                  });
-                } else {
-                  updateProject({ fabricColor: hex });
-                }
-              };
-              const activeColor = selectedPanels.length
-                ? (project.panelColors?.[selectedPanels[0]] || project.fabricColor)
-                : project.fabricColor;
-              return (
-                <>
-                  <div className="grid grid-cols-4 gap-2">
-                    {FABRIC_PRESETS.map((c) => (
-                      <button
-                        key={c.value}
-                        onClick={() => applyColor(c.value)}
-                        title={t(`color.${c.name}`)}
-                        className={cn(
-                          "h-9 rounded-md border-2 transition",
-                          activeColor === c.value ? "border-primary scale-105" : "border-border"
-                        )}
-                        style={{ background: c.value }}
-                      />
-                    ))}
-                  </div>
-                  <div className="mt-2 flex items-center gap-2">
-                    <Input
-                      type="color"
-                      value={activeColor}
-                      onChange={(e) => applyColor(e.target.value)}
-                      className="h-9 w-14 p-1"
+                    return { ...p, innerLayer: { ...inner, panelColors: next } };
+                  }
+                  const next = { ...(p.panelColors || {}) };
+                  selectedPanels.forEach((i) => { next[i] = hex; });
+                  return { ...p, panelColors: next };
+                });
+              } else if (isInner) {
+                updateProject((p) => ({
+                  ...p,
+                  innerLayer: { ...(p.innerLayer || DEFAULT_INNER), fabricColor: hex },
+                }));
+              } else {
+                updateProject({ fabricColor: hex });
+              }
+            };
+
+            const resetPanels = () => {
+              if (isInner) {
+                updateProject((p) => ({
+                  ...p,
+                  innerLayer: { ...(p.innerLayer || DEFAULT_INNER), panelColors: {} },
+                }));
+              } else {
+                updateProject({ panelColors: {} });
+              }
+            };
+
+            const activeColor = selectedPanels.length
+              ? (layerPanelColors?.[selectedPanels[0]] || layerFabric)
+              : layerFabric;
+
+            return (
+              <section>
+                <div className="flex items-baseline justify-between mb-3">
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    {t("fabric.title")}
+                    {isInner && <span className="ml-1 text-primary normal-case">· {t("surface.inner")}</span>}
+                  </h3>
+                  {hasPanelOverrides && !isPouch && (
+                    <button onClick={resetPanels} className="text-[11px] text-primary hover:underline">
+                      {t("fabric.resetPanels")}
+                    </button>
+                  )}
+                </div>
+                <p className="text-[11px] text-muted-foreground mb-2">
+                  {isPouch
+                    ? t("fabric.applyToAll")
+                    : selectedPanels.length
+                    ? t("fabric.applyToSelected").replace("{n}", String(selectedPanels.length))
+                    : t("fabric.applyToAll")}
+                </p>
+                <div className="grid grid-cols-4 gap-2">
+                  {FABRIC_PRESETS.map((c) => (
+                    <button
+                      key={c.value}
+                      onClick={() => applyColor(c.value)}
+                      title={t(`color.${c.name}`)}
+                      className={cn(
+                        "h-9 rounded-md border-2 transition",
+                        activeColor === c.value ? "border-primary scale-105" : "border-border"
+                      )}
+                      style={{ background: c.value }}
                     />
-                    <Input
-                      value={activeColor}
-                      onChange={(e) => applyColor(e.target.value)}
-                      className="h-9 text-xs"
-                    />
-                  </div>
-                  <div className="mt-2">
-                    <PantoneInput
-                      label={t("fabric.pantone") || "Pantone code"}
-                      onChange={(hex) => applyColor(hex)}
-                    />
-                  </div>
-                </>
-              );
-            })()}
+                  ))}
+                </div>
+                <div className="mt-2 flex items-center gap-2">
+                  <Input
+                    type="color"
+                    value={activeColor}
+                    onChange={(e) => applyColor(e.target.value)}
+                    className="h-9 w-14 p-1"
+                  />
+                  <Input
+                    value={activeColor}
+                    onChange={(e) => applyColor(e.target.value)}
+                    className="h-9 text-xs"
+                  />
+                </div>
+                <div className="mt-2">
+                  <PantoneInput
+                    label={t("fabric.pantone") || "Pantone code"}
+                    onChange={(hex) => applyColor(hex)}
+                  />
+                </div>
+              </section>
+            );
+          })()}
+
+          <Separator className="my-5" />
+
+          <section>
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">{t("cap.title")}</h3>
+            <div className="grid grid-cols-4 gap-2">
+              {FABRIC_PRESETS.map((c) => (
+                <button
+                  key={c.value}
+                  onClick={() => updateProject({ capColor: c.value })}
+                  title={t(`color.${c.name}`)}
+                  className={cn(
+                    "h-9 rounded-md border-2 transition",
+                    (project.capColor || "#111111") === c.value ? "border-primary scale-105" : "border-border"
+                  )}
+                  style={{ background: c.value }}
+                />
+              ))}
+            </div>
+            <div className="mt-2 flex items-center gap-2">
+              <Input
+                type="color"
+                value={project.capColor || "#111111"}
+                onChange={(e) => updateProject({ capColor: e.target.value })}
+                className="h-9 w-14 p-1"
+              />
+              <Input
+                value={project.capColor || "#111111"}
+                onChange={(e) => updateProject({ capColor: e.target.value })}
+                className="h-9 text-xs"
+              />
+            </div>
           </section>
         </aside>
 

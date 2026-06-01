@@ -328,7 +328,7 @@ export async function exportPdfSummary(
     pdf.setTextColor(255, 255, 255);
     pdf.setFont("helvetica", "bold");
     pdf.setFontSize(14);
-    pdf.text("Inner layer — full canopy", 40, 38);
+    pdf.text("Inside view (inner layer) — full canopy", 40, 38);
 
     pdf.setTextColor(20, 24, 30);
     pdf.setFont("helvetica", "normal");

@@ -325,7 +325,11 @@ const DesignEditor = () => {
         project.hasPouch && pouchSvgRef.current
           ? await svgToPngDataUrl(pouchSvgRef.current, 2)
           : undefined;
-      await exportPdfSummary(project, url, pouchUrl);
+      const innerUrl =
+        project.hasDoubleLayer && project.umbrellaCategory === "golf" && innerOnlySvgRef.current
+          ? await svgToPngDataUrl(innerOnlySvgRef.current, 2)
+          : undefined;
+      await exportPdfSummary(project, url, pouchUrl, innerUrl);
     } catch (e) {
       toast({ title: t("editor.pdfFail"), variant: "destructive" });
     }
@@ -333,7 +337,14 @@ const DesignEditor = () => {
   const handleExportAi = async () => {
     if (!svgRef.current) return;
     try {
-      await exportAiFile(project, svgRef.current, project.hasPouch ? pouchSvgRef.current : null);
+      const innerSvg =
+        project.hasDoubleLayer && project.umbrellaCategory === "golf" ? innerOnlySvgRef.current : null;
+      await exportAiFile(
+        project,
+        svgRef.current,
+        project.hasPouch ? pouchSvgRef.current : null,
+        innerSvg
+      );
     } catch (e) {
       toast({ title: t("editor.aiFail"), variant: "destructive" });
     }
@@ -343,6 +354,12 @@ const DesignEditor = () => {
     if (!confirm(t("editor.resetConfirm"))) return;
     if (activeSurface === "pouch") {
       updateProject((p) => ({ ...p, pouchArtwork: [] }));
+    } else if (activeSurface === "inner") {
+      updateProject((p) => ({
+        ...p,
+        innerLayer: { ...(p.innerLayer || DEFAULT_INNER), artworkItems: [] },
+      }));
+      setSelectedPanels([]);
     } else {
       updateProject((p) => ({ ...p, artworkItems: [] }));
       setSelectedPanels([]);

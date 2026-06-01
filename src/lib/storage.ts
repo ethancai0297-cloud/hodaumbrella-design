@@ -9,6 +9,7 @@ const withDefaults = (p: DesignProject): DesignProject => ({
   panelColors: {},
   capColor: "#111111",
   hasDoubleLayer: false,
+  doubleLayerStyle: "vented",
   innerLayer: { fabricColor: "#f5f6f8", panelColors: {}, artworkItems: [] },
   ...p,
 });

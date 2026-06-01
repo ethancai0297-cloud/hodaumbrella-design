@@ -40,7 +40,7 @@ export async function svgToPngDataUrl(svg: SVGSVGElement, scale = 2): Promise<st
     ctx.drawImage(img, 0, 0, w, h);
 
     // Footer band
-    ctx.fillStyle = "#0f1f3d";
+    ctx.fillStyle = "#bae0f0";
     ctx.fillRect(0, h, w, footerH);
 
     // Logo
@@ -52,13 +52,13 @@ export async function svgToPngDataUrl(svg: SVGSVGElement, scale = 2): Promise<st
     } catch {}
 
     // Company name text
-    ctx.fillStyle = "#ffffff";
+    ctx.fillStyle = "#0f1f3d";
     ctx.textBaseline = "middle";
     ctx.font = `600 ${Math.round(18 * scale)}px Inter, sans-serif`;
     ctx.textAlign = "right";
     ctx.fillText(COMPANY_NAME, w - 20 * scale, h + footerH / 2 - 10 * scale);
     ctx.font = `400 ${Math.round(11 * scale)}px Inter, sans-serif`;
-    ctx.fillStyle = "rgba(255,255,255,0.7)";
+    ctx.fillStyle = "rgba(15,31,61,0.7)";
     ctx.fillText(COMPANY_TAGLINE, w - 20 * scale, h + footerH / 2 + 12 * scale);
 
     return canvas.toDataURL("image/png");

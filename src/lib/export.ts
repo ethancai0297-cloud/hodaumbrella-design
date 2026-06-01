@@ -115,7 +115,7 @@ export async function svgPairToPngDataUrl(
     ctx.drawImage(a.img, 0, labelH * scale, cellW * scale, cellH * scale);
     ctx.drawImage(b.img, (cellW + gap) * scale, labelH * scale, cellW * scale, cellH * scale);
 
-    ctx.fillStyle = "#0f1f3d";
+    ctx.fillStyle = "#bae0f0";
     ctx.fillRect(0, h, w, footerH);
     try {
       const logo = await loadImage(logoUrl);
@@ -123,13 +123,13 @@ export async function svgPairToPngDataUrl(
       const logoW = (logo.width / logo.height) * logoH;
       ctx.drawImage(logo, 20 * scale, h + (footerH - logoH) / 2, logoW, logoH);
     } catch {}
-    ctx.fillStyle = "#ffffff";
+    ctx.fillStyle = "#0f1f3d";
     ctx.textBaseline = "middle";
     ctx.textAlign = "right";
     ctx.font = `600 ${Math.round(18 * scale)}px Inter, sans-serif`;
     ctx.fillText(COMPANY_NAME, w - 20 * scale, h + footerH / 2 - 10 * scale);
     ctx.font = `400 ${Math.round(11 * scale)}px Inter, sans-serif`;
-    ctx.fillStyle = "rgba(255,255,255,0.7)";
+    ctx.fillStyle = "rgba(15,31,61,0.7)";
     ctx.fillText(COMPANY_TAGLINE + " — Double-layer outside / inside", w - 20 * scale, h + footerH / 2 + 12 * scale);
 
     return canvas.toDataURL("image/png");

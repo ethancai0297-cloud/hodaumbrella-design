@@ -369,7 +369,7 @@ export const UmbrellaCanopy = forwardRef<SVGSVGElement, Props>(function Umbrella
             innerR: centerR,
             fabric: innerLayer!.fabricColor,
             pColors: innerLayer!.panelColors,
-            art: innerLayer!.artworkItems,
+            art: innerLayer!.artwork,
             selPanels: innerLayer!.selectedPanels || [],
             onClick: activeLayer === "inner" ? onInnerPanelClick : undefined,
             interactive: activeLayer === "inner",
@@ -406,7 +406,7 @@ export const UmbrellaCanopy = forwardRef<SVGSVGElement, Props>(function Umbrella
 
       {/* center cap — hidden when any image/logo artwork is present on the relevant top layer */}
       {(() => {
-        const topArt = hasInner ? innerLayer!.artworkItems : artwork;
+        const topArt = hasInner ? innerLayer!.artwork : artwork;
         const hasImg = topArt.some((a) => (a.type === "image" || a.type === "logo") && a.src);
         if (hasImg) return null;
         return <circle r={centerR + 2} fill={capColor} />;

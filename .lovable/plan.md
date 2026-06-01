@@ -1,35 +1,35 @@
-## Two adjustments for double-layer umbrellas
+## Fix inner export view + recolor export bands
 
-### 1. Top cap radius → 50%
-`src/components/UmbrellaCanopy.tsx` line 102
-- `const innerCapR = radius * 0.72;` → `const innerCapR = radius * 0.50;`
+### 1. Inside view should match the umbrella style
 
-### 2. PNG export — include both outside and inside views
+Today the hidden "inner export" canopy in `src/pages/DesignEditor.tsx` (≈ lines 741-757) always renders the inner layer alone as a full canopy. That is correct for the **full double** style, but wrong for **vented**, where the client should see both layers (outer canopy as the background + small inner cap on top).
 
-Currently `Download PNG` only saves the outer (top) view. For double-layer golf umbrellas the client can't see the inner layer in the PNG.
+Change in `DesignEditor.tsx`:
+- Pass full double-layer props to the hidden inner export `UmbrellaCanopy`, mirroring what the on-screen preview already uses:
+  - `fabricColor={project.fabricColor}` (outer fabric)
+  - `panelColors={project.panelColors}` (outer panels)
+  - `artwork={project.artworkItems}` (outer artwork)
+  - `innerLayer={{ fabricColor, panelColors, artwork }}` from `project.innerLayer`
+  - `doubleLayerStyle={project.doubleLayerStyle || "vented"}`
+- For `doubleLayerStyle === "double"` (full-size two layers), keep current behavior: render the inner layer alone as a full canopy (use `forceSingleLayer` + inner fabric/artwork as the main props).
+- Result: vented exports show both layers stacked; full-double exports show the inner full canopy.
 
-**`src/lib/export.ts`** — add a new helper:
-```ts
-export async function svgPairToPngDataUrl(
-  outer: SVGSVGElement,
-  inner: SVGSVGElement,
-  scale = 2
-): Promise<string>
-```
-Renders both SVGs side-by-side on one canvas with labels "Outside view" and "Inside view", plus the same branded footer used today.
+No change to `UmbrellaCanopy.tsx` itself — it already renders both layers when given the props.
 
-**`src/pages/DesignEditor.tsx`** `handleExportPng`:
-- If `hasDoubleLayer && category === "golf"` and `innerOnlySvgRef.current` exists, call `svgPairToPngDataUrl(outer, inner)` instead of the single-view path.
-- Filename: `{project}_outside_inside.png`.
+### 2. Recolor exported file bands to light blue
 
-### 3. PDF / AI exports — label pages clearly
+In `src/lib/export.ts`, replace the dark navy band/text color used in PDF header/footer and PNG footer:
+- All `setFillColor(15, 31, 61)` → light blue `setFillColor(186, 220, 240)` (a soft sky-blue).
+- The PNG canvas `ctx.fillStyle = "#0f1f3d"` for the footer band and label text → `"#bae0f0"` for the band; keep label/company text readable by switching `ctx.fillStyle = "#ffffff"` → `"#0f1f3d"` for text drawn on the new light band so it stays legible.
+- PDF `setTextColor(255, 255, 255)` for header text on the light band → `setTextColor(15, 31, 61)` so text remains readable.
 
-The PDF already adds an inner-layer page, but it's titled only "Inner layer — full canopy". Update titles so the client immediately understands they are looking at the two sides of one umbrella:
-
-`src/lib/export.ts`
-- PDF summary inner page title: `"Inside view (inner layer) — full canopy"`. Also rename the rendering above it from untitled to `"Outside view (outer canopy)"` printed just above the main image on page 1, only when `hasDoubleLayer`.
-- AI export inner page footer label: `"{projectName} — inside view (inner layer)"`; outer page footer adds `" — outside view"` suffix when `hasDoubleLayer`.
+Applies to:
+- `svgToPngDataUrl` footer (lines ~43, 55, 61)
+- `svgPairToPngDataUrl` footer
+- `exportPdfSummary` header band + inner-layer page header band
+- Pouch page header band
 
 ### Out of scope
-- No change to vent hole size, panel splitting, slider for cap size, or non-golf double-layer support.
-- No data model / wizard / i18n changes beyond the literal page titles inside `export.ts`.
+- No data model, wizard, or i18n changes.
+- No change to the on-screen preview colors — only exported PDF/PNG bands.
+- No change to top cap radius.

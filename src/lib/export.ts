@@ -40,7 +40,7 @@ export async function svgToPngDataUrl(svg: SVGSVGElement, scale = 2): Promise<st
     ctx.drawImage(img, 0, 0, w, h);
 
     // Footer band
-    ctx.fillStyle = "#0f1f3d";
+    ctx.fillStyle = "#bae0f0";
     ctx.fillRect(0, h, w, footerH);
 
     // Logo
@@ -52,13 +52,13 @@ export async function svgToPngDataUrl(svg: SVGSVGElement, scale = 2): Promise<st
     } catch {}
 
     // Company name text
-    ctx.fillStyle = "#ffffff";
+    ctx.fillStyle = "#0f1f3d";
     ctx.textBaseline = "middle";
     ctx.font = `600 ${Math.round(18 * scale)}px Inter, sans-serif`;
     ctx.textAlign = "right";
     ctx.fillText(COMPANY_NAME, w - 20 * scale, h + footerH / 2 - 10 * scale);
     ctx.font = `400 ${Math.round(11 * scale)}px Inter, sans-serif`;
-    ctx.fillStyle = "rgba(255,255,255,0.7)";
+    ctx.fillStyle = "rgba(15,31,61,0.7)";
     ctx.fillText(COMPANY_TAGLINE, w - 20 * scale, h + footerH / 2 + 12 * scale);
 
     return canvas.toDataURL("image/png");
@@ -115,7 +115,7 @@ export async function svgPairToPngDataUrl(
     ctx.drawImage(a.img, 0, labelH * scale, cellW * scale, cellH * scale);
     ctx.drawImage(b.img, (cellW + gap) * scale, labelH * scale, cellW * scale, cellH * scale);
 
-    ctx.fillStyle = "#0f1f3d";
+    ctx.fillStyle = "#bae0f0";
     ctx.fillRect(0, h, w, footerH);
     try {
       const logo = await loadImage(logoUrl);
@@ -123,13 +123,13 @@ export async function svgPairToPngDataUrl(
       const logoW = (logo.width / logo.height) * logoH;
       ctx.drawImage(logo, 20 * scale, h + (footerH - logoH) / 2, logoW, logoH);
     } catch {}
-    ctx.fillStyle = "#ffffff";
+    ctx.fillStyle = "#0f1f3d";
     ctx.textBaseline = "middle";
     ctx.textAlign = "right";
     ctx.font = `600 ${Math.round(18 * scale)}px Inter, sans-serif`;
     ctx.fillText(COMPANY_NAME, w - 20 * scale, h + footerH / 2 - 10 * scale);
     ctx.font = `400 ${Math.round(11 * scale)}px Inter, sans-serif`;
-    ctx.fillStyle = "rgba(255,255,255,0.7)";
+    ctx.fillStyle = "rgba(15,31,61,0.7)";
     ctx.fillText(COMPANY_TAGLINE + " — Double-layer outside / inside", w - 20 * scale, h + footerH / 2 + 12 * scale);
 
     return canvas.toDataURL("image/png");
@@ -171,7 +171,7 @@ export async function exportPdfSummary(
   const pageW = pdf.internal.pageSize.getWidth();
 
   // Header band
-  pdf.setFillColor(15, 31, 61);
+  pdf.setFillColor(186, 220, 240);
   pdf.rect(0, 0, pageW, 90, "F");
 
   const logo = await imageToDataUrl(logoUrl);
@@ -183,7 +183,7 @@ export async function exportPdfSummary(
     } catch {}
   }
 
-  pdf.setTextColor(255, 255, 255);
+  pdf.setTextColor(15, 31, 61);
   pdf.setFont("helvetica", "bold");
   pdf.setFontSize(18);
   pdf.text(COMPANY_NAME, pageW - 30, 45, { align: "right" });
@@ -293,9 +293,9 @@ export async function exportPdfSummary(
   if (pouchPngDataUrl && project.hasPouch) {
     pdf.addPage();
     const ps = POUCH_SIZE_CM[project.umbrellaCategory];
-    pdf.setFillColor(15, 31, 61);
+    pdf.setFillColor(186, 220, 240);
     pdf.rect(0, 0, pageW, 60, "F");
-    pdf.setTextColor(255, 255, 255);
+    pdf.setTextColor(15, 31, 61);
     pdf.setFont("helvetica", "bold");
     pdf.setFontSize(14);
     pdf.text("Pouch artwork — spread layout", 40, 38);
@@ -323,9 +323,9 @@ export async function exportPdfSummary(
   // Optional inner-layer page (double-layer golf)
   if (innerLayerPngDataUrl && project.hasDoubleLayer && project.umbrellaCategory === "golf") {
     pdf.addPage();
-    pdf.setFillColor(15, 31, 61);
+    pdf.setFillColor(186, 220, 240);
     pdf.rect(0, 0, pageW, 60, "F");
-    pdf.setTextColor(255, 255, 255);
+    pdf.setTextColor(15, 31, 61);
     pdf.setFont("helvetica", "bold");
     pdf.setFontSize(14);
     pdf.text("Inside view (inner layer) — full canopy", 40, 38);

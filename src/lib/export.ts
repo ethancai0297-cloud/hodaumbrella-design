@@ -183,7 +183,7 @@ export async function exportPdfSummary(
     } catch {}
   }
 
-  pdf.setTextColor(255, 255, 255);
+  pdf.setTextColor(15, 31, 61);
   pdf.setFont("helvetica", "bold");
   pdf.setFontSize(18);
   pdf.text(COMPANY_NAME, pageW - 30, 45, { align: "right" });
@@ -295,7 +295,7 @@ export async function exportPdfSummary(
     const ps = POUCH_SIZE_CM[project.umbrellaCategory];
     pdf.setFillColor(186, 220, 240);
     pdf.rect(0, 0, pageW, 60, "F");
-    pdf.setTextColor(255, 255, 255);
+    pdf.setTextColor(15, 31, 61);
     pdf.setFont("helvetica", "bold");
     pdf.setFontSize(14);
     pdf.text("Pouch artwork — spread layout", 40, 38);
@@ -325,7 +325,7 @@ export async function exportPdfSummary(
     pdf.addPage();
     pdf.setFillColor(186, 220, 240);
     pdf.rect(0, 0, pageW, 60, "F");
-    pdf.setTextColor(255, 255, 255);
+    pdf.setTextColor(15, 31, 61);
     pdf.setFont("helvetica", "bold");
     pdf.setFontSize(14);
     pdf.text("Inside view (inner layer) — full canopy", 40, 38);

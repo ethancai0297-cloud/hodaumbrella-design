@@ -248,6 +248,13 @@ export async function exportPdfSummary(
 
   // Design rendering below specifications
   y += 14;
+  if (project.hasDoubleLayer && project.umbrellaCategory === "golf") {
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(11);
+    pdf.setTextColor(20, 24, 30);
+    pdf.text("Outside view (outer canopy)", 40, y);
+    y += 14;
+  }
   const imgW = pageW - 80;
   const imgProps = pdf.getImageProperties(pngDataUrl);
   const pageH = pdf.internal.pageSize.getHeight();

@@ -394,7 +394,10 @@ export async function exportAiFile(
   pdf.setFont("helvetica", "bold");
   pdf.setFontSize(11);
   pdf.setTextColor(20, 24, 30);
-  pdf.text(project.projectName, margin, footerY);
+  const outerTitle = project.hasDoubleLayer && project.umbrellaCategory === "golf"
+    ? `${project.projectName} — outside view (outer canopy)`
+    : project.projectName;
+  pdf.text(outerTitle, margin, footerY);
   pdf.setFont("helvetica", "normal");
   pdf.setFontSize(9);
   pdf.setTextColor(80, 80, 90);

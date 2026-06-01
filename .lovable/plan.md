@@ -1,34 +1,47 @@
 ## Goal
-Allow each umbrella panel to have its own fabric color, and add 7 as a rib-count option alongside 6/8/10.
+1. Make the center cap color user-selectable (FABRIC_PRESETS swatches + custom hex input).
+2. For 30" golf umbrellas, add a "double layer" option: an outer vented canopy over an inner canopy, each with independently customizable per-panel colors and artwork.
 
 ## Changes
 
-### 1. Rib counts (add 7)
-- `src/types/design.ts`: change `RibCount` to `6 | 7 | 8 | 10`.
-- `src/components/editor/WizardPanel.tsx`: add `7` to the `ribs` array so the picker shows 6 / 7 / 8 / 10.
-- `src/components/UmbrellaCanopy.tsx` already builds panels dynamically from `ribCount`, so 7-panel geometry will render automatically (heptagon outline, 7 wedges).
+### 1. Cap color
+- `src/types/design.ts`: add `capColor?: string` to `DesignProject` (default `#111111`).
+- `src/lib/storage.ts`: include `capColor: "#111111"` in `withDefaults`.
+- `src/components/UmbrellaCanopy.tsx`: accept `capColor` prop; use it instead of hardcoded `#111111` for the center cap circle. Keep the existing "hide cap when full-canopy image present" logic.
+- `src/pages/DesignEditor.tsx`: new "Cap color" section in the right panel showing the same `FABRIC_PRESETS` swatches plus a small hex input (`<input type="color">` + text field). Pass `capColor` to `UmbrellaCanopy`.
+- `src/lib/export.ts`: pass `capColor` through to canopy exports.
+- `src/i18n/i18n.tsx`: add `cap.title`, `cap.custom` strings.
 
-### 2. Per-panel fabric colors
-- `src/types/design.ts`: add an optional `panelColors?: Record<number, string>` to `DesignProject`. Keep the existing single `fabricColor` as the default/base color (used for any panel without an override and for new panels when rib count changes).
-- `src/lib/storage.ts`: include `panelColors: {}` in `withDefaults` so old saved projects load cleanly.
+### 2. Double-layer golf umbrella
+- `src/types/design.ts`:
+  - Add `hasDoubleLayer?: boolean`.
+  - Add `innerLayer?: { fabricColor: string; panelColors?: Record<number, string>; artworkItems: ArtworkItem[] }`.
+  - Only meaningful when `umbrellaCategory === "golf"`.
+- `src/lib/storage.ts`: default `hasDoubleLayer: false`, `innerLayer: { fabricColor: "#f5f6f8", panelColors: {}, artworkItems: [] }`.
+- `src/components/editor/WizardPanel.tsx`: when `category === "golf"`, show a new toggle "Double-layer canopy" (same toggle style as the pouch toggle). Hidden for folding/straight. Wire `hasDoubleLayer` + `onHasDoubleLayer`.
 - `src/components/UmbrellaCanopy.tsx`:
-  - Accept a new `panelColors` prop.
-  - When rendering each `<path>` panel, use `panelColors[i] ?? fabricColor` for fill.
-  - The base hexagon/heptagon/etc. polygon and the outline keep using `fabricColor` (so seams between differently colored panels stay clean — the per-panel paths paint on top).
-  - Recompute `isLight` / `ribStroke` per panel so rib lines stay visible on both light and dark panels. (Outline stroke stays based on `fabricColor`.)
+  - Add optional props `innerLayer?: { fabricColor, panelColors, artwork }`, `showAsOuterVented?: boolean`, and `ventRingRatio` (default `0.78`).
+  - When `showAsOuterVented` is true: render outer canopy panels with an inner cut-out ring (use a clip-path that is the outer polygon minus a smaller polygon at `ventRingRatio * radius`) so the inner layer shows through as a vent. The vent gap reveals the inner layer geometry.
+  - Inner layer is rendered as a second, smaller canopy (radius * `ventRingRatio` minus a small overlap so it peeks through) drawn first, using the same `panelPath`/rib logic with its own `fabricColor`, `panelColors`, and `artwork`. Reuse the same `panelCentroid` math for inner artwork placement.
+  - Selection still works on outer panels by default. Inner-layer interaction is driven by a new `activeLayer` prop (`"outer" | "inner"`); when `"inner"`, click handlers target inner panels and the outer is rendered with `pointerEvents: none` overlay.
 - `src/pages/DesignEditor.tsx`:
-  - Add `panelColors` state synced with the project.
-  - When the user has one or more panels selected (existing selection mechanism) and picks a swatch from the color section, apply that color to each selected panel in `panelColors` instead of overwriting the global `fabricColor`. When no panels are selected, the swatch updates `fabricColor` (current behavior) and also acts as the default for un-overridden panels.
-  - Add a small "Reset panel colors" button that clears `panelColors` back to the base color.
-  - Pass `panelColors` through to `UmbrellaCanopy` (both the editor canvas and any preview instance, e.g. on the Projects card and Landing preview if they render the canopy).
-- `src/lib/export.ts`: pass `panelColors` through to the canopy used in PNG/PDF/AI exports so the multicolor canopy exports correctly. The AI export already renders the same SVG, so once the component reads `panelColors` the vector export inherits it.
-- `src/i18n/i18n.tsx`: add strings for "Panel color", "Applies to selected panels", "Reset panel colors", and update the rib-count helper text if needed.
+  - Extend `activeSurface` state to include `"inner-canopy"` (existing values are `"canopy"` and `"pouch"`); only available when `hasDoubleLayer && category === "golf"`.
+  - Add a tab in the top-center surface switcher: Canopy | Inner Layer | Pouch (Pouch and Inner Layer only show when their respective toggles are on; Inner Layer only when category is golf).
+  - Route panel-color swatch picks, fabric color picks, and artwork CRUD (add/update/delete/select) to the correct layer based on `activeSurface`. Reuse the existing artwork helpers by parameterizing them with a `(get, set)` accessor for the active layer's `{ fabricColor, panelColors, artworkItems, selectedPanels }`.
+  - When user switches `category` away from golf, force `hasDoubleLayer = false` and `activeSurface = "canopy"`.
+  - Keep both SVG refs mounted (display toggle) for export, same pattern as pouch.
+- `src/lib/export.ts`:
+  - When `hasDoubleLayer && category === "golf"`, add a second canopy page to the PDF/AI export: "Inner layer" rendered as a normal full canopy (no vent) showing inner panel colors and artwork, plus pass `capColor` through.
+  - Outer-layer export uses `showAsOuterVented` and includes the inner layer beneath, so the printed proof matches the on-screen composite.
+- `src/i18n/i18n.tsx`: add `wiz.doubleLayer`, `wiz.doubleLayer.desc`, `surface.outer`, `surface.inner`, `surface.pouch`.
 
 ### 3. UX notes
-- Selection model is unchanged: click a panel on the canopy to select it (multi-select already supported), then pick a color swatch — only the selected panels change. This matches how artwork is already applied to selected panels.
-- The existing pouch feature is unaffected (pouch color is not per-panel).
+- Cap color picker lives directly under the existing "Fabric color" section. The hex input mirrors selected swatch and vice versa.
+- Inner-layer editing mirrors outer-layer: same per-panel selection model, same swatches, same artwork tools — only the data target changes via `activeSurface`.
+- Vent ring thickness is fixed (≈22% of radius) for a clean visual; no UI to tune it.
 
 ## Out of scope
-- Custom hex picker per panel (still uses the existing `FABRIC_PRESETS` swatches).
-- Different colors on the pouch.
-- Gradient or pattern fills per panel.
+- Double layer for folding/straight categories.
+- Per-rib structural detail (vent shape stays a simple inner polygon cut-out).
+- Different cap shapes/materials, only color.
+- Independent pouch for inner layer.

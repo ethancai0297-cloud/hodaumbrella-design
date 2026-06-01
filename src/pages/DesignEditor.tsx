@@ -117,20 +117,26 @@ const DesignEditor = () => {
   useEffect(() => {
     setSelectedPanels((s) => s.filter((p) => p < project.ribCount));
     setProject((p) => {
-      if (!p.panelColors) return p;
-      const keys = Object.keys(p.panelColors);
-      const stale = keys.filter((k) => Number(k) >= p.ribCount);
-      if (!stale.length) return p;
-      const next = { ...p.panelColors };
-      stale.forEach((k) => delete next[Number(k)]);
-      return { ...p, panelColors: next };
+      const prune = (m?: Record<number, string>) => {
+        if (!m) return m;
+        const stale = Object.keys(m).filter((k) => Number(k) >= p.ribCount);
+        if (!stale.length) return m;
+        const next = { ...m };
+        stale.forEach((k) => delete next[Number(k)]);
+        return next;
+      };
+      const nextPanelColors = prune(p.panelColors);
+      const nextInner = p.innerLayer
+        ? { ...p.innerLayer, panelColors: prune(p.innerLayer.panelColors) }
+        : p.innerLayer;
+      if (nextPanelColors === p.panelColors && nextInner === p.innerLayer) return p;
+      return { ...p, panelColors: nextPanelColors, innerLayer: nextInner };
     });
   }, [project.ribCount]);
 
   const togglePanel = (i: number) => {
     setSelectedPanels((s) => {
       if (s.includes(i)) return s.filter((p) => p !== i);
-      // silkscreen max 8
       const next = [...s, i].sort((a, b) => a - b);
       if (project.printingMethod === "silkscreen" && next.length > 8) {
         toast({ title: "Silkscreen max 8 panels" });
@@ -145,15 +151,25 @@ const DesignEditor = () => {
   };
   const clearSelection = () => setSelectedPanels([]);
 
-  const itemsKey: "artworkItems" | "pouchArtwork" =
-    activeSurface === "pouch" ? "pouchArtwork" : "artworkItems";
+  const DEFAULT_INNER = { fabricColor: "#f5f6f8", panelColors: {}, artworkItems: [] };
+
   const currentItems: ArtworkItem[] =
-    (activeSurface === "pouch" ? project.pouchArtwork : project.artworkItems) || [];
+    activeSurface === "pouch"
+      ? project.pouchArtwork || []
+      : activeSurface === "inner"
+      ? project.innerLayer?.artworkItems || []
+      : project.artworkItems;
 
   const setItems = (updater: (items: ArtworkItem[]) => ArtworkItem[]) => {
     updateProject((p) => {
-      const cur = (activeSurface === "pouch" ? p.pouchArtwork : p.artworkItems) || [];
-      return { ...p, [itemsKey]: updater(cur) } as DesignProject;
+      if (activeSurface === "pouch") {
+        return { ...p, pouchArtwork: updater(p.pouchArtwork || []) };
+      }
+      if (activeSurface === "inner") {
+        const inner = p.innerLayer || DEFAULT_INNER;
+        return { ...p, innerLayer: { ...inner, artworkItems: updater(inner.artworkItems) } };
+      }
+      return { ...p, artworkItems: updater(p.artworkItems) };
     });
   };
 

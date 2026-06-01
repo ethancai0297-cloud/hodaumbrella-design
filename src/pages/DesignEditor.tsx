@@ -738,21 +738,43 @@ const DesignEditor = () => {
           </div>
 
 
-          {/* Hidden inner-only canopy for export (rendered as full standalone canopy) */}
+          {/* Hidden inner-export canopy. Vented = render full composition (both layers).
+              Full double = render inner layer alone as a full canopy. */}
           {project.hasDoubleLayer && project.umbrellaCategory === "golf" && (
             <div style={{ position: "absolute", left: -99999, top: -99999, pointerEvents: "none" }} aria-hidden>
-              <UmbrellaCanopy
-                ref={innerOnlySvgRef}
-                category={project.umbrellaCategory}
-                ribCount={project.ribCount}
-                fabricColor={project.innerLayer?.fabricColor || "#f5f6f8"}
-                panelColors={project.innerLayer?.panelColors}
-                capColor={project.capColor}
-                artwork={project.innerLayer?.artworkItems || []}
-                selectedPanels={[]}
-                highlightSelection={false}
-                size={620}
-              />
+              {(project.doubleLayerStyle || "vented") === "vented" ? (
+                <UmbrellaCanopy
+                  ref={innerOnlySvgRef}
+                  category={project.umbrellaCategory}
+                  ribCount={project.ribCount}
+                  fabricColor={project.fabricColor}
+                  panelColors={project.panelColors}
+                  capColor={project.capColor}
+                  artwork={project.artworkItems}
+                  innerLayer={{
+                    fabricColor: project.innerLayer?.fabricColor || "#f5f6f8",
+                    panelColors: project.innerLayer?.panelColors,
+                    artwork: project.innerLayer?.artworkItems || [],
+                  }}
+                  doubleLayerStyle="vented"
+                  selectedPanels={[]}
+                  highlightSelection={false}
+                  size={620}
+                />
+              ) : (
+                <UmbrellaCanopy
+                  ref={innerOnlySvgRef}
+                  category={project.umbrellaCategory}
+                  ribCount={project.ribCount}
+                  fabricColor={project.innerLayer?.fabricColor || "#f5f6f8"}
+                  panelColors={project.innerLayer?.panelColors}
+                  capColor={project.capColor}
+                  artwork={project.innerLayer?.artworkItems || []}
+                  selectedPanels={[]}
+                  highlightSelection={false}
+                  size={620}
+                />
+              )}
             </div>
           )}
 

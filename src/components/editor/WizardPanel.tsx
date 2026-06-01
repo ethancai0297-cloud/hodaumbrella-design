@@ -7,21 +7,67 @@ interface Props {
   ribCount: RibCount;
   method: PrintingMethod;
   hasPouch: boolean;
+  hasDoubleLayer: boolean;
   onCategory: (v: UmbrellaCategory) => void;
   onRibs: (v: RibCount) => void;
   onMethod: (v: PrintingMethod) => void;
   onHasPouch: (v: boolean) => void;
+  onHasDoubleLayer: (v: boolean) => void;
 }
 
 const ribs: RibCount[] = [6, 7, 8, 10];
 
-export function WizardPanel({ category, ribCount, method, hasPouch, onCategory, onRibs, onMethod, onHasPouch }: Props) {
+export function WizardPanel({
+  category,
+  ribCount,
+  method,
+  hasPouch,
+  hasDoubleLayer,
+  onCategory,
+  onRibs,
+  onMethod,
+  onHasPouch,
+  onHasDoubleLayer,
+}: Props) {
   const { t } = useI18n();
   const cats: { id: UmbrellaCategory; label: string; desc: string }[] = [
     { id: "folding", label: t("wiz.folding"), desc: t("wiz.folding.desc") },
     { id: "straight", label: t("wiz.straight"), desc: t("wiz.straight.desc") },
     { id: "golf", label: t("wiz.golf"), desc: t("wiz.golf.desc") },
   ];
+
+  const Toggle = ({
+    on,
+    onClick,
+    title,
+    desc,
+  }: {
+    on: boolean;
+    onClick: () => void;
+    title: string;
+    desc: string;
+  }) => (
+    <button
+      onClick={onClick}
+      className={cn(
+        "w-full rounded-lg border px-3 py-3 text-left transition flex items-center gap-3",
+        on ? "border-primary bg-accent" : "border-border bg-card hover:border-primary/40"
+      )}
+    >
+      <div className={cn("h-5 w-9 rounded-full relative transition", on ? "bg-primary" : "bg-muted")}>
+        <div
+          className={cn(
+            "absolute top-0.5 h-4 w-4 rounded-full bg-card shadow-soft transition",
+            on ? "left-[18px]" : "left-0.5"
+          )}
+        />
+      </div>
+      <div className="flex-1">
+        <div className="font-display font-semibold text-sm">{title}</div>
+        <div className="text-[11px] text-muted-foreground">{desc}</div>
+      </div>
+    </button>
+  );
 
   return (
     <div className="space-y-6">
@@ -92,33 +138,26 @@ export function WizardPanel({ category, ribCount, method, hasPouch, onCategory, 
         </div>
       </section>
 
+      {category === "golf" && (
+        <section>
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">{t("wiz.doubleLayer")}</h3>
+          <Toggle
+            on={hasDoubleLayer}
+            onClick={() => onHasDoubleLayer(!hasDoubleLayer)}
+            title={t("wiz.doubleLayer.add")}
+            desc={t("wiz.doubleLayer.desc")}
+          />
+        </section>
+      )}
+
       <section>
         <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">{t("wiz.pouch")}</h3>
-        <button
+        <Toggle
+          on={hasPouch}
           onClick={() => onHasPouch(!hasPouch)}
-          className={cn(
-            "w-full rounded-lg border px-3 py-3 text-left transition flex items-center gap-3",
-            hasPouch ? "border-primary bg-accent" : "border-border bg-card hover:border-primary/40"
-          )}
-        >
-          <div
-            className={cn(
-              "h-5 w-9 rounded-full relative transition",
-              hasPouch ? "bg-primary" : "bg-muted"
-            )}
-          >
-            <div
-              className={cn(
-                "absolute top-0.5 h-4 w-4 rounded-full bg-card shadow-soft transition",
-                hasPouch ? "left-[18px]" : "left-0.5"
-              )}
-            />
-          </div>
-          <div className="flex-1">
-            <div className="font-display font-semibold text-sm">{t("wiz.pouch.add")}</div>
-            <div className="text-[11px] text-muted-foreground">{t("wiz.pouch.desc")}</div>
-          </div>
-        </button>
+          title={t("wiz.pouch.add")}
+          desc={t("wiz.pouch.desc")}
+        />
       </section>
     </div>
   );

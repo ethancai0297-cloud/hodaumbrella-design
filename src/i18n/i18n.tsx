@@ -72,13 +72,21 @@ const dict: Dict = {
   "wiz.silkscreen.desc": { en: "Logos / text on selected panels (1, 2, 4 or 8).", zh: "在所选面板上印 logo / 文字（1、2、4 或 8 面）。" },
   "wiz.digital": { en: "Digital print", zh: "数码印花" },
   "wiz.digital.desc": { en: "Full image — single panel or full canopy cover.", zh: "整图 — 单面板或整伞覆盖。" },
-  "wiz.pouch": { en: "4. Pouch (optional)", zh: "4. 伞套（可选）" },
+  "wiz.pouch": { en: "5. Pouch (optional)", zh: "5. 伞套（可选）" },
   "wiz.pouch.add": { en: "Add pouch design", zh: "添加伞套设计" },
   "wiz.pouch.desc": { en: "Design the fabric case for folded umbrellas.", zh: "为折叠伞设计配套伞套。" },
-  "surface.canopy": { en: "Canopy", zh: "伞面" },
+  "wiz.doubleLayer": { en: "4. Double-layer canopy (golf only)", zh: "4. 双层伞面（仅高尔夫）" },
+  "wiz.doubleLayer.add": { en: "Add inner layer", zh: "添加内层" },
+  "wiz.doubleLayer.desc": { en: "Vented outer over a fully customizable inner canopy.", zh: "外层带透气环，内层可独立自定义。" },
+  "surface.canopy": { en: "Outer layer", zh: "外层" },
+  "surface.inner": { en: "Inner layer", zh: "内层" },
   "surface.pouch": { en: "Pouch", zh: "伞套" },
   "pouch.spread": { en: "Spread", zh: "展开" },
   "pouch.front": { en: "Front", zh: "正面" },
+
+  // Cap
+  "cap.title": { en: "Cap color (top center)", zh: "顶帽颜色（中心）" },
+  "cap.custom": { en: "Custom hex", zh: "自定义十六进制" },
 
   // Fabric
   "fabric.title": { en: "Fabric color", zh: "伞布颜色" },

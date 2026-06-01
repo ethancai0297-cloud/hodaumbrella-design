@@ -89,7 +89,12 @@ async function imageToDataUrl(src: string): Promise<{ data: string; w: number; h
   }
 }
 
-export async function exportPdfSummary(project: DesignProject, pngDataUrl: string, pouchPngDataUrl?: string) {
+export async function exportPdfSummary(
+  project: DesignProject,
+  pngDataUrl: string,
+  pouchPngDataUrl?: string,
+  innerLayerPngDataUrl?: string
+) {
   const pdf = new jsPDF({ unit: "pt", format: "a4" });
   const pageW = pdf.internal.pageSize.getWidth();
 
@@ -243,7 +248,12 @@ export async function exportPdfSummary(project: DesignProject, pngDataUrl: strin
 // PDF-compatible files saved with the .ai extension natively, so we embed
 // the live SVG as vectors using svg2pdf.js. This preserves crisp paths,
 // text and logos for the fabric supplier.
-export async function exportAiFile(project: DesignProject, svg: SVGSVGElement, pouchSvg?: SVGSVGElement | null) {
+export async function exportAiFile(
+  project: DesignProject,
+  svg: SVGSVGElement,
+  pouchSvg?: SVGSVGElement | null,
+  innerSvg?: SVGSVGElement | null
+) {
   // Clone so we don't disturb the on-screen SVG
   const clone = svg.cloneNode(true) as SVGSVGElement;
   const vb = svg.viewBox.baseVal;

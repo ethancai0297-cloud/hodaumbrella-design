@@ -36,7 +36,7 @@ import {
 } from "@/types/design";
 import { getProject, saveProject } from "@/lib/storage";
 import { cn } from "@/lib/utils";
-import { downloadDataUrl, exportAiFile, exportPdfSummary, svgToPngDataUrl } from "@/lib/export";
+import { downloadDataUrl, exportAiFile, exportPdfSummary, svgPairToPngDataUrl, svgToPngDataUrl } from "@/lib/export";
 import { PantoneInput } from "@/components/editor/PantoneInput";
 
 const SILKSCREEN_LIMITS = [1, 2, 4, 8];

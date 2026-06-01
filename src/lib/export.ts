@@ -171,7 +171,7 @@ export async function exportPdfSummary(
   const pageW = pdf.internal.pageSize.getWidth();
 
   // Header band
-  pdf.setFillColor(15, 31, 61);
+  pdf.setFillColor(186, 220, 240);
   pdf.rect(0, 0, pageW, 90, "F");
 
   const logo = await imageToDataUrl(logoUrl);
@@ -293,7 +293,7 @@ export async function exportPdfSummary(
   if (pouchPngDataUrl && project.hasPouch) {
     pdf.addPage();
     const ps = POUCH_SIZE_CM[project.umbrellaCategory];
-    pdf.setFillColor(15, 31, 61);
+    pdf.setFillColor(186, 220, 240);
     pdf.rect(0, 0, pageW, 60, "F");
     pdf.setTextColor(255, 255, 255);
     pdf.setFont("helvetica", "bold");
@@ -323,7 +323,7 @@ export async function exportPdfSummary(
   // Optional inner-layer page (double-layer golf)
   if (innerLayerPngDataUrl && project.hasDoubleLayer && project.umbrellaCategory === "golf") {
     pdf.addPage();
-    pdf.setFillColor(15, 31, 61);
+    pdf.setFillColor(186, 220, 240);
     pdf.rect(0, 0, pageW, 60, "F");
     pdf.setTextColor(255, 255, 255);
     pdf.setFont("helvetica", "bold");

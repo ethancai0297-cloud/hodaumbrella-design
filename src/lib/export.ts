@@ -445,7 +445,7 @@ export async function exportAiFile(
     pdf.setFont("helvetica", "bold");
     pdf.setFontSize(11);
     pdf.setTextColor(20, 24, 30);
-    pdf.text(`${project.projectName} — inner layer`, margin, fY);
+    pdf.text(`${project.projectName} — inside view (inner layer)`, margin, fY);
     pdf.setFont("helvetica", "normal");
     pdf.setFontSize(9);
     pdf.setTextColor(80, 80, 90);

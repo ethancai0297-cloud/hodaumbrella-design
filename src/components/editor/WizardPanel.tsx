@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { UmbrellaCategory, RibCount, PrintingMethod } from "@/types/design";
+import { UmbrellaCategory, RibCount, PrintingMethod, DoubleLayerStyle } from "@/types/design";
 import { useI18n } from "@/i18n/i18n";
 
 interface Props {
@@ -8,11 +8,13 @@ interface Props {
   method: PrintingMethod;
   hasPouch: boolean;
   hasDoubleLayer: boolean;
+  doubleLayerStyle: DoubleLayerStyle;
   onCategory: (v: UmbrellaCategory) => void;
   onRibs: (v: RibCount) => void;
   onMethod: (v: PrintingMethod) => void;
   onHasPouch: (v: boolean) => void;
   onHasDoubleLayer: (v: boolean) => void;
+  onDoubleLayerStyle: (v: DoubleLayerStyle) => void;
 }
 
 const ribs: RibCount[] = [6, 7, 8, 10];
@@ -23,11 +25,13 @@ export function WizardPanel({
   method,
   hasPouch,
   hasDoubleLayer,
+  doubleLayerStyle,
   onCategory,
   onRibs,
   onMethod,
   onHasPouch,
   onHasDoubleLayer,
+  onDoubleLayerStyle,
 }: Props) {
   const { t } = useI18n();
   const cats: { id: UmbrellaCategory; label: string; desc: string }[] = [
@@ -147,6 +151,25 @@ export function WizardPanel({
             title={t("wiz.doubleLayer.add")}
             desc={t("wiz.doubleLayer.desc")}
           />
+          {hasDoubleLayer && (
+            <div className="mt-3 grid gap-2">
+              {(["vented", "double"] as DoubleLayerStyle[]).map((s) => (
+                <button
+                  key={s}
+                  onClick={() => onDoubleLayerStyle(s)}
+                  className={cn(
+                    "rounded-lg border px-3 py-2 text-left transition",
+                    doubleLayerStyle === s
+                      ? "border-primary bg-accent"
+                      : "border-border bg-card hover:border-primary/40"
+                  )}
+                >
+                  <div className="font-display font-semibold text-xs">{t(`wiz.layerStyle.${s}`)}</div>
+                  <div className="text-[10px] text-muted-foreground mt-0.5">{t(`wiz.layerStyle.${s}.desc`)}</div>
+                </button>
+              ))}
+            </div>
+          )}
         </section>
       )}
 

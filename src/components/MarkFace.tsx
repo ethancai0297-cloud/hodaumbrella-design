@@ -25,6 +25,11 @@ export const MarkFace = ({ variant: v, side, widthPx, heightPx }: Props) => {
       lines.push(
         <div key="cc">CARTON NO.&nbsp;&nbsp;&nbsp;&nbsp;OF {v.cartonCount}</div>,
       );
+    if (hasText(v.extraMainLines)) {
+      v.extraMainLines!.split(/\r?\n/).forEach((ln, idx) => {
+        if (hasText(ln)) lines.push(<div key={`xm${idx}`}>{ln}</div>);
+      });
+    }
 
     const rowEstimate = Math.max(1, lines.length) + (v.barcode ? 2 : 0);
     const fontSize = Math.max(

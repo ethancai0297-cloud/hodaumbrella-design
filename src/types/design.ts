@@ -55,8 +55,8 @@ export interface DesignProject {
 
 export const POUCH_SIZE_CM: Record<UmbrellaCategory, { w: number; h: number }> = {
   folding: { w: 8, h: 24 },
-  straight: { w: 9, h: 27 },
-  golf: { w: 11, h: 34 },
+  straight: { w: 8, h: 85 },
+  golf: { w: 8, h: 102 },
 };
 
 export const FABRIC_PRESETS: { name: string; value: string }[] = [

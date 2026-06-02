@@ -79,6 +79,11 @@ export const MarkFace = ({ variant: v, side, widthPx, heightPx }: Props) => {
   if (hasText(v.gw)) lines.push(<div key="gw">G.W. : {v.gw}</div>);
   if (hasText(v.nw)) lines.push(<div key="nw">N.W. : {v.nw}</div>);
   if (hasText(v.meas)) lines.push(<div key="me">MEAS: {v.meas}</div>);
+  if (hasText(v.extraSideLines)) {
+    v.extraSideLines!.split(/\r?\n/).forEach((ln, idx) => {
+      if (hasText(ln)) lines.push(<div key={`xs${idx}`}>{ln}</div>);
+    });
+  }
 
   const rowEstimate = Math.max(1, lines.length) + (v.sideBarcode ? 2 : 0);
   const fontSize = Math.max(

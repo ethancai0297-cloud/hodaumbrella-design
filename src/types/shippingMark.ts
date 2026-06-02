@@ -17,6 +17,10 @@ export interface MarkVariant {
   meas: string;
   barcode?: string;
   sideBarcode?: string;
+  /** Extra free-form lines (one per line) shown on the main mark after the standard fields. */
+  extraMainLines?: string;
+  /** Extra free-form lines (one per line) shown on the side mark after the standard fields. */
+  extraSideLines?: string;
   dimensions?: { l: number; w: number; h: number };
 }
 

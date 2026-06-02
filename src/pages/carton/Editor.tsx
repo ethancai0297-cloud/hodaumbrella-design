@@ -326,27 +326,45 @@ export default function CartonEditor() {
                   ) : (
                     <div className="grid grid-cols-2 gap-2">
                       <div>
-                        <Label>型号 (MODELS)</Label>
+                        <div className="flex items-center justify-between">
+                          <Label>型号 (MODELS)</Label>
+                          {v.model && <button type="button" className="text-[11px] text-muted-foreground hover:text-destructive" onClick={() => updateVariant(v.id, { model: "" })}>清除</button>}
+                        </div>
                         <Input value={v.model} onChange={(e) => updateVariant(v.id, { model: e.target.value })} />
                       </div>
                       <div>
-                        <Label>颜色 (COLOUR)</Label>
+                        <div className="flex items-center justify-between">
+                          <Label>颜色 (COLOUR)</Label>
+                          {v.colour && <button type="button" className="text-[11px] text-muted-foreground hover:text-destructive" onClick={() => updateVariant(v.id, { colour: "" })}>清除</button>}
+                        </div>
                         <Input value={v.colour} onChange={(e) => updateVariant(v.id, { colour: e.target.value })} />
                       </div>
                       <div>
-                        <Label>数量 (QUANTITY)</Label>
+                        <div className="flex items-center justify-between">
+                          <Label>数量 (QUANTITY)</Label>
+                          {v.quantity && <button type="button" className="text-[11px] text-muted-foreground hover:text-destructive" onClick={() => updateVariant(v.id, { quantity: "" })}>清除</button>}
+                        </div>
                         <Input value={v.quantity} onChange={(e) => updateVariant(v.id, { quantity: e.target.value })} />
                       </div>
                       <div>
-                        <Label>毛重 (G.W.)</Label>
+                        <div className="flex items-center justify-between">
+                          <Label>毛重 (G.W.)</Label>
+                          {v.gw && <button type="button" className="text-[11px] text-muted-foreground hover:text-destructive" onClick={() => updateVariant(v.id, { gw: "" })}>清除</button>}
+                        </div>
                         <Input value={v.gw} onChange={(e) => updateVariant(v.id, { gw: e.target.value })} />
                       </div>
                       <div>
-                        <Label>净重 (N.W.)</Label>
+                        <div className="flex items-center justify-between">
+                          <Label>净重 (N.W.)</Label>
+                          {v.nw && <button type="button" className="text-[11px] text-muted-foreground hover:text-destructive" onClick={() => updateVariant(v.id, { nw: "" })}>清除</button>}
+                        </div>
                         <Input value={v.nw} onChange={(e) => updateVariant(v.id, { nw: e.target.value })} />
                       </div>
                       <div>
-                        <Label>尺寸 (MEAS)</Label>
+                        <div className="flex items-center justify-between">
+                          <Label>尺寸 (MEAS)</Label>
+                          {v.meas && <button type="button" className="text-[11px] text-muted-foreground hover:text-destructive" onClick={() => updateVariant(v.id, { meas: "" })}>清除</button>}
+                        </div>
                         <Input
                           value={v.meas}
                           onChange={(e) => {
@@ -356,6 +374,15 @@ export default function CartonEditor() {
                               dimensions: tryParseMeas(meas) ?? v.dimensions,
                             });
                           }}
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <Label>更多内容 — 每行一项,留空即不显示</Label>
+                        <Textarea
+                          rows={3}
+                          value={v.extraSideLines ?? ""}
+                          onChange={(e) => updateVariant(v.id, { extraSideLines: e.target.value })}
+                          placeholder={"例如:\nPACKING: 12 PCS/CTN\nFRAGILE — HANDLE WITH CARE"}
                         />
                       </div>
                       <div className="col-span-2">

@@ -110,3 +110,39 @@
   .shadow-glow { box-shadow: var(--shadow-glow); }
   .text-balance { text-wrap: balance; }
 }
+
+/* === Carton Mark Pro additions === */
+:root {
+  --surface: 0 0% 100%;
+  --surface-muted: 210 16% 96%;
+  --section-border: 214 20% 90%;
+}
+
+/* Carton mark visual styling — strict B/W, bold, print-friendly */
+.mark-sheet {
+  background-color: #d2b48c;
+  background-image:
+    radial-gradient(rgba(120, 80, 40, 0.10) 1px, transparent 1px),
+    radial-gradient(rgba(80, 50, 20, 0.08) 1px, transparent 1px);
+  background-size: 6px 6px, 11px 11px;
+  background-position: 0 0, 3px 3px;
+  color: #000;
+  font-family: "Arial Black", "Helvetica Neue", Arial, sans-serif;
+  border: 4px solid #000;
+}
+.mark-sheet .row { border-bottom: 2px solid #000; }
+.mark-sheet .row:last-child { border-bottom: 0; }
+.mark-label {
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+@media print {
+  @page { size: A4; margin: 10mm; }
+  body { background: #fff !important; }
+  .no-print { display: none !important; }
+  .print-page { page-break-after: always; }
+  .print-page:last-child { page-break-after: auto; }
+  .print-grid { display: grid !important; gap: 8mm; }
+}

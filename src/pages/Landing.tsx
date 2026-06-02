@@ -22,6 +22,7 @@ const Landing = () => {
             <a href="#features" className="hover:text-foreground transition">{t("nav.features")}</a>
             <a href="#how" className="hover:text-foreground transition">{t("nav.how")}</a>
             <Link to="/projects" className="hover:text-foreground transition">{t("nav.projects")}</Link>
+            <Link to="/carton" className="hover:text-foreground transition">Carton Mark</Link>
           </nav>
           <div className="flex items-center gap-3">
             <LanguageToggle />

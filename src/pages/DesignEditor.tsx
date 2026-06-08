@@ -798,7 +798,10 @@ const DesignEditor = () => {
             </div>
           )}
 
-          <div className="min-h-full grid place-items-center p-12 pt-20">
+          <div
+            className="min-h-full grid place-items-center p-12 pt-20"
+            style={{ display: viewMode === "2d" ? "grid" : "none" }}
+          >
             <div style={{ transform: `scale(${zoom})`, transformOrigin: "center" }}>
               <div
                 style={{ display: activeSurface === "pouch" ? "none" : "block" }}
@@ -860,6 +863,112 @@ const DesignEditor = () => {
               )}
             </div>
           </div>
+
+          {/* Keep the canopy SVG mounted invisibly while in 3D mode so the
+              texture-rasterizer can keep reading it for live updates. */}
+          {viewMode === "3d" && (
+            <div style={{ position: "absolute", left: -99999, top: -99999, pointerEvents: "none" }} aria-hidden>
+              <UmbrellaCanopy
+                ref={svgRef}
+                category={project.umbrellaCategory}
+                ribCount={project.ribCount}
+                fabricColor={project.fabricColor}
+                panelColors={project.panelColors}
+                capColor={project.capColor}
+                artwork={project.artworkItems}
+                selectedPanels={[]}
+                highlightSelection={false}
+                size={620}
+              />
+            </div>
+          )}
+
+          {/* 3D preview */}
+          {viewMode === "3d" && (
+            <div className="absolute inset-0 top-16">
+              {model3d ? (
+                <>
+                  <UmbrellaScene
+                    ref={(api) => { sceneRef.current = api; }}
+                    config={model3d}
+                    svg={svgRef.current}
+                    fabricColor={project.fabricColor}
+                    capColor={project.capColor}
+                    showFrame={showFrame}
+                    textureDeps={[
+                      project.fabricColor,
+                      project.capColor,
+                      project.panelColors,
+                      project.artworkItems,
+                      project.ribCount,
+                      project.umbrellaCategory,
+                      project.printingMethod,
+                      dryToggle,
+                    ]}
+                  />
+                  <div className="absolute top-2 left-1/2 -translate-x-1/2 z-10 rounded-lg bg-card border border-border shadow-soft p-1 flex items-center gap-1 text-xs">
+                    {(["perspective", "top", "front", "side", "bottom"] as CameraPreset[]).map((p) => (
+                      <button
+                        key={p}
+                        onClick={() => sceneRef.current?.setView(p)}
+                        className="px-2.5 py-1 rounded-md text-muted-foreground hover:bg-muted transition"
+                      >
+                        {t(`threeD.${p === "perspective" ? "reset" : p}`)}
+                      </button>
+                    ))}
+                    <Separator orientation="vertical" className="h-5 mx-1" />
+                    <button
+                      onClick={() => setShowFrame((v) => !v)}
+                      className="px-2.5 py-1 rounded-md text-muted-foreground hover:bg-muted transition flex items-center gap-1"
+                    >
+                      {showFrame ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                      {showFrame ? t("threeD.hideFrame") : t("threeD.showFrame")}
+                    </button>
+                    <button
+                      onClick={async () => {
+                        const url = await sceneRef.current?.captureView("perspective");
+                        if (url) downloadDataUrl(url, `${project.projectName.replace(/\s+/g, "_")}_3d.png`);
+                      }}
+                      className="px-2.5 py-1 rounded-md text-muted-foreground hover:bg-muted transition flex items-center gap-1"
+                    >
+                      <Camera className="h-3.5 w-3.5" /> {t("threeD.screenshot")}
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <div className="h-full grid place-items-center p-12">
+                  <div className="max-w-md text-center rounded-xl border border-border bg-card p-8 shadow-soft">
+                    <Box className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
+                    <p className="text-sm text-foreground">{t("threeD.unavailable")}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Headless offscreen 3D scene used to capture PDF screenshots when
+              the user clicks "PDF" while still in 2D mode. */}
+          {headlessCapture && model3d && (
+            <div
+              style={{ position: "fixed", left: -99999, top: -99999, width: 720, height: 720, pointerEvents: "none" }}
+              aria-hidden
+            >
+              <UmbrellaScene
+                ref={(api) => {
+                  if (api && headlessCapture) {
+                    headlessSceneRef.current = api;
+                    headlessCapture.resolve(api);
+                  }
+                }}
+                config={model3d}
+                svg={svgRef.current}
+                fabricColor={project.fabricColor}
+                capColor={project.capColor}
+                showFrame={showFrame}
+                textureDeps={[project]}
+              />
+            </div>
+          )}
 
 
           {/* Hidden inner-export canopy. Vented = render full composition (both layers).

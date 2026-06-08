@@ -373,8 +373,9 @@ const DesignEditor = () => {
     setSelectedItem(null);
   };
 
-  const silkscreenWarn = project.printingMethod === "silkscreen";
+  const silkscreenWarn = project.printingMethod === "silkscreen" || project.printingMethod === "color-change";
   const digitalWarn = project.printingMethod === "digital";
+  const colorChangeHint = project.printingMethod === "color-change";
 
   return (
     <div className="min-h-screen bg-muted/30 flex flex-col">

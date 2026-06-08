@@ -406,9 +406,7 @@ const DesignEditor = () => {
             displayName: model3d.display_name,
           };
         }
-        if (headlessCapture) {
-          setHeadlessCapture(null);
-        }
+        setHeadlessCapture(null);
       }
 
       await exportPdfSummary(project, url, pouchUrl, innerUrl, threeD);

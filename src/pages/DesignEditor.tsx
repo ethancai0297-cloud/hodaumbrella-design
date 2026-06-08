@@ -74,6 +74,8 @@ const DesignEditor = () => {
   const [selectedItem, setSelectedItem] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1);
   const [activeSurface, setActiveSurface] = useState<"canopy" | "inner" | "pouch">("canopy");
+  const [dryToggle, setDryToggle] = useState<"auto" | "dry" | "wet">("auto");
+  const [canopyHover, setCanopyHover] = useState(false);
   const svgRef = useRef<SVGSVGElement>(null);
   const pouchSvgRef = useRef<SVGSVGElement>(null);
   const innerOnlySvgRef = useRef<SVGSVGElement>(null);

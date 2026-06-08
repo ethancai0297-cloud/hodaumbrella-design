@@ -30,6 +30,8 @@ interface Props {
   onInnerItemChange?: (id: string, patch: { x: number; y: number }) => void;
   // Render variant for export (no vent, single layer)
   forceSingleLayer?: boolean;
+  // Color-changing silkscreen preview: when true, all artwork renders as white silhouettes.
+  dryMode?: boolean;
 }
 
 function panelPath(
@@ -87,6 +89,7 @@ export const UmbrellaCanopy = forwardRef<SVGSVGElement, Props>(function Umbrella
     onInnerItemSelect,
     onInnerItemChange,
     forceSingleLayer = false,
+    dryMode = false,
   },
   ref
 ) {
@@ -267,6 +270,7 @@ export const UmbrellaCanopy = forwardRef<SVGSVGElement, Props>(function Umbrella
                       y={-fullSize / 2}
                       width={fullSize}
                       height={fullSize}
+                      filter={dryMode ? "url(#dry-white)" : undefined}
                       preserveAspectRatio={
                         item.fitMode === "stretch"
                           ? "none"
@@ -296,7 +300,7 @@ export const UmbrellaCanopy = forwardRef<SVGSVGElement, Props>(function Umbrella
                         fontFamily={item.fontFamily || "Inter, sans-serif"}
                         fontSize={(item.fontSize || 18) * item.scale}
                         fontWeight={700}
-                        fill={item.color || "#ffffff"}
+                        fill={dryMode ? "#ffffff" : (item.color || "#ffffff")}
                       >
                         {item.text}
                       </text>
@@ -307,6 +311,7 @@ export const UmbrellaCanopy = forwardRef<SVGSVGElement, Props>(function Umbrella
                         y={-baseSize / 2}
                         width={baseSize}
                         height={baseSize}
+                        filter={dryMode ? "url(#dry-white)" : undefined}
                         preserveAspectRatio={
                           item.fitMode === "stretch"
                             ? "none"
@@ -451,6 +456,16 @@ export const UmbrellaCanopy = forwardRef<SVGSVGElement, Props>(function Umbrella
       className="select-none"
       style={{ filter: "drop-shadow(0 24px 40px rgba(15,31,61,0.18))" }}
     >
+      <defs>
+        {/* Color-changing silkscreen: map any non-transparent pixel to white, keep alpha */}
+        <filter id="dry-white" x="-10%" y="-10%" width="120%" height="120%">
+          <feComponentTransfer>
+            <feFuncR type="linear" slope="0" intercept="1" />
+            <feFuncG type="linear" slope="0" intercept="1" />
+            <feFuncB type="linear" slope="0" intercept="1" />
+          </feComponentTransfer>
+        </filter>
+      </defs>
       {content}
       {!hasImg && <circle r={centerR + 2} fill={capColor} />}
     </svg>

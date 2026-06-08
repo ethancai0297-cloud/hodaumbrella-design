@@ -74,6 +74,8 @@ const DesignEditor = () => {
   const [selectedItem, setSelectedItem] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1);
   const [activeSurface, setActiveSurface] = useState<"canopy" | "inner" | "pouch">("canopy");
+  const [dryToggle, setDryToggle] = useState<"auto" | "dry" | "wet">("auto");
+  const [canopyHover, setCanopyHover] = useState(false);
   const svgRef = useRef<SVGSVGElement>(null);
   const pouchSvgRef = useRef<SVGSVGElement>(null);
   const innerOnlySvgRef = useRef<SVGSVGElement>(null);
@@ -138,7 +140,7 @@ const DesignEditor = () => {
     setSelectedPanels((s) => {
       if (s.includes(i)) return s.filter((p) => p !== i);
       const next = [...s, i].sort((a, b) => a - b);
-      if (project.printingMethod === "silkscreen" && next.length > 8) {
+      if ((project.printingMethod === "silkscreen" || project.printingMethod === "color-change") && next.length > 8) {
         toast({ title: "Silkscreen max 8 panels" });
         return s;
       }
@@ -371,8 +373,9 @@ const DesignEditor = () => {
     setSelectedItem(null);
   };
 
-  const silkscreenWarn = project.printingMethod === "silkscreen";
+  const silkscreenWarn = project.printingMethod === "silkscreen" || project.printingMethod === "color-change";
   const digitalWarn = project.printingMethod === "digital";
+  const colorChangeHint = project.printingMethod === "color-change";
 
   return (
     <div className="min-h-screen bg-muted/30 flex flex-col">
@@ -595,7 +598,7 @@ const DesignEditor = () => {
               <Separator orientation="vertical" className="h-4" />
               <button onClick={applySelectAll} className="text-primary hover:underline">{t("canvas.all")}</button>
               <button onClick={clearSelection} className="text-muted-foreground hover:text-foreground">{t("canvas.clear")}</button>
-              {project.printingMethod === "silkscreen" && (
+              {(project.printingMethod === "silkscreen" || project.printingMethod === "color-change") && (
                 <>
                   <Separator orientation="vertical" className="h-4" />
                   {SILKSCREEN_LIMITS.filter((n) => n <= project.ribCount).map((n) => (
@@ -621,6 +624,23 @@ const DesignEditor = () => {
               <Button size="icon" variant="ghost" className="h-7 w-7" onClick={handleReset} title="Reset"><RotateCcw className="h-3.5 w-3.5" /></Button>
             </div>
           </div>
+
+          {project.printingMethod === "color-change" && activeSurface !== "pouch" && (
+            <div className="absolute top-16 right-4 z-10 rounded-lg bg-card border border-border shadow-soft p-1 flex items-center gap-1 text-xs">
+              {(["auto", "dry", "wet"] as const).map((m) => (
+                <button
+                  key={m}
+                  onClick={() => setDryToggle(m)}
+                  className={cn(
+                    "px-2.5 py-1 rounded-md transition",
+                    dryToggle === m ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
+                  )}
+                >
+                  {t(`canvas.${m}`)}
+                </button>
+              ))}
+            </div>
+          )}
 
           {(project.hasPouch || (project.hasDoubleLayer && project.umbrellaCategory === "golf")) && (
             <div className="absolute top-16 left-1/2 -translate-x-1/2 z-10 rounded-lg bg-card border border-border shadow-soft p-1 flex items-center gap-1 text-xs">
@@ -683,7 +703,11 @@ const DesignEditor = () => {
 
           <div className="min-h-full grid place-items-center p-12 pt-20">
             <div style={{ transform: `scale(${zoom})`, transformOrigin: "center" }}>
-              <div style={{ display: activeSurface === "pouch" ? "none" : "block" }}>
+              <div
+                style={{ display: activeSurface === "pouch" ? "none" : "block" }}
+                onMouseEnter={() => setCanopyHover(true)}
+                onMouseLeave={() => setCanopyHover(false)}
+              >
                 <UmbrellaCanopy
                   ref={svgRef}
                   category={project.umbrellaCategory}
@@ -699,6 +723,10 @@ const DesignEditor = () => {
                     activeSurface === "canopy" && updateItem(id, patch)
                   }
                   size={620}
+                  dryMode={
+                    project.printingMethod === "color-change" &&
+                    (dryToggle === "dry" || (dryToggle === "auto" && !canopyHover))
+                  }
                   innerLayer={
                     project.hasDoubleLayer && project.umbrellaCategory === "golf"
                       ? {
@@ -782,9 +810,14 @@ const DesignEditor = () => {
 
 
           {(silkscreenWarn || digitalWarn) && (
-            <div className="absolute bottom-4 left-4 right-4 rounded-lg border border-warning/40 bg-warning/10 text-foreground text-xs px-3 py-2 flex items-start gap-2">
-              <span className="font-semibold text-warning">{t("canvas.note")}</span>
-              <span>{silkscreenWarn ? t("canvas.warn.silk") : t("canvas.warn.digital")}</span>
+            <div className="absolute bottom-4 left-4 right-4 rounded-lg border border-warning/40 bg-warning/10 text-foreground text-xs px-3 py-2 flex flex-col gap-1">
+              <div className="flex items-start gap-2">
+                <span className="font-semibold text-warning">{t("canvas.note")}</span>
+                <span>{silkscreenWarn ? t("canvas.warn.silk") : t("canvas.warn.digital")}</span>
+              </div>
+              {colorChangeHint && (
+                <div className="text-muted-foreground">{t("canvas.colorChangeHint")}</div>
+              )}
             </div>
           )}
         </main>

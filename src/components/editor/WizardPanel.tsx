@@ -139,6 +139,16 @@ export function WizardPanel({
             <div className="font-display font-semibold text-sm">{t("wiz.digital")}</div>
             <div className="text-[11px] text-muted-foreground">{t("wiz.digital.desc")}</div>
           </button>
+          <button
+            onClick={() => onMethod("color-change")}
+            className={cn(
+              "rounded-lg border px-3 py-3 text-left transition",
+              method === "color-change" ? "border-primary bg-accent" : "border-border bg-card hover:border-primary/40"
+            )}
+          >
+            <div className="font-display font-semibold text-sm">{t("wiz.colorChange")}</div>
+            <div className="text-[11px] text-muted-foreground">{t("wiz.colorChange.desc")}</div>
+          </button>
         </div>
       </section>
 

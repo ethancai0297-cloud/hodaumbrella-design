@@ -89,6 +89,7 @@ export const UmbrellaCanopy = forwardRef<SVGSVGElement, Props>(function Umbrella
     onInnerItemSelect,
     onInnerItemChange,
     forceSingleLayer = false,
+    dryMode = false,
   },
   ref
 ) {

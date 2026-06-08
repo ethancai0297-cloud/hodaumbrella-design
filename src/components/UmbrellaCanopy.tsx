@@ -454,6 +454,16 @@ export const UmbrellaCanopy = forwardRef<SVGSVGElement, Props>(function Umbrella
       className="select-none"
       style={{ filter: "drop-shadow(0 24px 40px rgba(15,31,61,0.18))" }}
     >
+      <defs>
+        {/* Color-changing silkscreen: map any non-transparent pixel to white, keep alpha */}
+        <filter id="dry-white" x="-10%" y="-10%" width="120%" height="120%">
+          <feComponentTransfer>
+            <feFuncR type="linear" slope="0" intercept="1" />
+            <feFuncG type="linear" slope="0" intercept="1" />
+            <feFuncB type="linear" slope="0" intercept="1" />
+          </feComponentTransfer>
+        </filter>
+      </defs>
       {content}
       {!hasImg && <circle r={centerR + 2} fill={capColor} />}
     </svg>

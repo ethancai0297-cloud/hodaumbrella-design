@@ -83,7 +83,7 @@ const dict: Dict = {
   "canvas.dry": { en: "Dry", zh: "干" },
   "canvas.wet": { en: "Wet", zh: "湿" },
   "canvas.auto": { en: "Auto", zh: "自动" },
-  "canvas.colorChangeHint": { en: "Hover canopy to reveal real colors. Production files always use real colors.", zh: "鼠标悬停伞面以显示真实颜色。生产文件始终使用真实颜色。" },
+  "canvas.colorChangeHint": { en: "Hover over the artwork to preview the wet color; move away to see it dry. Production files always use real colors.", zh: "将鼠标悬停在图案上可预览遇水显色效果，移开则恢复干燥状态。生产文件始终使用真实颜色。" },
   "wiz.pouch": { en: "5. Pouch (optional)", zh: "5. 伞套（可选）" },
   "wiz.pouch.add": { en: "Add pouch design", zh: "添加伞套设计" },
   "wiz.pouch.desc": { en: "Design the fabric case for folded umbrellas.", zh: "为折叠伞设计配套伞套。" },

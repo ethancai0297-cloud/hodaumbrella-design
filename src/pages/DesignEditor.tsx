@@ -14,10 +14,21 @@ import {
   Plus,
   RotateCcw,
   Save,
+  Trash2,
   Upload,
   ZoomIn,
   ZoomOut,
 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { UmbrellaCanopy } from "@/components/UmbrellaCanopy";
 import { PouchCanvas } from "@/components/PouchCanvas";
 import { WizardPanel } from "@/components/editor/WizardPanel";

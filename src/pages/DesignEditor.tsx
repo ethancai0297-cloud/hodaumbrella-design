@@ -716,8 +716,6 @@ const DesignEditor = () => {
             <div style={{ transform: `scale(${zoom})`, transformOrigin: "center" }}>
               <div
                 style={{ display: activeSurface === "pouch" ? "none" : "block" }}
-                onMouseEnter={() => setCanopyHover(true)}
-                onMouseLeave={() => setCanopyHover(false)}
               >
                 <UmbrellaCanopy
                   ref={svgRef}
@@ -734,9 +732,10 @@ const DesignEditor = () => {
                     activeSurface === "canopy" && updateItem(id, patch)
                   }
                   size={620}
+                  onArtworkHoverChange={setArtworkHover}
                   dryMode={
                     project.printingMethod === "color-change" &&
-                    (dryToggle === "dry" || (dryToggle === "auto" && !canopyHover))
+                    (dryToggle === "dry" || (dryToggle === "auto" && !artworkHover))
                   }
                   innerLayer={
                     project.hasDoubleLayer && project.umbrellaCategory === "golf"

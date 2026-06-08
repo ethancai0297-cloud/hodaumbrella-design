@@ -295,7 +295,12 @@ export const UmbrellaCanopy = forwardRef<SVGSVGElement, Props>(function Umbrella
               const c = panelCentroid(pIdx, ribCount, outerR, innerR);
               const baseSize = outerR * 0.5 * item.scale;
               return (
-                <g key={`${keyPrefix}-${item.id}-${pIdx}`} clipPath={`url(#${keyPrefix}-panel-clip-${pIdx})`}>
+                <g
+                  key={`${keyPrefix}-${item.id}-${pIdx}`}
+                  clipPath={`url(#${keyPrefix}-panel-clip-${pIdx})`}
+                  onPointerEnter={() => onArtworkHoverChange?.(true)}
+                  onPointerLeave={() => onArtworkHoverChange?.(false)}
+                >
                   <g
                     transform={`translate(${c.x} ${c.y}) rotate(${c.angle + 90 + item.rotation}) translate(${item.x * baseSize} ${item.y * baseSize})`}
                     onPointerDown={(e) => startDrag(e, item, "panel", c.angle + 90 + item.rotation, c, baseSize)}

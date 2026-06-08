@@ -217,6 +217,22 @@ const dict: Dict = {
   "cat.golf": { en: "golf", zh: "高尔夫" },
   "method.silkscreen": { en: "silkscreen", zh: "丝印" },
   "method.digital": { en: "digital", zh: "数码" },
+
+  // 3D preview
+  "view.2d": { en: "2D Design", zh: "2D 设计" },
+  "view.3d": { en: "3D Preview", zh: "3D 预览" },
+  "threeD.unavailable": {
+    en: "3D preview is not available for this specification yet. Please use the 2D preview or contact our sales team.",
+    zh: "该规格暂不支持 3D 预览。请使用 2D 预览或联系我们的销售团队。",
+  },
+  "threeD.showFrame": { en: "Show frame", zh: "显示骨架" },
+  "threeD.hideFrame": { en: "Hide frame", zh: "隐藏骨架" },
+  "threeD.top": { en: "Top", zh: "顶视" },
+  "threeD.front": { en: "Front", zh: "正面" },
+  "threeD.side": { en: "Side", zh: "侧面" },
+  "threeD.bottom": { en: "Bottom", zh: "底视" },
+  "threeD.reset": { en: "Reset", zh: "复位" },
+  "threeD.screenshot": { en: "Screenshot", zh: "截图" },
 };
 
 interface I18nCtx {

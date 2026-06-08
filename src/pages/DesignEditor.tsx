@@ -598,7 +598,7 @@ const DesignEditor = () => {
               <Separator orientation="vertical" className="h-4" />
               <button onClick={applySelectAll} className="text-primary hover:underline">{t("canvas.all")}</button>
               <button onClick={clearSelection} className="text-muted-foreground hover:text-foreground">{t("canvas.clear")}</button>
-              {project.printingMethod === "silkscreen" && (
+              {(project.printingMethod === "silkscreen" || project.printingMethod === "color-change") && (
                 <>
                   <Separator orientation="vertical" className="h-4" />
                   {SILKSCREEN_LIMITS.filter((n) => n <= project.ribCount).map((n) => (

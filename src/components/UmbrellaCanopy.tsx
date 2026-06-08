@@ -261,7 +261,12 @@ export const UmbrellaCanopy = forwardRef<SVGSVGElement, Props>(function Umbrella
             if (item.type !== "text" && item.printArea === "full-canopy" && item.src) {
               const fullSize = outerR * 2 * item.scale;
               return (
-                <g key={`${keyPrefix}-${item.id}-full`} clipPath={`url(#${clipId})`}>
+                <g
+                  key={`${keyPrefix}-${item.id}-full`}
+                  clipPath={`url(#${clipId})`}
+                  onPointerEnter={() => onArtworkHoverChange?.(true)}
+                  onPointerLeave={() => onArtworkHoverChange?.(false)}
+                >
                   <g
                     transform={`rotate(${item.rotation}) translate(${item.x * outerR} ${item.y * outerR})`}
                     onPointerDown={(e) => startDrag(e, item, "full")}

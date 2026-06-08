@@ -1,32 +1,37 @@
-# Color-changing silkscreen printing method
+# Hero redesign + Undo/Reset button fix
 
-Add a third printing method, "Color-changing silkscreen", to the umbrella editor. When selected, the canopy preview renders the artwork in its **dry (white)** state by default. The user can reveal the real (wet) colors by either hovering the canopy, or toggling a Dry / Wet switch on the canvas toolbar.
+## 1. Landing hero — Layered trio + branding
 
-## What changes for the user
+Replace the right-side hero card on `/` with the chosen "Layered trio" composition: three umbrellas stacked at offset angles inside a rounded card with ambient color glows behind it. Left column (badge, headline, subhead, CTAs, trust line) stays as-is.
 
-1. In the Printing Method step of the wizard, a new option appears next to Silkscreen and Digital:
-   - **Color-changing silkscreen** — "Prints turn white when dry and reveal full color when wet."
-2. When selected:
-   - The canopy preview shows all uploaded artwork (logos, images, text) as solid white silhouettes.
-   - A small **Dry / Wet** toggle appears in the canvas toolbar (next to zoom).
-   - Hovering anywhere over the canopy temporarily switches to the wet (real-color) state; moving the mouse away returns to dry. The manual toggle overrides hover and pins one state.
-3. Pouch preview and exports keep showing the real (wet) colors so factories still get the artwork to print. A note on the canvas reads: "Preview shows dry/wet effect. Production files use the real colors."
-4. No new uploads required — the dry state is derived automatically from whatever artwork is already placed (logos, images, text).
+- Background umbrella (back): rose→orange gradient, rotated +12°, with a subtle white-dot polka pattern, dimmed to 40% opacity.
+- Middle umbrella: indigo→violet gradient, rotated −6°, with rib lines and a dark center hub.
+- Front umbrella: dark slate-900 fabric with a soft emerald glow + faint italic "HODA" wordmark in the corner, drawn rib lines, prominent drop shadow.
+- Floating tags around the front umbrella:
+  - Top-right: "Silk Print Active" pill with a rose dot.
+  - Bottom-left: "+12 Colors" pill with three overlapping color avatars.
+- Card: white, `rounded-3xl`, indigo-tinted shadow, soft border. Two ambient `blur-[100px]` glows (indigo + rose) behind the card.
+- Keep all umbrellas as octagons via `clip-path: polygon(50% 0%, 85% 15%, 100% 50%, 85% 85%, 50% 100%, 15% 85%, 0% 50%, 15% 15%)`.
 
-## Technical notes
+The headline keeps its existing solid color; do not switch it to a gradient (matches the rest of the site's voice and the current bilingual headline).
 
-- `src/types/design.ts`: extend `PrintingMethod` to `"silkscreen" | "digital" | "color-change"`.
-- `src/components/editor/WizardPanel.tsx`: add a third selector card; add i18n keys `wiz.colorChange` / `wiz.colorChange.desc` in `src/i18n/i18n.tsx` (EN + ZH).
-- `src/components/UmbrellaCanopy.tsx`: add two optional props `dryMode?: boolean` and `onHoverDryChange?: (hovering: boolean) => void`. When `dryMode` is true:
-  - Text artwork renders with `fill="#ffffff"`.
-  - Image / logo artwork is wrapped in an SVG `<filter>` that maps any non-transparent pixel to white (use `feColorMatrix` to desaturate + brighten, or `feComponentTransfer` setting RGB to 1 while preserving alpha). Apply via `filter="url(#dry-white)"` on the `<image>` elements only.
-  - Center cap unaffected.
-- `src/pages/DesignEditor.tsx`:
-  - New local state `dryToggle: "dry" | "wet" | "auto"` (default `"auto"` when method is color-change).
-  - New local state `hovering: boolean` driven by `onMouseEnter` / `onMouseLeave` on the canvas wrapper.
-  - Effective `dryMode = method==='color-change' && (toggle==='dry' || (toggle==='auto' && !hovering))`.
-  - Render a small `ToggleGroup` (Dry / Wet / Auto) in the existing canvas toolbar, only when method is color-change.
-  - Pass `dryMode={false}` to the pouch canvas and to the offscreen SVG used by `exportAiFile` / `svgToPngDataUrl` so exports always reflect the real colors.
-- Existing silkscreen color-limit warning (`SILKSCREEN_LIMITS`) also applies to color-change (same screen count rules).
+Bilingual: the floating tag labels go through `useI18n` with new keys (`landing.tag.silk`, `landing.tag.colors`) in both EN and ZH.
 
-No backend, storage, or schema changes. No new dependencies.
+Files: `src/pages/Landing.tsx`, `src/i18n/i18n.tsx`.
+
+## 2. Undo vs Reset — clearer, swapped
+
+Currently both the canopy-area "Reset" button and the top-bar "Undo" button use the `RotateCcw` icon, which is causing real confusion (user has been hitting Reset thinking it's Undo).
+
+- Swap the two icons:
+  - **Undo** (top bar): keep `RotateCcw` (the curved-arrow-back icon).
+  - **Reset** (canvas toolbar): use `Trash2` to clearly signal "clear everything".
+- Swap their positions per the user's request:
+  - Move **Reset** out of the canvas zoom toolbar and into the **top bar**, placed to the right of Undo (so Undo sits first / leftmost of the pair).
+  - Remove the Reset button from the canvas zoom toolbar; that toolbar only keeps zoom in/out + percentage.
+- Add a confirmation dialog before Reset actually clears: small `AlertDialog` titled "Reset design?" with body "This clears all panel colors, artwork, and selections for this project. This cannot be undone." and buttons Cancel / Reset.
+- Add clear labels next to each icon in the top bar (`Undo` and `Reset`) so the difference is unambiguous, matching the existing labelled buttons (Save, PNG, AI, PDF).
+
+Files: `src/pages/DesignEditor.tsx` (move/relabel buttons, wire AlertDialog), `src/i18n/i18n.tsx` (add `editor.reset` EN/ZH; `editor.undo` already exists).
+
+No data, schema, dependency, or route changes.

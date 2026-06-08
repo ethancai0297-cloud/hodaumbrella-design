@@ -14,10 +14,21 @@ import {
   Plus,
   RotateCcw,
   Save,
+  Trash2,
   Upload,
   ZoomIn,
   ZoomOut,
 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { UmbrellaCanopy } from "@/components/UmbrellaCanopy";
 import { PouchCanvas } from "@/components/PouchCanvas";
 import { WizardPanel } from "@/components/editor/WizardPanel";
@@ -356,8 +367,8 @@ const DesignEditor = () => {
     }
   };
 
-  const handleReset = () => {
-    if (!confirm(t("editor.resetConfirm"))) return;
+  const [resetOpen, setResetOpen] = useState(false);
+  const doReset = () => {
     if (activeSurface === "pouch") {
       updateProject((p) => ({ ...p, pouchArtwork: [] }));
     } else if (activeSurface === "inner") {
@@ -367,10 +378,11 @@ const DesignEditor = () => {
       }));
       setSelectedPanels([]);
     } else {
-      updateProject((p) => ({ ...p, artworkItems: [] }));
+      updateProject((p) => ({ ...p, artworkItems: [], panelColors: {} }));
       setSelectedPanels([]);
     }
     setSelectedItem(null);
+    setResetOpen(false);
   };
 
   const silkscreenWarn = project.printingMethod === "silkscreen" || project.printingMethod === "color-change";
@@ -398,7 +410,8 @@ const DesignEditor = () => {
         />
         <div className="ml-auto flex items-center gap-2">
           <LanguageToggle />
-          <Button size="sm" variant="ghost" onClick={undo} title={t("editor.undo")}><RotateCcw className="h-4 w-4" /></Button>
+          <Button size="sm" variant="ghost" onClick={undo}><RotateCcw className="h-4 w-4 mr-1" /> {t("editor.undo")}</Button>
+          <Button size="sm" variant="ghost" onClick={() => setResetOpen(true)} className="text-destructive hover:text-destructive"><Trash2 className="h-4 w-4 mr-1" /> {t("editor.reset")}</Button>
           <Button size="sm" variant="outline" onClick={handleSave}><Save className="h-4 w-4 mr-1" /> {t("editor.save")}</Button>
           <Button size="sm" variant="outline" onClick={handleExportPng}><FileImage className="h-4 w-4 mr-1" /> {t("editor.png")}</Button>
           <Button size="sm" variant="outline" onClick={handleExportAi}><FileCode className="h-4 w-4 mr-1" /> {t("editor.ai")}</Button>
@@ -620,8 +633,6 @@ const DesignEditor = () => {
               <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setZoom((z) => Math.max(0.5, z - 0.1))}><ZoomOut className="h-3.5 w-3.5" /></Button>
               <span className="text-xs w-10 text-center">{Math.round(zoom * 100)}%</span>
               <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setZoom((z) => Math.min(2, z + 0.1))}><ZoomIn className="h-3.5 w-3.5" /></Button>
-              <Separator orientation="vertical" className="h-5" />
-              <Button size="icon" variant="ghost" className="h-7 w-7" onClick={handleReset} title="Reset"><RotateCcw className="h-3.5 w-3.5" /></Button>
             </div>
           </div>
 
@@ -899,6 +910,21 @@ const DesignEditor = () => {
           </section>
         </aside>
       </div>
+
+      <AlertDialog open={resetOpen} onOpenChange={setResetOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("editor.resetTitle")}</AlertDialogTitle>
+            <AlertDialogDescription>{t("editor.resetBody")}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("editor.cancel")}</AlertDialogCancel>
+            <AlertDialogAction onClick={doReset} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {t("editor.reset")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

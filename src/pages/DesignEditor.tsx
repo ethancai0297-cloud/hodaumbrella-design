@@ -937,7 +937,7 @@ const DesignEditor = () => {
             >
               <UmbrellaScene
                 ref={(api) => {
-                  if (api && headlessCapture) {
+                  if (api && headlessCapture && headlessSceneRef.current !== api) {
                     headlessSceneRef.current = api;
                     headlessCapture.resolve(api);
                   }

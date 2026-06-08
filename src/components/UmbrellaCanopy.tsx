@@ -30,6 +30,8 @@ interface Props {
   onInnerItemChange?: (id: string, patch: { x: number; y: number }) => void;
   // Render variant for export (no vent, single layer)
   forceSingleLayer?: boolean;
+  // Color-changing silkscreen preview: when true, all artwork renders as white silhouettes.
+  dryMode?: boolean;
 }
 
 function panelPath(

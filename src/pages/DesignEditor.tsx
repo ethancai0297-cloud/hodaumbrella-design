@@ -624,6 +624,23 @@ const DesignEditor = () => {
             </div>
           </div>
 
+          {project.printingMethod === "color-change" && activeSurface !== "pouch" && (
+            <div className="absolute top-16 right-4 z-10 rounded-lg bg-card border border-border shadow-soft p-1 flex items-center gap-1 text-xs">
+              {(["auto", "dry", "wet"] as const).map((m) => (
+                <button
+                  key={m}
+                  onClick={() => setDryToggle(m)}
+                  className={cn(
+                    "px-2.5 py-1 rounded-md transition",
+                    dryToggle === m ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
+                  )}
+                >
+                  {t(`canvas.${m}`)}
+                </button>
+              ))}
+            </div>
+          )}
+
           {(project.hasPouch || (project.hasDoubleLayer && project.umbrellaCategory === "golf")) && (
             <div className="absolute top-16 left-1/2 -translate-x-1/2 z-10 rounded-lg bg-card border border-border shadow-soft p-1 flex items-center gap-1 text-xs">
               <button

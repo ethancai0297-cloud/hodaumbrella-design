@@ -270,6 +270,7 @@ export const UmbrellaCanopy = forwardRef<SVGSVGElement, Props>(function Umbrella
                       y={-fullSize / 2}
                       width={fullSize}
                       height={fullSize}
+                      filter={dryMode ? "url(#dry-white)" : undefined}
                       preserveAspectRatio={
                         item.fitMode === "stretch"
                           ? "none"

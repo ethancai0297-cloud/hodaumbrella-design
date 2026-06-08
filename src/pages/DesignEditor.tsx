@@ -18,6 +18,11 @@ import {
   Upload,
   ZoomIn,
   ZoomOut,
+  Box,
+  Camera,
+  Eye,
+  EyeOff,
+  Square,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -49,6 +54,8 @@ import { getProject, saveProject } from "@/lib/storage";
 import { cn } from "@/lib/utils";
 import { downloadDataUrl, exportAiFile, exportPdfSummary, svgPairToPngDataUrl, svgToPngDataUrl } from "@/lib/export";
 import { PantoneInput } from "@/components/editor/PantoneInput";
+import { findModel } from "@/3d/models/registry";
+import { UmbrellaScene, type SceneApi, type CameraPreset } from "@/components/3d/UmbrellaScene";
 
 const SILKSCREEN_LIMITS = [1, 2, 4, 8];
 
@@ -87,9 +94,18 @@ const DesignEditor = () => {
   const [activeSurface, setActiveSurface] = useState<"canopy" | "inner" | "pouch">("canopy");
   const [dryToggle, setDryToggle] = useState<"auto" | "dry" | "wet">("auto");
   const [artworkHover, setArtworkHover] = useState(false);
+  const [viewMode, setViewMode] = useState<"2d" | "3d">("2d");
+  const [showFrame, setShowFrame] = useState(true);
+  const [headlessCapture, setHeadlessCapture] = useState<null | {
+    resolve: (api: SceneApi | null) => void;
+  }>(null);
+  const sceneRef = useRef<SceneApi | null>(null);
+  const headlessSceneRef = useRef<SceneApi | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const pouchSvgRef = useRef<SVGSVGElement>(null);
   const innerOnlySvgRef = useRef<SVGSVGElement>(null);
+
+  const model3d = findModel(project.umbrellaCategory, project.ribCount);
 
   // load existing
   useEffect(() => {

@@ -356,8 +356,8 @@ const DesignEditor = () => {
     }
   };
 
-  const handleReset = () => {
-    if (!confirm(t("editor.resetConfirm"))) return;
+  const [resetOpen, setResetOpen] = useState(false);
+  const doReset = () => {
     if (activeSurface === "pouch") {
       updateProject((p) => ({ ...p, pouchArtwork: [] }));
     } else if (activeSurface === "inner") {
@@ -367,10 +367,11 @@ const DesignEditor = () => {
       }));
       setSelectedPanels([]);
     } else {
-      updateProject((p) => ({ ...p, artworkItems: [] }));
+      updateProject((p) => ({ ...p, artworkItems: [], panelColors: {} }));
       setSelectedPanels([]);
     }
     setSelectedItem(null);
+    setResetOpen(false);
   };
 
   const silkscreenWarn = project.printingMethod === "silkscreen" || project.printingMethod === "color-change";

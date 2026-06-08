@@ -165,7 +165,16 @@ export async function exportPdfSummary(
   project: DesignProject,
   pngDataUrl: string,
   pouchPngDataUrl?: string,
-  innerLayerPngDataUrl?: string
+  innerLayerPngDataUrl?: string,
+  threeD?: {
+    top: string;
+    front: string;
+    side: string;
+    modelId: string;
+    topCap: string;
+    handle: string;
+    displayName: string;
+  }
 ) {
   const pdf = new jsPDF({ unit: "pt", format: "a4" });
   const pageW = pdf.internal.pageSize.getWidth();

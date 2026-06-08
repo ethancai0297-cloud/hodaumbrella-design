@@ -32,6 +32,8 @@ interface Props {
   forceSingleLayer?: boolean;
   // Color-changing silkscreen preview: when true, all artwork renders as white silhouettes.
   dryMode?: boolean;
+  // Fires when the cursor enters/leaves any artwork item (used for hover-triggered color reveal).
+  onArtworkHoverChange?: (hovered: boolean) => void;
 }
 
 function panelPath(

@@ -864,24 +864,8 @@ const DesignEditor = () => {
             </div>
           </div>
 
-          {/* Keep the canopy SVG mounted invisibly while in 3D mode so the
-              texture-rasterizer can keep reading it for live updates. */}
-          {viewMode === "3d" && (
-            <div style={{ position: "absolute", left: -99999, top: -99999, pointerEvents: "none" }} aria-hidden>
-              <UmbrellaCanopy
-                ref={svgRef}
-                category={project.umbrellaCategory}
-                ribCount={project.ribCount}
-                fabricColor={project.fabricColor}
-                panelColors={project.panelColors}
-                capColor={project.capColor}
-                artwork={project.artworkItems}
-                selectedPanels={[]}
-                highlightSelection={false}
-                size={620}
-              />
-            </div>
-          )}
+          {/* (2D canopy SVG above is left mounted via display:none in 3D mode
+              so the texture rasterizer can keep reading it.) */}
 
           {/* 3D preview */}
           {viewMode === "3d" && (

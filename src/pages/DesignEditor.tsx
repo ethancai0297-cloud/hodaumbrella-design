@@ -18,6 +18,11 @@ import {
   Upload,
   ZoomIn,
   ZoomOut,
+  Box,
+  Camera,
+  Eye,
+  EyeOff,
+  Square,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -49,6 +54,8 @@ import { getProject, saveProject } from "@/lib/storage";
 import { cn } from "@/lib/utils";
 import { downloadDataUrl, exportAiFile, exportPdfSummary, svgPairToPngDataUrl, svgToPngDataUrl } from "@/lib/export";
 import { PantoneInput } from "@/components/editor/PantoneInput";
+import { findModel } from "@/3d/models/registry";
+import { UmbrellaScene, type SceneApi, type CameraPreset } from "@/components/3d/UmbrellaScene";
 
 const SILKSCREEN_LIMITS = [1, 2, 4, 8];
 
@@ -87,9 +94,18 @@ const DesignEditor = () => {
   const [activeSurface, setActiveSurface] = useState<"canopy" | "inner" | "pouch">("canopy");
   const [dryToggle, setDryToggle] = useState<"auto" | "dry" | "wet">("auto");
   const [artworkHover, setArtworkHover] = useState(false);
+  const [viewMode, setViewMode] = useState<"2d" | "3d">("2d");
+  const [showFrame, setShowFrame] = useState(true);
+  const [headlessCapture, setHeadlessCapture] = useState<null | {
+    resolve: (api: SceneApi | null) => void;
+  }>(null);
+  const sceneRef = useRef<SceneApi | null>(null);
+  const headlessSceneRef = useRef<SceneApi | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const pouchSvgRef = useRef<SVGSVGElement>(null);
   const innerOnlySvgRef = useRef<SVGSVGElement>(null);
+
+  const model3d = findModel(project.umbrellaCategory, project.ribCount);
 
   // load existing
   useEffect(() => {
@@ -322,8 +338,13 @@ const DesignEditor = () => {
   };
 
   const handleExportPng = async () => {
-    if (!svgRef.current) return;
     try {
+      if (viewMode === "3d" && sceneRef.current) {
+        const url = await sceneRef.current.captureView("perspective");
+        downloadDataUrl(url, `${project.projectName.replace(/\s+/g, "_")}_3d.png`);
+        return;
+      }
+      if (!svgRef.current) return;
       const isDouble = project.hasDoubleLayer && project.umbrellaCategory === "golf" && innerOnlySvgRef.current;
       const url = isDouble
         ? await svgPairToPngDataUrl(svgRef.current, innerOnlySvgRef.current!, 3)
@@ -334,6 +355,15 @@ const DesignEditor = () => {
       toast({ title: t("editor.exportFail"), variant: "destructive" });
     }
   };
+
+  const acquireSceneApi = async (): Promise<SceneApi | null> => {
+    if (sceneRef.current && viewMode === "3d") return sceneRef.current;
+    if (!model3d) return null;
+    return await new Promise<SceneApi | null>((resolve) => {
+      setHeadlessCapture({ resolve });
+    });
+  };
+
   const handleExportPdf = async () => {
     if (!svgRef.current) return;
     try {
@@ -346,9 +376,43 @@ const DesignEditor = () => {
         project.hasDoubleLayer && project.umbrellaCategory === "golf" && innerOnlySvgRef.current
           ? await svgToPngDataUrl(innerOnlySvgRef.current, 2)
           : undefined;
-      await exportPdfSummary(project, url, pouchUrl, innerUrl);
+
+      let threeD:
+        | {
+            top: string;
+            front: string;
+            side: string;
+            modelId: string;
+            topCap: string;
+            handle: string;
+            displayName: string;
+          }
+        | undefined;
+      if (model3d) {
+        const api = await acquireSceneApi();
+        if (api) {
+          // small settle delay so canopy texture is ready
+          await new Promise((r) => setTimeout(r, 350));
+          const top = await api.captureView("top");
+          const front = await api.captureView("front");
+          const side = await api.captureView("side");
+          threeD = {
+            top,
+            front,
+            side,
+            modelId: model3d.model_id,
+            topCap: model3d.top_cap_style,
+            handle: model3d.handle_style,
+            displayName: model3d.display_name,
+          };
+        }
+        setHeadlessCapture(null);
+      }
+
+      await exportPdfSummary(project, url, pouchUrl, innerUrl, threeD);
     } catch (e) {
       toast({ title: t("editor.pdfFail"), variant: "destructive" });
+      setHeadlessCapture(null);
     }
   };
   const handleExportAi = async () => {
@@ -630,6 +694,26 @@ const DesignEditor = () => {
               )}
             </div>
             <div className="ml-auto rounded-lg bg-card border border-border shadow-soft p-1 flex items-center gap-1">
+              <button
+                onClick={() => setViewMode("2d")}
+                className={cn(
+                  "px-2.5 py-1 rounded-md text-xs transition flex items-center gap-1",
+                  viewMode === "2d" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
+                )}
+              >
+                <Square className="h-3.5 w-3.5" /> {t("view.2d")}
+              </button>
+              <button
+                onClick={() => setViewMode("3d")}
+                className={cn(
+                  "px-2.5 py-1 rounded-md text-xs transition flex items-center gap-1",
+                  viewMode === "3d" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
+                )}
+              >
+                <Box className="h-3.5 w-3.5" /> {t("view.3d")}
+              </button>
+            </div>
+            <div className="rounded-lg bg-card border border-border shadow-soft p-1 flex items-center gap-1">
               <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setZoom((z) => Math.max(0.5, z - 0.1))}><ZoomOut className="h-3.5 w-3.5" /></Button>
               <span className="text-xs w-10 text-center">{Math.round(zoom * 100)}%</span>
               <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setZoom((z) => Math.min(2, z + 0.1))}><ZoomIn className="h-3.5 w-3.5" /></Button>
@@ -712,7 +796,10 @@ const DesignEditor = () => {
             </div>
           )}
 
-          <div className="min-h-full grid place-items-center p-12 pt-20">
+          <div
+            className="min-h-full grid place-items-center p-12 pt-20"
+            style={{ display: viewMode === "2d" ? "grid" : "none" }}
+          >
             <div style={{ transform: `scale(${zoom})`, transformOrigin: "center" }}>
               <div
                 style={{ display: activeSurface === "pouch" ? "none" : "block" }}
@@ -774,6 +861,100 @@ const DesignEditor = () => {
               )}
             </div>
           </div>
+
+          {/* (2D canopy SVG above is left mounted via display:none in 3D mode
+              so the texture rasterizer can keep reading it.) */}
+
+          {/* 3D preview */}
+          {viewMode === "3d" && (
+            <div className="absolute inset-0 top-16">
+              {model3d ? (
+                <>
+                  <UmbrellaScene
+                    ref={(api) => { sceneRef.current = api; }}
+                    config={model3d}
+                    svg={svgRef.current}
+                    fabricColor={project.fabricColor}
+                    capColor={project.capColor}
+                    showFrame={showFrame}
+                    textureDeps={[
+                      project.fabricColor,
+                      project.capColor,
+                      project.panelColors,
+                      project.artworkItems,
+                      project.ribCount,
+                      project.umbrellaCategory,
+                      project.printingMethod,
+                      dryToggle,
+                    ]}
+                  />
+                  <div className="absolute top-2 left-1/2 -translate-x-1/2 z-10 rounded-lg bg-card border border-border shadow-soft p-1 flex items-center gap-1 text-xs">
+                    {(["perspective", "top", "front", "side", "bottom"] as CameraPreset[]).map((p) => (
+                      <button
+                        key={p}
+                        onClick={() => sceneRef.current?.setView(p)}
+                        className="px-2.5 py-1 rounded-md text-muted-foreground hover:bg-muted transition"
+                      >
+                        {t(`threeD.${p === "perspective" ? "reset" : p}`)}
+                      </button>
+                    ))}
+                    <Separator orientation="vertical" className="h-5 mx-1" />
+                    <button
+                      onClick={() => setShowFrame((v) => !v)}
+                      className="px-2.5 py-1 rounded-md text-muted-foreground hover:bg-muted transition flex items-center gap-1"
+                    >
+                      {showFrame ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                      {showFrame ? t("threeD.hideFrame") : t("threeD.showFrame")}
+                    </button>
+                    <button
+                      onClick={async () => {
+                        const url = await sceneRef.current?.captureView("perspective");
+                        if (url) downloadDataUrl(url, `${project.projectName.replace(/\s+/g, "_")}_3d.png`);
+                      }}
+                      className="px-2.5 py-1 rounded-md text-muted-foreground hover:bg-muted transition flex items-center gap-1"
+                    >
+                      <Camera className="h-3.5 w-3.5" /> {t("threeD.screenshot")}
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <div className="h-full grid place-items-center p-12">
+                  <div className="max-w-md text-center rounded-xl border border-border bg-card p-8 shadow-soft">
+                    <Box className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
+                    <p className="text-sm text-foreground">{t("threeD.unavailable")}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Headless offscreen 3D scene used to capture PDF screenshots when
+              the user clicks "PDF" while still in 2D mode. */}
+          {headlessCapture && model3d && (
+            <div
+              style={{ position: "fixed", left: -99999, top: -99999, width: 720, height: 720, pointerEvents: "none" }}
+              aria-hidden
+            >
+              <UmbrellaScene
+                ref={(api) => {
+                  if (!api) {
+                    headlessSceneRef.current = null;
+                    return;
+                  }
+                  if (headlessCapture && headlessSceneRef.current !== api) {
+                    headlessSceneRef.current = api;
+                    headlessCapture.resolve(api);
+                  }
+                }}
+                config={model3d}
+                svg={svgRef.current}
+                fabricColor={project.fabricColor}
+                capColor={project.capColor}
+                showFrame={showFrame}
+                textureDeps={[project]}
+              />
+            </div>
+          )}
 
 
           {/* Hidden inner-export canopy. Vented = render full composition (both layers).

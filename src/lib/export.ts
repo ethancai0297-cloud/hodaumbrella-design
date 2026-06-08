@@ -165,7 +165,16 @@ export async function exportPdfSummary(
   project: DesignProject,
   pngDataUrl: string,
   pouchPngDataUrl?: string,
-  innerLayerPngDataUrl?: string
+  innerLayerPngDataUrl?: string,
+  threeD?: {
+    top: string;
+    front: string;
+    side: string;
+    modelId: string;
+    topCap: string;
+    handle: string;
+    displayName: string;
+  }
 ) {
   const pdf = new jsPDF({ unit: "pt", format: "a4" });
   const pageW = pdf.internal.pageSize.getWidth();
@@ -341,6 +350,83 @@ export async function exportPdfSummary(
     try {
       pdf.addImage(innerLayerPngDataUrl, "PNG", 40, 110, iW, Math.min(iH, pageH - 180));
     } catch {}
+
+    pdf.setDrawColor(220);
+    pdf.line(40, pageH - 40, pageW - 40, pageH - 40);
+    pdf.setFontSize(9);
+    pdf.setTextColor(140);
+    pdf.text(COMPANY_NAME, 40, pageH - 24);
+    pdf.text(new Date().toLocaleDateString(), pageW - 40, pageH - 24, { align: "right" });
+  }
+
+  // Optional 3D Sales Preview page
+  if (threeD) {
+    pdf.addPage();
+    pdf.setFillColor(186, 220, 240);
+    pdf.rect(0, 0, pageW, 60, "F");
+    pdf.setTextColor(15, 31, 61);
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(14);
+    pdf.text("3D Sales Preview", 40, 38);
+
+    pdf.setTextColor(20, 24, 30);
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(10);
+    pdf.text(threeD.displayName, 40, 84);
+
+    // Three captures in a row
+    const gap = 12;
+    const cellW = (pageW - 80 - gap * 2) / 3;
+    const cellH = cellW; // square captures
+    const labels = ["Top view", "Front view", "Side view"];
+    const urls = [threeD.top, threeD.front, threeD.side];
+    const yImg = 100;
+    pdf.setFontSize(9);
+    pdf.setTextColor(110, 110, 120);
+    urls.forEach((u, i) => {
+      const x = 40 + i * (cellW + gap);
+      try {
+        const props = pdf.getImageProperties(u);
+        const ratio = props.height / props.width;
+        const drawH = Math.min(cellH, cellW * ratio);
+        const drawW = drawH === cellH ? cellH / ratio : cellW;
+        const ox = x + (cellW - drawW) / 2;
+        const oy = yImg + (cellH - drawH) / 2;
+        pdf.addImage(u, "PNG", ox, oy, drawW, drawH);
+      } catch {}
+      pdf.text(labels[i], x + cellW / 2, yImg + cellH + 14, { align: "center" });
+    });
+
+    // Spec block
+    let sy = yImg + cellH + 40;
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(11);
+    pdf.setTextColor(20, 24, 30);
+    pdf.text("Model details", 40, sy);
+    sy += 16;
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(10);
+    const specRows: [string, string][] = [
+      ["Model ID", threeD.modelId],
+      ["Top cap style", threeD.topCap],
+      ["Handle style", threeD.handle],
+    ];
+    specRows.forEach(([k, v]) => {
+      pdf.setTextColor(110, 110, 120);
+      pdf.text(k, 40, sy);
+      pdf.setTextColor(20, 24, 30);
+      pdf.text(v, 180, sy);
+      sy += 14;
+    });
+
+    sy += 8;
+    pdf.setFont("helvetica", "italic");
+    pdf.setTextColor(110, 110, 120);
+    pdf.setFontSize(9);
+    const disclaimer =
+      "The 3D preview is for sales visualization only. Final production details, materials, dimensions and finishing must be confirmed by the factory designer.";
+    const dLines = pdf.splitTextToSize(disclaimer, pageW - 80);
+    pdf.text(dLines, 40, sy);
 
     pdf.setDrawColor(220);
     pdf.line(40, pageH - 40, pageW - 40, pageH - 40);

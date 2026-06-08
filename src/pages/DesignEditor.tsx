@@ -702,7 +702,11 @@ const DesignEditor = () => {
 
           <div className="min-h-full grid place-items-center p-12 pt-20">
             <div style={{ transform: `scale(${zoom})`, transformOrigin: "center" }}>
-              <div style={{ display: activeSurface === "pouch" ? "none" : "block" }}>
+              <div
+                style={{ display: activeSurface === "pouch" ? "none" : "block" }}
+                onMouseEnter={() => setCanopyHover(true)}
+                onMouseLeave={() => setCanopyHover(false)}
+              >
                 <UmbrellaCanopy
                   ref={svgRef}
                   category={project.umbrellaCategory}
@@ -718,6 +722,10 @@ const DesignEditor = () => {
                     activeSurface === "canopy" && updateItem(id, patch)
                   }
                   size={620}
+                  dryMode={
+                    project.printingMethod === "color-change" &&
+                    (dryToggle === "dry" || (dryToggle === "auto" && !canopyHover))
+                  }
                   innerLayer={
                     project.hasDoubleLayer && project.umbrellaCategory === "golf"
                       ? {

@@ -57,6 +57,12 @@ const dict: Dict = {
   "editor.pdfFail": { en: "PDF export failed", zh: "PDF 导出失败" },
   "editor.aiFail": { en: "AI export failed", zh: "AI 导出失败" },
   "editor.resetConfirm": { en: "Reset all artwork and panel selection?", zh: "重置所有图案和面板选择？" },
+  "editor.reset": { en: "Reset", zh: "重置" },
+  "editor.resetTitle": { en: "Reset design?", zh: "重置设计？" },
+  "editor.resetBody": { en: "This clears all panel colors, artwork, and selections for this project. This cannot be undone.", zh: "这将清除该项目的所有面板颜色、图案和选择。此操作无法撤销。" },
+  "editor.cancel": { en: "Cancel", zh: "取消" },
+  "landing.tag.silk": { en: "Silkscreen ready", zh: "丝印就绪" },
+  "landing.tag.colors": { en: "+12 colors", zh: "+12 色" },
 
   // Wizard
   "wiz.category": { en: "1. Umbrella category", zh: "1. 雨伞类型" },

@@ -696,6 +696,26 @@ const DesignEditor = () => {
               )}
             </div>
             <div className="ml-auto rounded-lg bg-card border border-border shadow-soft p-1 flex items-center gap-1">
+              <button
+                onClick={() => setViewMode("2d")}
+                className={cn(
+                  "px-2.5 py-1 rounded-md text-xs transition flex items-center gap-1",
+                  viewMode === "2d" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
+                )}
+              >
+                <Square className="h-3.5 w-3.5" /> {t("view.2d")}
+              </button>
+              <button
+                onClick={() => setViewMode("3d")}
+                className={cn(
+                  "px-2.5 py-1 rounded-md text-xs transition flex items-center gap-1",
+                  viewMode === "3d" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
+                )}
+              >
+                <Box className="h-3.5 w-3.5" /> {t("view.3d")}
+              </button>
+            </div>
+            <div className="rounded-lg bg-card border border-border shadow-soft p-1 flex items-center gap-1">
               <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setZoom((z) => Math.max(0.5, z - 0.1))}><ZoomOut className="h-3.5 w-3.5" /></Button>
               <span className="text-xs w-10 text-center">{Math.round(zoom * 100)}%</span>
               <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setZoom((z) => Math.min(2, z + 0.1))}><ZoomIn className="h-3.5 w-3.5" /></Button>

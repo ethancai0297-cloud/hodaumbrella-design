@@ -622,8 +622,6 @@ const DesignEditor = () => {
               <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setZoom((z) => Math.max(0.5, z - 0.1))}><ZoomOut className="h-3.5 w-3.5" /></Button>
               <span className="text-xs w-10 text-center">{Math.round(zoom * 100)}%</span>
               <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setZoom((z) => Math.min(2, z + 0.1))}><ZoomIn className="h-3.5 w-3.5" /></Button>
-              <Separator orientation="vertical" className="h-5" />
-              <Button size="icon" variant="ghost" className="h-7 w-7" onClick={handleReset} title="Reset"><RotateCcw className="h-3.5 w-3.5" /></Button>
             </div>
           </div>
 

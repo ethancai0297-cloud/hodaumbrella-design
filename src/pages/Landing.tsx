@@ -1,10 +1,11 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { UmbrellaCanopy } from "@/components/UmbrellaCanopy";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { useI18n } from "@/i18n/i18n";
 import { ArrowRight, Palette, Image as ImageIcon, FileDown, Sparkles, ShieldCheck, Layers } from "lucide-react";
 import logo from "@/assets/hoda-tuzh-logo.png";
+
+const OCTAGON_CLIP = "polygon(50% 0%, 85% 15%, 100% 50%, 85% 85%, 50% 100%, 15% 85%, 0% 50%, 15% 15%)";
 
 const Landing = () => {
   const { t } = useI18n();

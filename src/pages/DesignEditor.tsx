@@ -140,7 +140,7 @@ const DesignEditor = () => {
     setSelectedPanels((s) => {
       if (s.includes(i)) return s.filter((p) => p !== i);
       const next = [...s, i].sort((a, b) => a - b);
-      if (project.printingMethod === "silkscreen" && next.length > 8) {
+      if ((project.printingMethod === "silkscreen" || project.printingMethod === "color-change") && next.length > 8) {
         toast({ title: "Silkscreen max 8 panels" });
         return s;
       }

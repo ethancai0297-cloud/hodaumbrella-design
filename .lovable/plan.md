@@ -1,37 +1,29 @@
-# Hero redesign + Undo/Reset button fix
+## Goal
 
-## 1. Landing hero — Layered trio + branding
+Make the color-change preview trigger only when the cursor is directly over a printed artwork item. When the mouse leaves the artwork, the design returns to white. Keep the Dry / Wet buttons as a manual override; Auto becomes the hover-driven mode.
 
-Replace the right-side hero card on `/` with the chosen "Layered trio" composition: three umbrellas stacked at offset angles inside a rounded card with ambient color glows behind it. Left column (badge, headline, subhead, CTAs, trust line) stays as-is.
+## Changes
 
-- Background umbrella (back): rose→orange gradient, rotated +12°, with a subtle white-dot polka pattern, dimmed to 40% opacity.
-- Middle umbrella: indigo→violet gradient, rotated −6°, with rib lines and a dark center hub.
-- Front umbrella: dark slate-900 fabric with a soft emerald glow + faint italic "HODA" wordmark in the corner, drawn rib lines, prominent drop shadow.
-- Floating tags around the front umbrella:
-  - Top-right: "Silk Print Active" pill with a rose dot.
-  - Bottom-left: "+12 Colors" pill with three overlapping color avatars.
-- Card: white, `rounded-3xl`, indigo-tinted shadow, soft border. Two ambient `blur-[100px]` glows (indigo + rose) behind the card.
-- Keep all umbrellas as octagons via `clip-path: polygon(50% 0%, 85% 15%, 100% 50%, 85% 85%, 50% 100%, 15% 85%, 0% 50%, 15% 15%)`.
+### 1. `src/components/UmbrellaCanopy.tsx`
 
-The headline keeps its existing solid color; do not switch it to a gradient (matches the rest of the site's voice and the current bilingual headline).
+- Add an optional `onArtworkHoverChange?: (hovered: boolean) => void` prop.
+- Wrap each rendered artwork `<g>` (the full-canopy image group at ~L261 and per-panel groups at ~L290 for both image and text items) with `onPointerEnter={() => onArtworkHoverChange?.(true)}` and `onPointerLeave={() => onArtworkHoverChange?.(false)}`.
+- Apply the same wiring to the inner-layer artwork render path so double-layer golf umbrellas behave the same.
+- No change to how `dryMode` is consumed — the parent still owns the boolean.
 
-Bilingual: the floating tag labels go through `useI18n` with new keys (`landing.tag.silk`, `landing.tag.colors`) in both EN and ZH.
+### 2. `src/pages/DesignEditor.tsx`
 
-Files: `src/pages/Landing.tsx`, `src/i18n/i18n.tsx`.
+- Rename `canopyHover` → `artworkHover` (state + setter) and stop using the wrapper `<div>`'s `onMouseEnter`/`onMouseLeave` for it (remove those two handlers on L719–720; the wrapper div stays for layout).
+- Pass `onArtworkHoverChange={setArtworkHover}` to `<UmbrellaCanopy>`.
+- Update the `dryMode` expression on L737–740 to read:
+  `project.printingMethod === "color-change" && (dryToggle === "dry" || (dryToggle === "auto" && !artworkHover))`
+- Keep the Auto / Dry / Wet segmented toggle (L639–650) untouched — Auto = hover-driven, Dry = always white, Wet = always colored.
 
-## 2. Undo vs Reset — clearer, swapped
+### 3. Copy tweak — `src/i18n/i18n.tsx`
 
-Currently both the canopy-area "Reset" button and the top-bar "Undo" button use the `RotateCcw` icon, which is causing real confusion (user has been hitting Reset thinking it's Undo).
+- Update the `canvas.colorChangeHint` string (EN + ZH) so it reflects the new behavior, e.g. "Hover over the artwork to preview the wet color; move away to see it dry."
 
-- Swap the two icons:
-  - **Undo** (top bar): keep `RotateCcw` (the curved-arrow-back icon).
-  - **Reset** (canvas toolbar): use `Trash2` to clearly signal "clear everything".
-- Swap their positions per the user's request:
-  - Move **Reset** out of the canvas zoom toolbar and into the **top bar**, placed to the right of Undo (so Undo sits first / leftmost of the pair).
-  - Remove the Reset button from the canvas zoom toolbar; that toolbar only keeps zoom in/out + percentage.
-- Add a confirmation dialog before Reset actually clears: small `AlertDialog` titled "Reset design?" with body "This clears all panel colors, artwork, and selections for this project. This cannot be undone." and buttons Cancel / Reset.
-- Add clear labels next to each icon in the top bar (`Undo` and `Reset`) so the difference is unambiguous, matching the existing labelled buttons (Save, PNG, AI, PDF).
+## Out of scope
 
-Files: `src/pages/DesignEditor.tsx` (move/relabel buttons, wire AlertDialog), `src/i18n/i18n.tsx` (add `editor.reset` EN/ZH; `editor.undo` already exists).
-
-No data, schema, dependency, or route changes.
+- No changes to the pouch surface, exports, artwork transforms, or the print-method selector.
+- No styling or layout changes to the canvas toolbar.

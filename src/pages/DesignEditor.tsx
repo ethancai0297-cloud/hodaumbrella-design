@@ -338,8 +338,13 @@ const DesignEditor = () => {
   };
 
   const handleExportPng = async () => {
-    if (!svgRef.current) return;
     try {
+      if (viewMode === "3d" && sceneRef.current) {
+        const url = await sceneRef.current.captureView("perspective");
+        downloadDataUrl(url, `${project.projectName.replace(/\s+/g, "_")}_3d.png`);
+        return;
+      }
+      if (!svgRef.current) return;
       const isDouble = project.hasDoubleLayer && project.umbrellaCategory === "golf" && innerOnlySvgRef.current;
       const url = isDouble
         ? await svgPairToPngDataUrl(svgRef.current, innerOnlySvgRef.current!, 3)
@@ -350,6 +355,15 @@ const DesignEditor = () => {
       toast({ title: t("editor.exportFail"), variant: "destructive" });
     }
   };
+
+  const acquireSceneApi = async (): Promise<SceneApi | null> => {
+    if (sceneRef.current && viewMode === "3d") return sceneRef.current;
+    if (!model3d) return null;
+    return await new Promise<SceneApi | null>((resolve) => {
+      setHeadlessCapture({ resolve });
+    });
+  };
+
   const handleExportPdf = async () => {
     if (!svgRef.current) return;
     try {
@@ -362,9 +376,45 @@ const DesignEditor = () => {
         project.hasDoubleLayer && project.umbrellaCategory === "golf" && innerOnlySvgRef.current
           ? await svgToPngDataUrl(innerOnlySvgRef.current, 2)
           : undefined;
-      await exportPdfSummary(project, url, pouchUrl, innerUrl);
+
+      let threeD:
+        | {
+            top: string;
+            front: string;
+            side: string;
+            modelId: string;
+            topCap: string;
+            handle: string;
+            displayName: string;
+          }
+        | undefined;
+      if (model3d) {
+        const api = await acquireSceneApi();
+        if (api) {
+          // small settle delay so canopy texture is ready
+          await new Promise((r) => setTimeout(r, 350));
+          const top = await api.captureView("top");
+          const front = await api.captureView("front");
+          const side = await api.captureView("side");
+          threeD = {
+            top,
+            front,
+            side,
+            modelId: model3d.model_id,
+            topCap: model3d.top_cap_style,
+            handle: model3d.handle_style,
+            displayName: model3d.display_name,
+          };
+        }
+        if (headlessCapture) {
+          setHeadlessCapture(null);
+        }
+      }
+
+      await exportPdfSummary(project, url, pouchUrl, innerUrl, threeD);
     } catch (e) {
       toast({ title: t("editor.pdfFail"), variant: "destructive" });
+      setHeadlessCapture(null);
     }
   };
   const handleExportAi = async () => {

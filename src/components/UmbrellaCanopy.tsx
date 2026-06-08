@@ -300,7 +300,7 @@ export const UmbrellaCanopy = forwardRef<SVGSVGElement, Props>(function Umbrella
                         fontFamily={item.fontFamily || "Inter, sans-serif"}
                         fontSize={(item.fontSize || 18) * item.scale}
                         fontWeight={700}
-                        fill={item.color || "#ffffff"}
+                        fill={dryMode ? "#ffffff" : (item.color || "#ffffff")}
                       >
                         {item.text}
                       </text>
@@ -311,6 +311,7 @@ export const UmbrellaCanopy = forwardRef<SVGSVGElement, Props>(function Umbrella
                         y={-baseSize / 2}
                         width={baseSize}
                         height={baseSize}
+                        filter={dryMode ? "url(#dry-white)" : undefined}
                         preserveAspectRatio={
                           item.fitMode === "stretch"
                             ? "none"

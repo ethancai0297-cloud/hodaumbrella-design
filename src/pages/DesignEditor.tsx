@@ -910,6 +910,21 @@ const DesignEditor = () => {
           </section>
         </aside>
       </div>
+
+      <AlertDialog open={resetOpen} onOpenChange={setResetOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("editor.resetTitle")}</AlertDialogTitle>
+            <AlertDialogDescription>{t("editor.resetBody")}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("editor.cancel")}</AlertDialogCancel>
+            <AlertDialogAction onClick={doReset} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {t("editor.reset")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

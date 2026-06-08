@@ -810,9 +810,14 @@ const DesignEditor = () => {
 
 
           {(silkscreenWarn || digitalWarn) && (
-            <div className="absolute bottom-4 left-4 right-4 rounded-lg border border-warning/40 bg-warning/10 text-foreground text-xs px-3 py-2 flex items-start gap-2">
-              <span className="font-semibold text-warning">{t("canvas.note")}</span>
-              <span>{silkscreenWarn ? t("canvas.warn.silk") : t("canvas.warn.digital")}</span>
+            <div className="absolute bottom-4 left-4 right-4 rounded-lg border border-warning/40 bg-warning/10 text-foreground text-xs px-3 py-2 flex flex-col gap-1">
+              <div className="flex items-start gap-2">
+                <span className="font-semibold text-warning">{t("canvas.note")}</span>
+                <span>{silkscreenWarn ? t("canvas.warn.silk") : t("canvas.warn.digital")}</span>
+              </div>
+              {colorChangeHint && (
+                <div className="text-muted-foreground">{t("canvas.colorChangeHint")}</div>
+              )}
             </div>
           )}
         </main>

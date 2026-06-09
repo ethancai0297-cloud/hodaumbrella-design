@@ -1,62 +1,63 @@
 ## Goal
 
-Add an optional 3D preview mode to the existing Design Editor without changing the 2D editing experience. The 3D view reflects the live design state (artwork, colors, panels, layout, fit mode) and supports OrbitControls, preset camera views, frame toggle, PNG screenshot, and a new PDF page with top/front/side captures.
+Make the existing 3D preview look like the Goudainc reference photo (soft studio shot, scalloped canopy, realistic wood handle, 3/4 side view) while keeping every existing feature: 2D editor, view-mode toggle, frame toggle, camera presets, screenshot, headless PDF capture, save/undo/reset/PNG/AI, language switcher, pouch, double-layer.
 
-## Decisions (from clarifying answers)
-- **GLB source:** Placeholder GLBs now, swap later. Registry + loader fully wired so production-quality GLBs drop in with no code changes.
-- **Texture pipeline:** Rasterize the existing 2D `UmbrellaCanopy` SVG output per panel into canvas textures (debounced on edits).
-- **PDF screenshots:** Auto-captured headlessly during PDF export by mounting the 3D scene offscreen.
-- **Scope:** Canopy only in v1. Pouch and golf inner layer stay 2D-only.
+Reference: https://goudainc.com/product/custom-wood-frame-umbrellas/ (hero image — black floral all-over print on a wood-frame straight umbrella, soft cream backdrop).
 
-## Changes
+## What changes vs. today
 
-### 1. Dependencies
-Add (exact versions, React 18 compatible):
-- `three@^0.160` · `@react-three/fiber@^8.18` · `@react-three/drei@^9.122` · `three-stdlib` (for `GLTFLoader`).
+Today the canopy is a smooth dome made of flat-ish wedges with a sphere top cap and a flat blue-gray background. The reference shows:
 
-### 2. Model registry — `src/3d/models/registry.ts` + JSON configs
-Create a typed registry plus one JSON file per model under `src/3d/models/configs/`:
-- `folding_21in_8panel_standard.json`
-- `straight_23in_8panel_standard.json`
-- `golf_30in_8panel_standard.json`
+1. Each panel **bows outward between adjacent ribs** (visible scalloped silhouette), and the fabric **dips back up at the rib tip** (the classic "pagoda" droop).
+2. A **sharper, pointier apex** (no visible sphere cap on top).
+3. **Wood J-hook handle** with warm wood material (not a flat brown cylinder section).
+4. **Soft cream/off-white studio backdrop** with a gentle floor gradient and a soft contact shadow — not a flat panel color.
+5. **3/4 side default camera** (slightly below canopy equator) instead of a high overhead angle.
+6. Richer fabric shading: ACES tone mapping, slightly lower ambient, stronger key light, fill light, subtle rim light.
 
-Each JSON matches the user-specified schema (model_id, category, display_name, rib_count, panel_count, rib_length_inch/cm, canopy_diameter_cm, canopy_height_cm, canopy_arc_length_cm, shaft_length_cm, shaft_diameter_mm, shaft_color, top_cap_style/dimensions/color, rib_tip_style/dimensions, ferrule_style, handle_style/material/color, canopy_material, canopy_layer, model_file, uv_template_file).
+## Files touched (all existing — no new files)
 
-`registry.ts` exports `findModel(category, ribCount)` returning the config or `null`.
+- `src/components/3d/buildUmbrellaGeometry.ts` — new panel profile with per-panel bow + tip droop; UVs updated to follow the bowed surface so artwork still maps correctly per wedge.
+- `src/components/3d/UmbrellaModel.tsx` — remove visible sphere top cap (replace with a tiny dark finial flush to apex), tune rib-tip size, refine J-hook curve, wood material (warmer color + lower roughness when handle_material is "wood").
+- `src/components/3d/UmbrellaScene.tsx` — cream gradient background, ACES filmic tone mapping, exposure tweak, key+fill+rim lighting, softer/larger contact shadow, default camera moved to 3/4 side (slightly below canopy), OrbitControls min polar tightened so users can't flip under the floor.
+- (No changes to 2D code, registry JSONs, export pipeline, i18n, or DesignEditor — the scene API/props stay identical.)
 
-### 3. Placeholder GLB assets
-Add three placeholder `.glb` files under `public/models/` with the required named meshes (`canopy_panel_01`..`canopy_panel_08`, `top_cap`, `shaft`, `rib_frame`, `rib_tip`, `handle`) and per-panel UVs. They are built once with a small Node script (`scripts/build-placeholder-glbs.mjs`, run manually) using `three`'s exporter so the runtime only loads finished `.glb`s. Real GLBs drop into the same path later.
+## Geometry detail (panel bow + tip droop)
 
-### 4. 3D preview components — `src/components/3d/`
-- `UmbrellaScene.tsx` — `<Canvas>` host: lighting, ground shadow, `OrbitControls`, ref-forwarded `gl` for screenshots.
-- `UmbrellaModel.tsx` — loads the model GLB via `useGLTF`, locates named meshes, applies per-panel materials/textures and shaft/handle/cap colors from the config + project state. Honors `showFrame` to hide/show `rib_frame` + `rib_tip`.
-- `useCanopyTextures.ts` — debounced hook that renders the existing `UmbrellaCanopy` SVG (offscreen, single panel at a time for per-panel/selected layouts, or one atlas for full-canopy wrap) to `HTMLCanvasElement`s and returns `CanvasTexture[]` keyed by panel index. Reuses scale/rotation/offset/fit-mode/printArea values verbatim.
-- `CameraPresets.tsx` — buttons (Top / Front / Side / Bottom / Reset) that tween the OrbitControls target+position.
-- `ScreenshotButton.tsx` — calls `gl.domElement.toDataURL("image/png")` after a forced render, downloads via existing `downloadDataUrl`.
+For each panel the current code samples a `(rows × cols)` grid between rib angles `aA..aB`. New profile per vertex at radial `t` and angular `s` (`0..1` across the wedge):
 
-### 5. Editor integration — `src/pages/DesignEditor.tsx`
-- Add `viewMode: "2d" | "3d"` state. Add a segmented toggle `[ 2D Design | 3D Preview ]` next to the existing zoom controls.
-- 2D mode: unchanged.
-- 3D mode: render `<UmbrellaScene>` in the same canvas slot. Pass the current `project` (category, ribCount, fabricColor, panelColors, capColor, artworkItems, selectedPanels). Show frame toggle and preset buttons in the toolbar.
-- If `findModel(category, ribCount)` returns null, render a centered message with the exact copy:
-  > "3D preview is not available for this specification yet. Please use the 2D preview or contact our sales team."
-  Add the same string to `i18n.tsx` (EN + ZH).
-- No change to existing save/undo/reset/PNG/AI export.
+```text
+bow(s)   = sin(pi * s)                 // 0 at rib edges, 1 mid-panel
+droop(t) = max(0, (t - 0.85)) * k_tip  // small dip near rim
+y = height * cos(t*pi/2)
+    - height * 0.10 * t^2              // base droop
+    + height * 0.08 * bow(s) * t       // panels puff outward
+    - height * 0.18 * droop(t)         // rib-tip dip
+r_offset = radius * 0.04 * bow(s) * t  // panel pushes out radially mid-wedge
+```
 
-### 6. PDF upgrade — `src/lib/export.ts`
-- Add new function parameter `threeDCaptures?: { top: string; front: string; side: string; modelId: string; topCap: string; handle: string }` to `exportPdfSummary`.
-- When provided, append a new page titled **"3D Sales Preview"** containing the three captures in a row, a small spec table (Model ID, Top cap style, Handle style), and the disclaimer:
-  > "The 3D preview is for sales visualization only. Final production details must be confirmed by the factory designer."
-- In `DesignEditor.tsx`'s PDF export handler, if a 3D model exists for the spec, mount `<UmbrellaScene>` inside a hidden 512×512 container, capture three preset views via `gl.domElement.toDataURL`, unmount, then call `exportPdfSummary` with the captures.
+UVs keep the existing top-down `(0.5 + 0.5·cos(angle)·t, 0.5 + 0.5·sin(angle)·t)` mapping so the rasterized SVG continues to land on the correct wedge — the bow only displaces position/normals, not UVs.
 
-### 7. i18n — `src/i18n/i18n.tsx`
-Add keys (EN + ZH): `view.2d`, `view.3d`, `threeD.unavailable`, `threeD.showFrame`, `threeD.hideFrame`, `threeD.top`, `threeD.front`, `threeD.side`, `threeD.bottom`, `threeD.reset`, `threeD.screenshot`, `pdf.threeDTitle`, `pdf.threeDDisclaimer`.
+Bump `radialSegments` to 16 and `angularSegments` to 10 for smooth scallops without a noticeable perf cost.
 
-## Out of scope (v1)
-- Pouch 3D, double-layer inner-canopy 3D, opening/closing animations, replacing 2D PNG export, mobile-specific orbit gestures beyond drei defaults, real photogrammetry GLBs.
+## Lighting & background
 
-## Technical notes
-- Texture updates are debounced (~150 ms) and use `CanvasTexture.needsUpdate = true` to avoid GPU churn while sliders move.
-- Per-panel UVs in placeholder GLBs cover `[0,1]` so the rasterized SVG slice maps 1:1.
-- OrbitControls min/max distance derived from `canopy_diameter_cm` so all sizes frame correctly.
-- Screenshot capture forces `gl.render(scene, camera)` synchronously before `toDataURL` to avoid blank frames.
+- `gl.toneMapping = ACESFilmicToneMapping`, `toneMappingExposure ≈ 1.05`.
+- Background: CSS gradient on the `<Canvas>` wrapper from `#f7f3ec` (top) to `#e9e3d6` (bottom) — keeps existing `background` prop as override.
+- Lights: ambient 0.35, directional key 1.2 (upper-front-right, shadow on), directional fill 0.4 (opposite side, no shadow), directional rim 0.25 (behind, slightly above).
+- `ContactShadows`: opacity 0.55, blur 3.0, scale `radius * 5`, positioned just under the handle tip.
+
+## Camera
+
+Default position changes from `[r·2.4, r·1.8, r·2.4]` (high 3/4) to `[r·3.0, r·0.6, r·2.2]` (lower 3/4 side, similar to reference). `OrbitControls` `maxPolarAngle = Math.PI * 0.52` so the camera can't go below the floor. Existing Top/Front/Side/Bottom/Reset presets stay; "Reset" now restores this new default.
+
+## Out of scope (unchanged)
+
+- Texture pipeline (`useCanopyTexture.ts`) — already produces the correct top-down rasterization.
+- Model registry, GLB swap path, PDF export, headless capture, 2D editor, i18n keys, pouch, double-layer toggle, animations.
+
+## Risk / verification
+
+- Verify per-panel artwork still aligns at rib seams after bow (UVs unchanged, so it should — visually confirm in preview with a striped test design).
+- Verify headless PDF capture still works (no scene API change).
+- Verify mobile perf: bumped segments add ~480 verts per panel × 8 = ~3.8k extra — negligible.

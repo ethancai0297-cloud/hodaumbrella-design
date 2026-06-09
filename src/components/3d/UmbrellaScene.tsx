@@ -25,7 +25,7 @@ interface Props {
 }
 
 export const UmbrellaScene = forwardRef<SceneApi, Props>(function UmbrellaScene(
-  { config, svg, fabricColor, capColor, showFrame, textureDeps, background = "#f5f7fb" },
+  { config, svg, fabricColor, capColor, showFrame, textureDeps, background },
   ref
 ) {
   const texture = useCanopyTexture(svg, textureDeps);
@@ -41,41 +41,71 @@ export const UmbrellaScene = forwardRef<SceneApi, Props>(function UmbrellaScene(
 
   const radius = (config.canopy_diameter_cm / 2) * 0.1;
 
+  // Soft studio backdrop similar to the reference product photo
+  const wrapperStyle: React.CSSProperties = {
+    width: "100%",
+    height: "100%",
+    background:
+      background ??
+      "radial-gradient(120% 80% at 50% 25%, #fbf8f1 0%, #f1ebdd 55%, #e2d9c6 100%)",
+  };
+
   return (
-    <Canvas
-      shadows
-      dpr={[1, 2]}
-      gl={{ preserveDrawingBuffer: true, antialias: true }}
-      camera={{ position: [radius * 2.4, radius * 1.8, radius * 2.4], fov: 35 }}
-      style={{ width: "100%", height: "100%", background }}
-    >
-      <Suspense fallback={null}>
-        <ambientLight intensity={0.55} />
-        <directionalLight
-          position={[radius * 3, radius * 5, radius * 2]}
-          intensity={1.1}
-          castShadow
-          shadow-mapSize-width={1024}
-          shadow-mapSize-height={1024}
-        />
-        <Environment preset="city" />
-        <UmbrellaModel
-          config={config}
-          texture={texture}
-          fabricColor={fabricColor}
-          capColor={capColor}
-          showFrame={showFrame}
-        />
-        <ContactShadows
-          position={[0, -((config.shaft_length_cm) * 0.1) + (config.canopy_height_cm * 0.1 * 0.3) - 0.02, 0]}
-          opacity={0.45}
-          scale={radius * 4}
-          blur={2.4}
-          far={radius * 2}
-        />
-        <SceneController radius={radius} canopyHeight={config.canopy_height_cm * 0.1} register={(api) => (apiRef.current = api)} />
-      </Suspense>
-    </Canvas>
+    <div style={wrapperStyle}>
+      <Canvas
+        shadows
+        dpr={[1, 2]}
+        gl={{ preserveDrawingBuffer: true, antialias: true }}
+        camera={{ position: [radius * 3.0, radius * 0.6, radius * 2.2], fov: 32 }}
+        onCreated={({ gl }) => {
+          gl.toneMapping = THREE.ACESFilmicToneMapping;
+          gl.toneMappingExposure = 1.05;
+        }}
+        style={{ width: "100%", height: "100%", background: "transparent" }}
+      >
+        <Suspense fallback={null}>
+          <ambientLight intensity={0.35} />
+          {/* Key light */}
+          <directionalLight
+            position={[radius * 3.5, radius * 4.5, radius * 2.5]}
+            intensity={1.2}
+            castShadow
+            shadow-mapSize-width={1024}
+            shadow-mapSize-height={1024}
+          />
+          {/* Fill light */}
+          <directionalLight
+            position={[-radius * 3, radius * 2.2, radius * 1.5]}
+            intensity={0.4}
+          />
+          {/* Rim light */}
+          <directionalLight
+            position={[-radius * 1.5, radius * 3, -radius * 3.5]}
+            intensity={0.25}
+          />
+          <Environment preset="studio" />
+          <UmbrellaModel
+            config={config}
+            texture={texture}
+            fabricColor={fabricColor}
+            capColor={capColor}
+            showFrame={showFrame}
+          />
+          <ContactShadows
+            position={[0, -((config.shaft_length_cm) * 0.1) + (config.canopy_height_cm * 0.1 * 0.3) - 0.02, 0]}
+            opacity={0.55}
+            scale={radius * 5}
+            blur={3.0}
+            far={radius * 2.5}
+          />
+          <SceneController
+            radius={radius}
+            canopyHeight={config.canopy_height_cm * 0.1}
+            register={(api) => (apiRef.current = api)}
+          />
+        </Suspense>
+      </Canvas>
+    </div>
   );
 });
 
@@ -99,7 +129,8 @@ function SceneController({
   const presets = useMemo<Record<CameraPreset, [THREE.Vector3, THREE.Vector3]>>(() => {
     const target = new THREE.Vector3(0, canopyHeight * 0.4, 0);
     return {
-      perspective: [new THREE.Vector3(radius * 2.4, radius * 1.8, radius * 2.4), target],
+      // Studio 3/4 side view, slightly below canopy equator (matches reference photo)
+      perspective: [new THREE.Vector3(radius * 3.0, radius * 0.6, radius * 2.2), target],
       top: [new THREE.Vector3(0.001, radius * 4.2, 0), target],
       front: [new THREE.Vector3(0, canopyHeight * 0.4, radius * 4.0), target],
       side: [new THREE.Vector3(radius * 4.0, canopyHeight * 0.4, 0), target],
@@ -125,7 +156,6 @@ function SceneController({
         camera.position.copy(pos);
         camera.lookAt(tgt);
         camera.updateProjectionMatrix();
-        // wait one frame to ensure texture+geometry are uploaded
         await new Promise((r) => requestAnimationFrame(() => r(null)));
         gl.render(scene, camera);
         const url = gl.domElement.toDataURL("image/png");
@@ -149,6 +179,7 @@ function SceneController({
       dampingFactor={0.08}
       minDistance={radius * 1.4}
       maxDistance={radius * 8}
+      maxPolarAngle={Math.PI * 0.52}
       target={[0, canopyHeight * 0.4, 0]}
     />
   );

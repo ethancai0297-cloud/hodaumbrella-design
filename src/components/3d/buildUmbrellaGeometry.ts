@@ -1,15 +1,16 @@
 import * as THREE from "three";
 
 /**
- * Build a curved canopy panel (a slice of the dome). Returns a BufferGeometry
- * whose UVs map back to a square top-down texture of the entire canopy, so a
- * single shared texture serves all panels at the correct wedge.
+ * Build a curved canopy panel that mimics a real umbrella's silhouette:
+ *  - each panel bows OUTWARD between adjacent ribs (visible scallops),
+ *  - the fabric dips slightly back up at the rib tip (pagoda droop),
+ *  - apex tapers to a point.
+ *
+ * UVs keep the original top-down mapping (0.5 + 0.5·cos(angle)·t, 0.5 + 0.5·sin(angle)·t)
+ * so the rasterized SVG continues to land on the correct wedge — the bow only
+ * displaces position/normals, never UVs.
  *
  * Coordinate system: canopy lies in the XZ plane, apex on +Y.
- *  - rasterized SVG: x_svg right, y_svg down  → UV: (0.5 + 0.5·cos(θ_svg)·t, 0.5 + 0.5·sin(θ_svg)·t)
- *  - 3D: angle θ measured from +X around +Y, panel between [θA, θB].
- *  - SVG panel angles are measured with -PI/2 + index·slice. We feed the same
- *    θ here so UV picks the same wedge of the texture as is drawn on screen.
  */
 export function buildCanopyPanelGeometry(opts: {
   ribIndex: number;
@@ -24,12 +25,11 @@ export function buildCanopyPanelGeometry(opts: {
     ribCount,
     radius,
     height,
-    radialSegments = 10,
-    angularSegments = 6,
+    radialSegments = 16,
+    angularSegments = 10,
   } = opts;
 
   const slice = (Math.PI * 2) / ribCount;
-  // Match SVG convention: angle = -PI/2 + (i - 0.5)·slice for left edge.
   const aA = -Math.PI / 2 + (ribIndex - 0.5) * slice;
   const aB = aA + slice;
 
@@ -43,22 +43,36 @@ export function buildCanopyPanelGeometry(opts: {
 
   for (let r = 0; r < rows; r++) {
     const t = r / (rows - 1); // 0 at apex, 1 at rim
-    // Dome profile: apex high, rim slightly drooped below 0. Cosine arc.
-    const y = height * Math.cos((t * Math.PI) / 2) - height * 0.15 * Math.pow(t, 2);
-    const rr = t * radius;
     for (let c = 0; c < cols; c++) {
-      const s = c / (cols - 1);
+      const s = c / (cols - 1); // 0 at left rib, 1 at right rib
       const angle = aA + (aB - aA) * s;
+
+      // bow(s): 0 at rib edges, 1 mid-panel — drives outward puffing
+      const bow = Math.sin(Math.PI * s);
+      // droop(t): only kicks in near rim — drives rib-tip dip
+      const droop = Math.max(0, t - 0.85) / 0.15; // 0..1 across last 15%
+
+      // Vertical profile
+      const yBase = height * Math.cos((t * Math.PI) / 2);
+      const yPanelPuff = height * 0.06 * bow * t; // panels swell mid-wedge
+      const yTipDip = height * 0.22 * droop; // pagoda dip at rib tip
+      const y = yBase - height * 0.08 * t * t + yPanelPuff - yTipDip;
+
+      // Radial profile: mid-panel pushes outward slightly so silhouette scallops
+      const rOffset = radius * 0.045 * bow * t;
+      const rr = t * radius + rOffset;
+
       const x = Math.cos(angle) * rr;
       const z = Math.sin(angle) * rr;
       positions.push(x, y, z);
-      // UV in [0,1] from top-down texture; θ matches SVG angle directly.
+
+      // UV stays top-down — preserves per-panel artwork alignment
       const u = 0.5 + 0.5 * Math.cos(angle) * t;
       const v = 0.5 + 0.5 * Math.sin(angle) * t;
       uvs.push(u, v);
-      // Approximate outward/upward normal
-      const n = new THREE.Vector3(x * 0.3, height + 0.1, z * 0.3).normalize();
-      normals.push(n.x, n.y, n.z);
+
+      // Placeholder normal; recomputed below for accuracy on bowed surface
+      normals.push(0, 1, 0);
     }
   }
 
@@ -78,6 +92,7 @@ export function buildCanopyPanelGeometry(opts: {
   g.setAttribute("uv", new THREE.Float32BufferAttribute(uvs, 2));
   g.setAttribute("normal", new THREE.Float32BufferAttribute(normals, 3));
   g.setIndex(indices);
+  g.computeVertexNormals();
   return g;
 }
 
@@ -89,12 +104,17 @@ export function buildRibCurve(opts: {
 }) {
   const { ribIndex, ribCount, radius, height } = opts;
   const slice = (Math.PI * 2) / ribCount;
-  const angle = -Math.PI / 2 + ribIndex * slice;
+  // Ribs sit at panel edges (s = 0), which corresponds to (ribIndex - 0.5)·slice
+  const angle = -Math.PI / 2 + (ribIndex - 0.5) * slice;
   const pts: THREE.Vector3[] = [];
-  const steps = 14;
+  const steps = 18;
   for (let i = 0; i <= steps; i++) {
     const t = i / steps;
-    const y = height * Math.cos((t * Math.PI) / 2) - height * 0.15 * Math.pow(t, 2);
+    const droop = Math.max(0, t - 0.85) / 0.15;
+    const y =
+      height * Math.cos((t * Math.PI) / 2) -
+      height * 0.08 * t * t -
+      height * 0.22 * droop;
     const rr = t * radius;
     pts.push(new THREE.Vector3(Math.cos(angle) * rr, y, Math.sin(angle) * rr));
   }

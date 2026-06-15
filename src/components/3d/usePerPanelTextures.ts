@@ -141,7 +141,25 @@ function buildDebug(ribCount: number, panelSize: number, fabricColor: string) {
 
 async function rasterize(svg: SVGSVGElement, size: number): Promise<HTMLCanvasElement | null> {
   try {
-    const xml = new XMLSerializer().serializeToString(svg);
+    // Clone and strip strokes so rib/panel outlines from the 2D editor
+    // don't bake into the 3D canopy texture as radial lines.
+    const clone = svg.cloneNode(true) as SVGSVGElement;
+    clone.querySelectorAll("path,line,polyline,polygon,rect,circle,ellipse").forEach((el) => {
+      const e = el as SVGElement;
+      // Drop selection dashes entirely
+      if (e.getAttribute("stroke-dasharray")) {
+        e.setAttribute("stroke", "none");
+        e.removeAttribute("stroke-dasharray");
+      } else if (e.getAttribute("stroke") && e.getAttribute("stroke") !== "none") {
+        e.setAttribute("stroke", "none");
+      }
+      e.removeAttribute("stroke-width");
+      if (e.style) {
+        e.style.stroke = "none";
+        e.style.strokeWidth = "0";
+      }
+    });
+    const xml = new XMLSerializer().serializeToString(clone);
     const blob = new Blob([xml], { type: "image/svg+xml;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     try {

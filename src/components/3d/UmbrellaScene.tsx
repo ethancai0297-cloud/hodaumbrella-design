@@ -111,8 +111,8 @@ export const UmbrellaScene = forwardRef<SceneApi, Props>(function UmbrellaScene(
             />
           )}
           <ContactShadows
-            position={[0, -((config.shaft_length_cm) * 0.1) + (config.canopy_height_cm * 0.1 * 0.3) - 0.02, 0]}
-            opacity={0.55}
+            position={[0, -((config.shaft_length_cm) * 0.1) + (config.canopy_height_cm * 0.1 * 0.3) - 0.05, 0]}
+            opacity={0.35}
             scale={radius * 5}
             blur={3.0}
             far={radius * 2.5}
@@ -198,7 +198,8 @@ function SceneController({
       dampingFactor={0.08}
       minDistance={radius * 1.4}
       maxDistance={radius * 8}
-      maxPolarAngle={Math.PI * 0.52}
+      minPolarAngle={0}
+      maxPolarAngle={Math.PI}
       target={[0, canopyHeight * 0.4, 0]}
     />
   );

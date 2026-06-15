@@ -29,6 +29,8 @@ export const UmbrellaScene = forwardRef<SceneApi, Props>(function UmbrellaScene(
   { config, svg, fabricColor, capColor, showFrame, textureDeps, background },
   ref
 ) {
+  const useGLB = !!config.model_file && config.model_file.toLowerCase().endsWith(".glb");
+  // Legacy procedural texture (used only for procedural fallback path)
   const texture = useCanopyTexture(svg, textureDeps);
   const apiRef = useRef<InternalApi | null>(null);
 

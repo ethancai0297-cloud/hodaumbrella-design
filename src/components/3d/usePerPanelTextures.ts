@@ -51,6 +51,11 @@ export function usePerPanelTextures(
     ? `${svg.childElementCount}:${svg.getAttribute("data-version") ?? svg.innerHTML.length}`
     : "none";
 
+  // "Artwork" = any uploaded image or user text inside the canopy SVG.
+  // When none is present, skip SVG rasterization entirely so the canopy
+  // shows the pure fabric color (no stripes from rib outlines / wedges).
+  const hasArtwork = !!svg && !!svg.querySelector("image, text");
+
   useEffect(() => {
     if (!ribCount) return;
     // eslint-disable-next-line no-console
@@ -65,28 +70,44 @@ export function usePerPanelTextures(
     if (timerRef.current) window.clearTimeout(timerRef.current);
     const generation = ++generationRef.current;
     let cancelled = false;
+
+    // No artwork and no debug overlay → release any existing textures and
+    // return an empty array. GLBUmbrellaModel will fall back to the pure
+    // fabric color on each canopy panel.
+    if (!debugPanelNumbers && !hasArtwork) {
+      const prev = texturesRef.current;
+      if (prev.length) {
+        prev.forEach((t) => t.dispose());
+        texturesRef.current = [];
+      }
+      // eslint-disable-next-line no-console
+      console.log("[3D] usePerPanelTextures no artwork → solid fabric only");
+      if (textures.length) setTextures([]);
+      return () => {
+        cancelled = true;
+      };
+    }
+
     timerRef.current = window.setTimeout(() => {
       const build: Promise<HTMLCanvasElement[] | null> = debugPanelNumbers
         ? Promise.resolve(buildDebug(ribCount, panelSize, fabricColor))
-        : (svg
-            ? buildAll(svg, ribCount, sourceSize, panelSize, fabricColor).then(
-                (out) => {
-                  if (out) return out;
-                  // eslint-disable-next-line no-console
-                  console.warn(
-                    "[3D] rasterize returned null — falling back to solid fabric"
-                  );
-                  return buildSolid(ribCount, panelSize, fabricColor);
-                }
-              )
-            : Promise.resolve(buildSolid(ribCount, panelSize, fabricColor)));
+        : buildAll(svg!, ribCount, sourceSize, panelSize, fabricColor).then(
+            (out) => {
+              if (out) return out;
+              // eslint-disable-next-line no-console
+              console.warn(
+                "[3D] rasterize returned null — falling back to solid fabric"
+              );
+              return buildSolid(ribCount, panelSize, fabricColor);
+            }
+          );
       void build.then((canvases) => {
         if (cancelled || generation !== generationRef.current) return;
         if (!canvases) return;
         // eslint-disable-next-line no-console
         console.log("[3D] usePerPanelTextures built canvases", {
           count: canvases.length,
-          mode: debugPanelNumbers ? "debug" : svg ? "svg" : "solid",
+          mode: debugPanelNumbers ? "debug" : "svg",
         });
         const prev = texturesRef.current;
           const next: THREE.CanvasTexture[] = [];

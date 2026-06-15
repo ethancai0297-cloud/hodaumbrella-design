@@ -96,6 +96,7 @@ const DesignEditor = () => {
   const [artworkHover, setArtworkHover] = useState(false);
   const [viewMode, setViewMode] = useState<"2d" | "3d">("2d");
   const [showFrame, setShowFrame] = useState(true);
+  const [debugPanelNumbers, setDebugPanelNumbers] = useState(false);
   const [headlessCapture, setHeadlessCapture] = useState<null | {
     resolve: (api: SceneApi | null) => void;
   }>(null);
@@ -877,6 +878,7 @@ const DesignEditor = () => {
                     fabricColor={project.fabricColor}
                     capColor={project.capColor}
                     showFrame={showFrame}
+                    debugPanelNumbers={debugPanelNumbers}
                     textureDeps={[
                       project.fabricColor,
                       project.capColor,
@@ -906,6 +908,20 @@ const DesignEditor = () => {
                       {showFrame ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
                       {showFrame ? t("threeD.hideFrame") : t("threeD.showFrame")}
                     </button>
+                    {model3d.model_id === "folding_21in_8panel_standard" && (
+                      <button
+                        onClick={() => setDebugPanelNumbers((v) => !v)}
+                        className={cn(
+                          "px-2.5 py-1 rounded-md transition flex items-center gap-1",
+                          debugPanelNumbers
+                            ? "bg-primary text-primary-foreground"
+                            : "text-muted-foreground hover:bg-muted"
+                        )}
+                        title="Show panel numbers"
+                      >
+                        #1–8
+                      </button>
+                    )}
                     <button
                       onClick={async () => {
                         const url = await sceneRef.current?.captureView("perspective");

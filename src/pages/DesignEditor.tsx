@@ -121,6 +121,29 @@ const DesignEditor = () => {
     }
   }, [id]);
 
+  // Bump a version attribute on the canopy SVG so the 3D rasterizer's
+  // svgVersion probe always flips on any 2D edit — even when arrays
+  // mutate in place without reference changes.
+  useEffect(() => {
+    if (!svgEl) return;
+    svgEl.setAttribute("data-version", String(Date.now()));
+  }, [
+    svgEl,
+    project.artworkItems,
+    project.panelColors,
+    project.fabricColor,
+    project.capColor,
+    project.innerLayer,
+    project.hasDoubleLayer,
+    project.doubleLayerStyle,
+    project.printingMethod,
+    project.ribCount,
+    project.umbrellaCategory,
+    dryToggle,
+    selectedPanels,
+    activeSurface,
+  ]);
+
   // history (simple undo/redo)
   const historyRef = useRef<DesignProject[]>([]);
   const futureRef = useRef<DesignProject[]>([]);

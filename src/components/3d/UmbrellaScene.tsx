@@ -133,26 +133,38 @@ interface InternalApi {
 function SceneController({
   radius,
   canopyHeight,
+  useGLB,
   register,
 }: {
   radius: number;
   canopyHeight: number;
+  useGLB: boolean;
   register: (api: InternalApi) => void;
 }) {
   const { camera, gl, scene } = useThree();
   const controlsRef = useRef<any>(null);
 
   const presets = useMemo<Record<CameraPreset, [THREE.Vector3, THREE.Vector3]>>(() => {
+    if (useGLB) {
+      // Normalized GLB model: longest dim ~3.2, centered at origin.
+      const target = new THREE.Vector3(0, 0, 0);
+      return {
+        perspective: [new THREE.Vector3(0, 1.2, 4.2), target],
+        top: [new THREE.Vector3(0.001, 4.2, 0), target],
+        front: [new THREE.Vector3(0, 0.4, 4.2), target],
+        side: [new THREE.Vector3(4.2, 0.4, 0), target],
+        bottom: [new THREE.Vector3(0.001, -4.2, 0), target],
+      };
+    }
     const target = new THREE.Vector3(0, canopyHeight * 0.4, 0);
     return {
-      // Studio 3/4 side view, slightly below canopy equator (matches reference photo)
       perspective: [new THREE.Vector3(radius * 1.45, radius * 0.4, radius * 1.1), target],
       top: [new THREE.Vector3(0.001, radius * 2.0, 0), target],
       front: [new THREE.Vector3(0, canopyHeight * 0.4, radius * 1.9), target],
       side: [new THREE.Vector3(radius * 1.9, canopyHeight * 0.4, 0), target],
       bottom: [new THREE.Vector3(0.001, -radius * 1.9, 0), target],
     };
-  }, [radius, canopyHeight]);
+  }, [radius, canopyHeight, useGLB]);
 
   useEffect(() => {
     const api: InternalApi = {
@@ -187,6 +199,12 @@ function SceneController({
     register(api);
   }, [presets, camera, gl, scene, register]);
 
+  const orbitTarget: [number, number, number] = useGLB
+    ? [0, 0, 0]
+    : [0, canopyHeight * 0.4, 0];
+  const orbitMin = useGLB ? 1.8 : radius * 0.9;
+  const orbitMax = useGLB ? 12 : radius * 8;
+
   return (
     <OrbitControls
       ref={controlsRef}
@@ -196,11 +214,11 @@ function SceneController({
       enableRotate
       enablePan
       enableZoom
-      minDistance={radius * 0.9}
-      maxDistance={radius * 8}
+      minDistance={orbitMin}
+      maxDistance={orbitMax}
       minPolarAngle={0}
       maxPolarAngle={Math.PI}
-      target={[0, canopyHeight * 0.4, 0]}
+      target={orbitTarget}
     />
   );
 }

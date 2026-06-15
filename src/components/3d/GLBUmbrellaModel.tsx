@@ -65,8 +65,24 @@ export function GLBUmbrellaModel({
   }, [panelTextures, fabricColor, panelMaterials, config.rib_count]);
 
   // Clone scene so multiple mounts (preview + headless PDF capture) don't
-  // share/mutate the same node tree.
-  const root = useMemo(() => gltf?.scene?.clone(true) ?? null, [gltf]);
+  // share/mutate the same node tree. Auto-normalize: center at origin and
+  // scale longest dimension to ~3.2 world units so the configured camera
+  // (see UmbrellaScene) frames the umbrella consistently regardless of
+  // the GLB's authored size.
+  const root = useMemo(() => {
+    const cloned = gltf?.scene?.clone(true);
+    if (!cloned) return null;
+    const box = new THREE.Box3().setFromObject(cloned);
+    const size = new THREE.Vector3();
+    const center = new THREE.Vector3();
+    box.getSize(size);
+    box.getCenter(center);
+    cloned.position.sub(center);
+    const maxDim = Math.max(size.x, size.y, size.z) || 1;
+    const targetSize = 3.2;
+    cloned.scale.setScalar(targetSize / maxDim);
+    return cloned;
+  }, [gltf]);
 
   // Bind canopy panel materials. Strict whitelist: only meshes whose name
   // matches /^canopy_panel_\d+$/ get a generated material. Every other mesh

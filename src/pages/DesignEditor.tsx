@@ -144,6 +144,25 @@ const DesignEditor = () => {
     activeSurface,
   ]);
 
+  // Debug: log the current design state passed to 3D whenever the user
+  // switches into 3D Preview, so we can verify nothing is missing.
+  useEffect(() => {
+    if (viewMode !== "3d") return;
+    // eslint-disable-next-line no-console
+    console.log("3D Preview design state", {
+      category: project.umbrellaCategory,
+      panelCount: project.ribCount,
+      fabricColor: project.fabricColor,
+      panelColors: project.panelColors,
+      printingMethod: project.printingMethod,
+      selectedPanels,
+      artworks: project.artworkItems,
+      activeSurface,
+      model3d: model3d?.model_id ?? null,
+      svgMounted: !!svgEl,
+    });
+  }, [viewMode]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // history (simple undo/redo)
   const historyRef = useRef<DesignProject[]>([]);
   const futureRef = useRef<DesignProject[]>([]);

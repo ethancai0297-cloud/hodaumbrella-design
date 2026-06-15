@@ -42,18 +42,14 @@ export function findModel(
   category: UmbrellaCategory,
   ribCount: RibCount
 ): UmbrellaModelConfig | null {
-  // GLB-backed Folding 21" 8-panel is only valid for that exact combo.
-  // Other category/rib combinations fall back to the procedural model
-  // entry (model_file stripped) so the scene picks the procedural path.
-  const match =
-    MODELS.find((m) => m.category === category && m.rib_count === ribCount) ||
-    null;
-  if (!match) return null;
-  const isFoldingGlbCombo =
-    category === "folding" && ribCount === 8 && match.model_id === "folding_21in_8panel_standard";
-  if (match.model_file && match.model_file.toLowerCase().endsWith(".glb") && !isFoldingGlbCombo) {
-    return { ...match, model_file: "" };
-  }
+  // Only Folding + 8 panel is currently supported in 3D. Straight, Golf,
+  // and folding with other rib counts (6/7/10) intentionally return null
+  // so the editor shows the "3D preview unavailable" fallback.
+  if (category !== "folding" || ribCount !== 8) return null;
+  const match = MODELS.find(
+    (m) => m.model_id === "folding_21in_8panel_standard"
+  );
+  if (!match || !match.model_file?.toLowerCase().endsWith(".glb")) return null;
   return match;
 }
 

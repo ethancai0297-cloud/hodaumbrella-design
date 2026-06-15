@@ -1,10 +1,11 @@
 import { Canvas, useThree } from "@react-three/fiber";
-import { OrbitControls, Environment, ContactShadows } from "@react-three/drei";
+import { OrbitControls, Environment, ContactShadows, Bounds } from "@react-three/drei";
 import { Suspense, forwardRef, useEffect, useImperativeHandle, useMemo, useRef } from "react";
 import * as THREE from "three";
 import type { UmbrellaModelConfig } from "@/3d/models/registry";
 import { UmbrellaModel } from "./UmbrellaModel";
 import { useCanopyTexture } from "./useCanopyTexture";
+import { GLBUmbrellaModel } from "./GLBUmbrellaModel";
 
 export type CameraPreset = "perspective" | "top" | "front" | "side" | "bottom";
 
@@ -28,6 +29,8 @@ export const UmbrellaScene = forwardRef<SceneApi, Props>(function UmbrellaScene(
   { config, svg, fabricColor, capColor, showFrame, textureDeps, background },
   ref
 ) {
+  const useGLB = !!config.model_file && config.model_file.toLowerCase().endsWith(".glb");
+  // Legacy procedural texture (used only for procedural fallback path)
   const texture = useCanopyTexture(svg, textureDeps);
   const apiRef = useRef<InternalApi | null>(null);
 
@@ -84,13 +87,25 @@ export const UmbrellaScene = forwardRef<SceneApi, Props>(function UmbrellaScene(
             intensity={0.25}
           />
           <Environment preset="studio" />
-          <UmbrellaModel
-            config={config}
-            texture={texture}
-            fabricColor={fabricColor}
-            capColor={capColor}
-            showFrame={showFrame}
-          />
+          {useGLB ? (
+            <Bounds fit clip observe margin={1.25}>
+              <GLBUmbrellaModel
+                config={config}
+                svg={svg}
+                fabricColor={fabricColor}
+                showFrame={showFrame}
+                textureDeps={textureDeps}
+              />
+            </Bounds>
+          ) : (
+            <UmbrellaModel
+              config={config}
+              texture={texture}
+              fabricColor={fabricColor}
+              capColor={capColor}
+              showFrame={showFrame}
+            />
+          )}
           <ContactShadows
             position={[0, -((config.shaft_length_cm) * 0.1) + (config.canopy_height_cm * 0.1 * 0.3) - 0.02, 0]}
             opacity={0.55}

@@ -44,7 +44,14 @@ export const UmbrellaScene = forwardRef<SceneApi, Props>(function UmbrellaScene(
     },
   }));
 
-  const radius = (config.canopy_diameter_cm / 2) * 0.1;
+  // When the GLB path is active the model is auto-normalized to ~3.2 world
+  // units (see GLBUmbrellaModel), so the camera frame is fixed and does
+  // NOT scale with config.canopy_diameter_cm.
+  const radius = useGLB ? 1.6 : (config.canopy_diameter_cm / 2) * 0.1;
+  const canopyHeight = useGLB ? 1.2 : config.canopy_height_cm * 0.1;
+  const initialCamera: [number, number, number] = useGLB
+    ? [0, 1.2, 4.2]
+    : [radius * 1.45, radius * 0.4, radius * 1.1];
 
   return (
     <div className="w-full h-full bg-gradient-subtle">
@@ -52,7 +59,7 @@ export const UmbrellaScene = forwardRef<SceneApi, Props>(function UmbrellaScene(
         shadows
         dpr={[1, 2]}
         gl={{ preserveDrawingBuffer: true, antialias: true }}
-        camera={{ position: [radius * 1.45, radius * 0.4, radius * 1.1], fov: 50 }}
+        camera={{ position: initialCamera, fov: 45, near: 0.01, far: 1000 }}
         onCreated={({ gl }) => {
           gl.toneMapping = THREE.ACESFilmicToneMapping;
           gl.toneMappingExposure = 1.05;
@@ -100,7 +107,7 @@ export const UmbrellaScene = forwardRef<SceneApi, Props>(function UmbrellaScene(
             />
           )}
           <ContactShadows
-            position={[0, -((config.shaft_length_cm) * 0.1) + (config.canopy_height_cm * 0.1 * 0.3) - 0.05, 0]}
+            position={[0, useGLB ? -1.6 : -((config.shaft_length_cm) * 0.1) + (config.canopy_height_cm * 0.1 * 0.3) - 0.05, 0]}
             opacity={0.35}
             scale={radius * 5}
             blur={3.0}
@@ -108,7 +115,8 @@ export const UmbrellaScene = forwardRef<SceneApi, Props>(function UmbrellaScene(
           />
           <SceneController
             radius={radius}
-            canopyHeight={config.canopy_height_cm * 0.1}
+            canopyHeight={canopyHeight}
+            useGLB={useGLB}
             register={(api) => (apiRef.current = api)}
           />
         </Suspense>

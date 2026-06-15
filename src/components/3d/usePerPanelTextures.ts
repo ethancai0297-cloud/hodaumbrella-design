@@ -185,16 +185,25 @@ function buildDebug(ribCount: number, panelSize: number, fabricColor: string) {
     // Outer-edge marker (v=1)
     ctx.fillStyle = "rgba(0,0,0,0.25)";
     ctx.fillRect(0, panelSize - Math.max(4, panelSize * 0.04), panelSize, panelSize);
-    // Number
+    // Number — small badge centered on the panel
+    const cx = panelSize / 2;
+    const cy = panelSize / 2;
+    const badgeR = panelSize * 0.14; // ~28% of panel width
+    // Solid background circle for contrast
+    ctx.beginPath();
+    ctx.arc(cx, cy, badgeR, 0, Math.PI * 2);
     ctx.fillStyle = "#ffffff";
+    ctx.fill();
+    ctx.lineWidth = Math.max(2, panelSize * 0.006);
     ctx.strokeStyle = "#000000";
-    ctx.lineWidth = panelSize * 0.03;
-    ctx.font = `bold ${Math.floor(panelSize * 0.55)}px sans-serif`;
+    ctx.stroke();
+    // Number on top
+    ctx.fillStyle = "#000000";
+    ctx.font = `bold ${Math.floor(panelSize * 0.16)}px sans-serif`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     const label = String(i + 1);
-    ctx.strokeText(label, panelSize / 2, panelSize / 2);
-    ctx.fillText(label, panelSize / 2, panelSize / 2);
+    ctx.fillText(label, cx, cy);
     out.push(c);
   }
   return out;

@@ -1,37 +1,84 @@
-## Goal
+# Fix 2D → 3D Texture Flow (Folding 21" 8-panel)
 
-Three fixes for the 3D preview on `/design`:
-1. Live sync: 2D edits (text, images, colors) must show on the 3D canopy reliably.
-2. Background: match the 2D canvas (`bg-gradient-subtle`).
-3. Size: the 3D umbrella should fill the panel at the same visual scale as the 2D preview.
+Scope: only the GLB preview path. No changes to the 2D editor behavior, registry scope (already Folding+8), camera framing, or material whitelist (already correct).
 
-Folding umbrella + GLB preview only. 2D editor, GLB file, UV mapping, and panel order are untouched.
+## Diagnosis
 
-## Why edits aren't showing today
+Pipeline today:
+```
+DesignEditor → svgEl (UmbrellaCanopy ref)
+            → UmbrellaScene(svg, textureDeps, debugPanelNumbers)
+              → GLBUmbrellaModel
+                → usePerPanelTextures(svg, ribCount, deps)
+                  → rasterize(svg) → unrollPanel × 8 → CanvasTexture × 8
+                → assign mat.map per canopy_panel_NN via getPanelUv
+```
 
-`UmbrellaScene` receives `svg={svgRef.current}` — a mutable ref read. On first 3D mount, `svgRef.current` is often `null` (the 2D canvas mounts inside a `display:none` branch, but the ref still assigns when React commits). Because reading a ref doesn't trigger a re-render, the rasterizer hook sometimes captures `svg = null` and never re-runs until a `textureDeps` value changes — and several edits (typing into a text item, dragging a logo) update array contents in place without changing references, so the effect doesn't re-fire.
+Likely failure points (need confirmation via logs):
+1. `svgEl` is null because `<UmbrellaCanopy ref={setCanopySvg}>` may not forward the inner `<svg>` element — need to confirm.
+2. `rasterize()` swallows errors silently (`catch {}`), so a tainted image / bad SVG returns `null` and `setTextures` is never called → panels stay solid fabric. The user sees "no artwork on 3D".
+3. SVG container uses `display:none` while in 3D mode — `Image.onload` of a serialized SVG normally still works, but worth verifying with a log.
+4. `textureDeps` references mutated arrays (`project.artworkItems`); identity may not change → effect uses `svgVersion` (data-version attribute) as fallback, which is set in a separate `useEffect`. If `svgEl` is null at first paint, the `data-version` write is skipped → texture rebuild doesn't fire after upload.
 
-## Changes
+## Part 1 — Instrumentation (temporary)
 
-### 1. `src/pages/DesignEditor.tsx`
-- Replace the `svgRef.current` read with a stateful holder: `const [svgEl, setSvgEl] = useState<SVGSVGElement | null>(null)` and pass `ref={setSvgEl}` to `<UmbrellaCanopy>` (keep `svgRef` only if other code paths need it; otherwise pass `setSvgEl` as the ref callback). This guarantees `<UmbrellaScene svg={svgEl}>` re-renders the moment the SVG node mounts.
-- Bump a `data-version` attribute on the SVG via a small `useEffect` whenever `project.artworkItems`, `project.panelColors`, `project.innerLayer`, `dryToggle`, `selectedPanels`, or `activeSurface` change, so the rasterizer's `svgVersion` probe definitely flips.
+Add `console.log` (gated behind `import.meta.env.DEV`) in three places:
 
-### 2. `src/components/3d/UmbrellaScene.tsx`
-- Background: drop the hard-coded radial gradient. Replace the wrapper `<div>` style with `className="w-full h-full bg-gradient-subtle"` and keep `<Canvas style={{ background: "transparent" }}>` so the gradient shows through.
-- Bigger model: widen FOV from `40°` → `50°`; pull camera in to `[radius*1.45, radius*0.4, radius*1.1]`; update every preset (`perspective`, `top`, `front`, `side`, `bottom`) by the same ratio (~25% closer); lower `OrbitControls minDistance` from `radius*1.1` → `radius*0.9` so users can zoom further if they want.
+- `DesignEditor.tsx` — inside the `viewMode==='3d'` effect, also log `svgEl?.outerHTML?.length` and `svgEl?.getAttribute('data-version')`.
+- `UmbrellaScene.tsx` — log `{ hasSvg, svgOuterHTMLLength, fabricColor, textureDeps, debugPanelNumbers, config: config.model_id }` whenever GLB path mounts and on prop change.
+- `GLBUmbrellaModel.tsx` — same log, plus log of detected mesh names (`canopy_panel_*`) and which materials got bound.
+- `usePerPanelTextures.ts` — log `{ hasSvg, svgLength, ribCount, textureDeps, svgVersion, debugPanelNumbers }` on every effect run; log when `rasterize` returns null, when `Image.onerror` fires (replace silent `catch` with `console.warn`), and log final canvas count.
 
-### 3. `src/components/3d/usePerPanelTextures.ts`
-- The `svgVersion` probe today reads `svg.innerHTML.length` as a fallback. Strengthen it to also include `Date.now()`-style monotonic tick only when a `data-version` attribute exists. No other behavior change; debounce stays at 60 ms.
+Keep logs concise, prefixed `[3D]` so they're easy to filter. Remove after we confirm green.
 
-## Out of scope
-- No edits to `GLBUmbrellaModel.tsx`, the GLB file, `uvCorrection.ts`, or the 2D editor components.
-- No direct 3D editing surface (per your "live sync from 2D → 3D" choice).
-- Pouch, carton, display box, and procedural-fallback umbrellas are untouched.
+## Part 2 — Fix SVG ref & version stamping
+
+- Confirm `UmbrellaCanopy` forwards the inner `<svg>`. If it currently passes a wrapper `<div>` or `forwardRef` returns the wrong node, fix it so `setCanopySvg` receives the actual `SVGSVGElement`.
+- Move the `data-version` stamping into `UmbrellaCanopy` itself (or do it synchronously on each render via a `useLayoutEffect`) so it happens on the same paint as the SVG content update — not after a `useEffect` chain that can race with the rasterize.
+- Ensure version stamping does not require `svgEl` state to be set; do it via the canopy ref directly.
+
+## Part 3 — Make rasterize loud and robust
+
+In `usePerPanelTextures.ts`:
+- Replace `try { ... } catch {}` with explicit `console.warn('[3D] rasterize failed', err)`.
+- Add `img.crossOrigin = 'anonymous'` before `i.src = url` (defensive — even though we inline blob/data URLs).
+- After `drawImage`, do a quick `getImageData(0,0,1,1)` probe inside `try/catch`; if it throws (tainted canvas), log it. If safe, continue.
+- If `buildAll` returns null, fall back to `buildSolid` (fabric color) so the 3D preview still updates instead of staying stale.
+
+## Part 4 — Hard "panel debug" toggle (already wired, verify)
+
+`debugPanelNumbers` toggle exists in `DesignEditor` and `buildDebug` already renders numbers 1–8. Verify in browser:
+- Toggle on → numbers 1–8 appear on the GLB panels. If yes, GLB material pipeline is healthy and the bug is purely in 2D-state → texture generation. If no, the material binding loop in `GLBUmbrellaModel` is wrong (mesh names mismatch, materials never `.needsUpdate = true`, or root is cloned after material assignment).
+
+No code change expected unless verification fails.
+
+## Part 5 — Camera fit
+
+Already implemented (auto-normalize to 3.2 units, camera `[0,1.2,4.2]`, controls target `(0,0,0)`). No change unless logs show the model is loaded but invisible.
+
+## Part 6 — Registry scope
+
+Already enforced: `findModel` returns null unless `category==='folding' && ribCount===8 && model_id==='folding_21in_8panel_standard'`. No change.
+
+## Part 7 — Texture settings
+
+Already correct (`ClampToEdgeWrapping`, `needsUpdate`, fabric pre-fill, whitelist-only material binding, `MeshStandardMaterial` per panel). No change.
 
 ## Verification
-1. Open `/design` in 2D, add a text item and a logo to panel 1, set a panel fill color. Switch to 3D — text, logo, and color appear on the top-right wedge within ~100 ms.
-2. While in 2D, drag a logo on panel 3, type into a text item — switch to 3D and confirm the latest state shows (no stale frame).
-3. The 3D panel background matches the 2D panel background (`bg-gradient-subtle`).
-4. The umbrella in 3D fills roughly the same screen area as the umbrella in 2D at default zoom.
-5. Mouse drag still rotates, scroll zooms, right-drag pans.
+
+After the edits, switch to 3D in the preview and check the console (`[3D]` prefix):
+
+1. Toggle "3D Panel Debug" → expect 1–8 on canopy panels.
+2. Upload an image in 2D → switch to 3D → expect `svgOuterHTMLLength` grow log, `[3D] rasterize ok`, and artwork visible on selected panel.
+3. Change fabric color → expect fabric color update + rebuild log.
+4. Per-panel repeat and full-canopy print already encoded in the source SVG, so they will appear once rasterize works.
+
+## Technical details (files touched)
+
+- `src/components/UmbrellaCanopy.tsx` — ensure `forwardRef` returns the `<svg>` and stamp `data-version` on render.
+- `src/components/3d/UmbrellaScene.tsx` — add dev-only log.
+- `src/components/3d/GLBUmbrellaModel.tsx` — add dev-only logs (props + bound meshes).
+- `src/components/3d/usePerPanelTextures.ts` — verbose error logging, fallback to solid on rasterize failure, crossOrigin on Image.
+- `src/pages/DesignEditor.tsx` — expand the existing `viewMode==='3d'` log with svg length + data-version; remove the now-redundant `useEffect` that bumps `data-version` (handled in canopy).
+
+No new dependencies. No schema/migration changes. No 2D editor behavior change.

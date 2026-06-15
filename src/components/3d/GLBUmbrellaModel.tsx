@@ -32,6 +32,7 @@ export function GLBUmbrellaModel({
   textureDeps,
   debugPanelNumbers = false,
   flipY = false,
+  modelYawOffsetDeg = 22.5,
 }: Props) {
   const gltf = useGLTF(config.model_file);
   // Note: debug numbers are rendered as floating 3D labels (see below), not

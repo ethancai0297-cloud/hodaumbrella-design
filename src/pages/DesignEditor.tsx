@@ -121,45 +121,27 @@ const DesignEditor = () => {
     }
   }, [id]);
 
-  // Bump a version attribute on the canopy SVG so the 3D rasterizer's
-  // svgVersion probe always flips on any 2D edit — even when arrays
-  // mutate in place without reference changes.
-  useEffect(() => {
-    if (!svgEl) return;
-    svgEl.setAttribute("data-version", String(Date.now()));
-  }, [
-    svgEl,
-    project.artworkItems,
-    project.panelColors,
-    project.fabricColor,
-    project.capColor,
-    project.innerLayer,
-    project.hasDoubleLayer,
-    project.doubleLayerStyle,
-    project.printingMethod,
-    project.ribCount,
-    project.umbrellaCategory,
-    dryToggle,
-    selectedPanels,
-    activeSurface,
-  ]);
+  // (data-version stamping moved into UmbrellaCanopy so it runs in the
+  // same paint as the SVG content update — no race with the 3D rasterize.)
 
   // Debug: log the current design state passed to 3D whenever the user
   // switches into 3D Preview, so we can verify nothing is missing.
   useEffect(() => {
     if (viewMode !== "3d") return;
     // eslint-disable-next-line no-console
-    console.log("3D Preview design state", {
+    console.log("[3D] DesignEditor → 3D state", {
       category: project.umbrellaCategory,
       panelCount: project.ribCount,
       fabricColor: project.fabricColor,
       panelColors: project.panelColors,
       printingMethod: project.printingMethod,
       selectedPanels,
-      artworks: project.artworkItems,
+      artworkCount: project.artworkItems.length,
       activeSurface,
       model3d: model3d?.model_id ?? null,
       svgMounted: !!svgEl,
+      svgOuterHTMLLength: svgEl?.outerHTML?.length ?? 0,
+      svgDataVersion: svgEl?.getAttribute("data-version") ?? null,
     });
   }, [viewMode]); // eslint-disable-line react-hooks/exhaustive-deps
 

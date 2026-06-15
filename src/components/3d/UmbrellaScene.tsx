@@ -44,6 +44,20 @@ export const UmbrellaScene = forwardRef<SceneApi, Props>(function UmbrellaScene(
     },
   }));
 
+  useEffect(() => {
+    if (!useGLB) return;
+    // eslint-disable-next-line no-console
+    console.log("[3D] UmbrellaScene GLB props", {
+      modelId: config.model_id,
+      hasSvg: !!svg,
+      svgOuterHTMLLength: svg?.outerHTML?.length ?? 0,
+      svgDataVersion: svg?.getAttribute("data-version") ?? null,
+      fabricColor,
+      debugPanelNumbers,
+      textureDepsLen: textureDeps?.length ?? 0,
+    });
+  }, [useGLB, config.model_id, svg, fabricColor, debugPanelNumbers, textureDeps]);
+
   // When the GLB path is active the model is auto-normalized to ~3.2 world
   // units (see GLBUmbrellaModel), so the camera frame is fixed and does
   // NOT scale with config.canopy_diameter_cm.

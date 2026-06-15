@@ -51,15 +51,38 @@ export function usePerPanelTextures(
 
   useEffect(() => {
     if (!ribCount) return;
+    // eslint-disable-next-line no-console
+    console.log("[3D] usePerPanelTextures input", {
+      hasSvg: !!svg,
+      svgLength: svg?.outerHTML?.length ?? 0,
+      svgVersion,
+      ribCount,
+      debugPanelNumbers,
+      depsLen: deps.length,
+    });
     if (timerRef.current) window.clearTimeout(timerRef.current);
     timerRef.current = window.setTimeout(() => {
-      const build = debugPanelNumbers
+      const build: Promise<HTMLCanvasElement[] | null> = debugPanelNumbers
         ? Promise.resolve(buildDebug(ribCount, panelSize, fabricColor))
         : (svg
-            ? buildAll(svg, ribCount, sourceSize, panelSize, fabricColor)
+            ? buildAll(svg, ribCount, sourceSize, panelSize, fabricColor).then(
+                (out) => {
+                  if (out) return out;
+                  // eslint-disable-next-line no-console
+                  console.warn(
+                    "[3D] rasterize returned null — falling back to solid fabric"
+                  );
+                  return buildSolid(ribCount, panelSize, fabricColor);
+                }
+              )
             : Promise.resolve(buildSolid(ribCount, panelSize, fabricColor)));
       void build.then((canvases) => {
         if (!canvases) return;
+        // eslint-disable-next-line no-console
+        console.log("[3D] usePerPanelTextures built canvases", {
+          count: canvases.length,
+          mode: debugPanelNumbers ? "debug" : svg ? "svg" : "solid",
+        });
         setTextures((prev) => {
           const next: THREE.CanvasTexture[] = [];
           for (let i = 0; i < canvases.length; i++) {
@@ -210,14 +233,26 @@ async function rasterize(svg: SVGSVGElement, size: number): Promise<HTMLCanvasEl
     // disappears from the 3D canopy.
     await inlineImages(clone);
 
+    // Ensure the serialized SVG has explicit width/height so Image rasterizes.
+    if (!clone.getAttribute("width")) clone.setAttribute("width", String(size));
+    if (!clone.getAttribute("height")) clone.setAttribute("height", String(size));
+    if (!clone.getAttribute("xmlns")) {
+      clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+    }
+
     const xml = new XMLSerializer().serializeToString(clone);
     const blob = new Blob([xml], { type: "image/svg+xml;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     try {
       const img = await new Promise<HTMLImageElement>((resolve, reject) => {
         const i = new Image();
+        i.crossOrigin = "anonymous";
         i.onload = () => resolve(i);
-        i.onerror = reject;
+        i.onerror = (e) => {
+          // eslint-disable-next-line no-console
+          console.warn("[3D] rasterize image.onerror", e);
+          reject(e);
+        };
         i.src = url;
       });
       const c = document.createElement("canvas");
@@ -226,11 +261,20 @@ async function rasterize(svg: SVGSVGElement, size: number): Promise<HTMLCanvasEl
       const ctx = c.getContext("2d")!;
       ctx.clearRect(0, 0, size, size);
       ctx.drawImage(img, 0, 0, size, size);
+      try {
+        ctx.getImageData(0, 0, 1, 1); // taint probe
+      } catch (e) {
+        // eslint-disable-next-line no-console
+        console.warn("[3D] rasterize canvas tainted", e);
+        return null;
+      }
       return c;
     } finally {
       URL.revokeObjectURL(url);
     }
-  } catch {
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.warn("[3D] rasterize failed", err);
     return null;
   }
 }

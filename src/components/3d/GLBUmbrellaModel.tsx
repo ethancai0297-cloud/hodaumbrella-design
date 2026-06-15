@@ -52,6 +52,7 @@ export function GLBUmbrellaModel({
 
   // Sync per-panel texture + fabric color through the UV correction map.
   useEffect(() => {
+    let bound = 0;
     for (let k = 0; k < config.rib_count; k++) {
       const meshName = `canopy_panel_${String(k + 1).padStart(2, "0")}`;
       const uv = getPanelUv(meshName);
@@ -61,7 +62,15 @@ export function GLBUmbrellaModel({
       mat.map = tex;
       mat.color.set(tex ? "#ffffff" : fabricColor);
       mat.needsUpdate = true;
+      if (tex) bound++;
     }
+    // eslint-disable-next-line no-console
+    console.log("[3D] GLB panel materials updated", {
+      rib_count: config.rib_count,
+      texturesAvailable: panelTextures.length,
+      withTexture: bound,
+      fabricColor,
+    });
   }, [panelTextures, fabricColor, panelMaterials, config.rib_count]);
 
   // Clone scene so multiple mounts (preview + headless PDF capture) don't
@@ -90,8 +99,11 @@ export function GLBUmbrellaModel({
   // material it shipped with inside the GLB.
   useEffect(() => {
     if (!root) return;
+    const meshes: string[] = [];
+    const matched: string[] = [];
     root.traverse((obj) => {
       if (!(obj instanceof THREE.Mesh)) return;
+      meshes.push(obj.name);
       const name = obj.name.toLowerCase().replace(/\s+/g, "_");
       const m = name.match(/^canopy_panel_(\d+)$/);
       if (m) {
@@ -100,6 +112,7 @@ export function GLBUmbrellaModel({
           obj.material = panelMaterials[k];
           obj.castShadow = true;
           obj.receiveShadow = true;
+          matched.push(obj.name);
         }
         return;
       }
@@ -110,6 +123,11 @@ export function GLBUmbrellaModel({
       // Hardware: keep baked material as-is.
       obj.castShadow = true;
       obj.receiveShadow = true;
+    });
+    // eslint-disable-next-line no-console
+    console.log("[3D] GLB meshes scanned", {
+      allMeshes: meshes,
+      canopyPanelsBound: matched,
     });
   }, [root, panelMaterials, showFrame]);
 

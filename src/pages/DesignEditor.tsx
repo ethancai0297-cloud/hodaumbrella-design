@@ -811,7 +811,7 @@ const DesignEditor = () => {
                 style={{ display: activeSurface === "pouch" ? "none" : "block" }}
               >
                 <UmbrellaCanopy
-                  ref={svgRef}
+                  ref={setCanopySvg}
                   category={project.umbrellaCategory}
                   ribCount={project.ribCount}
                   fabricColor={project.fabricColor}

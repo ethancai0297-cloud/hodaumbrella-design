@@ -879,7 +879,7 @@ const DesignEditor = () => {
                   <UmbrellaScene
                     ref={(api) => { sceneRef.current = api; }}
                     config={model3d}
-                    svg={svgRef.current}
+                    svg={svgEl}
                     fabricColor={project.fabricColor}
                     capColor={project.capColor}
                     showFrame={showFrame}

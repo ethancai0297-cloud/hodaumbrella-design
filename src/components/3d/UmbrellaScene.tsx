@@ -138,11 +138,11 @@ function SceneController({
     const target = new THREE.Vector3(0, canopyHeight * 0.4, 0);
     return {
       // Studio 3/4 side view, slightly below canopy equator (matches reference photo)
-      perspective: [new THREE.Vector3(radius * 1.9, radius * 0.45, radius * 1.45), target],
-      top: [new THREE.Vector3(0.001, radius * 2.6, 0), target],
-      front: [new THREE.Vector3(0, canopyHeight * 0.4, radius * 2.5), target],
-      side: [new THREE.Vector3(radius * 2.5, canopyHeight * 0.4, 0), target],
-      bottom: [new THREE.Vector3(0.001, -radius * 2.5, 0), target],
+      perspective: [new THREE.Vector3(radius * 1.45, radius * 0.4, radius * 1.1), target],
+      top: [new THREE.Vector3(0.001, radius * 2.0, 0), target],
+      front: [new THREE.Vector3(0, canopyHeight * 0.4, radius * 1.9), target],
+      side: [new THREE.Vector3(radius * 1.9, canopyHeight * 0.4, 0), target],
+      bottom: [new THREE.Vector3(0.001, -radius * 1.9, 0), target],
     };
   }, [radius, canopyHeight]);
 

@@ -43,6 +43,12 @@ export function usePerPanelTextures(
   const [textures, setTextures] = useState<THREE.CanvasTexture[]>([]);
   const timerRef = useRef<number | null>(null);
 
+  // Probe the SVG for any structural change (text edits, image uploads, drags)
+  // so we re-rasterize even when the parent forgets to bump textureDeps.
+  const svgVersion = svg
+    ? `${svg.childElementCount}:${svg.getAttribute("data-version") ?? svg.innerHTML.length}`
+    : "none";
+
   useEffect(() => {
     if (!ribCount) return;
     if (timerRef.current) window.clearTimeout(timerRef.current);
@@ -71,12 +77,12 @@ export function usePerPanelTextures(
           return next;
         });
       });
-    }, 140);
+    }, 60);
     return () => {
       if (timerRef.current) window.clearTimeout(timerRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [svg, ribCount, sourceSize, panelSize, fabricColor, debugPanelNumbers, flipY, ...deps]);
+  }, [svg, svgVersion, ribCount, sourceSize, panelSize, fabricColor, debugPanelNumbers, flipY, ...deps]);
 
   useEffect(() => () => textures.forEach((t) => t.dispose()), [textures]);
 

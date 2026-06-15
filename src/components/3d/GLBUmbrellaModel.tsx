@@ -52,39 +52,15 @@ export function GLBUmbrellaModel({ config, svg, fabricColor, showFrame, textureD
     }
   }, [panelTextures, fabricColor, panelMaterials, config.rib_count]);
 
-  // Walk the GLB scene and bind canopy materials + toggle frame visibility
-  useEffect(() => {
-    if (!gltf?.scene) return;
-    gltf.scene.traverse((obj) => {
-      if (!(obj instanceof THREE.Mesh)) return;
-      const name = obj.name.toLowerCase().replace(/\s+/g, "_");
-
-      // canopy_panel_01..NN
-      const m = name.match(/canopy_panel_(\d+)/);
-      if (m) {
-        const k = parseInt(m[1], 10) - 1;
-        if (k >= 0 && k < panelMaterials.length) {
-          obj.material = panelMaterials[k];
-          obj.castShadow = true;
-          obj.receiveShadow = true;
-        }
-        return;
-      }
-
-      // Rib frame visibility toggle
-      if (name.startsWith("rib_frame")) {
-        obj.visible = showFrame;
-      }
-    });
-  }, [gltf, panelMaterials, showFrame]);
-
-  // Recenter / scale model: scene units roughly match procedural fallback
-  // (1 unit ≈ 10 cm). The GLB is exported at its own scale; we let it be
-  // unless the bounding box is wildly off.
+  // Clone the loaded scene so multiple mounts (e.g. preview + headless PDF
+  // capture) don't share/mutate the same node tree.
   const root = useMemo(() => gltf?.scene?.clone(true) ?? null, [gltf]);
+
+  // Bind canopy panel materials and toggle the rib frame visibility on the
+  // cloned scene. The hardware nodes (handle_01/02, handle string, shaft_01)
+  // keep whatever material the GLB shipped with.
   useEffect(() => {
     if (!root) return;
-    // Re-apply materials/visibility to the cloned root
     root.traverse((obj) => {
       if (!(obj instanceof THREE.Mesh)) return;
       const name = obj.name.toLowerCase().replace(/\s+/g, "_");
@@ -98,6 +74,9 @@ export function GLBUmbrellaModel({ config, svg, fabricColor, showFrame, textureD
         }
       } else if (name.startsWith("rib_frame")) {
         obj.visible = showFrame;
+      } else {
+        obj.castShadow = true;
+        obj.receiveShadow = true;
       }
     });
   }, [root, panelMaterials, showFrame]);

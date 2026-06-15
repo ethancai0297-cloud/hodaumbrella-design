@@ -951,9 +951,9 @@ const DesignEditor = () => {
                             ? "bg-primary text-primary-foreground"
                             : "text-muted-foreground hover:bg-muted"
                         )}
-                        title="Show panel numbers"
+                        title={debugPanelNumbers ? "Hide panel numbers" : "Show panel numbers"}
                       >
-                        #1–8
+                        {debugPanelNumbers ? "Hide #1–8" : "Show #1–8"}
                       </button>
                     )}
                     <button

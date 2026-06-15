@@ -53,12 +53,20 @@ export function GLBUmbrellaModel({
   // Sync per-panel texture + fabric color through the UV correction map.
   useEffect(() => {
     let bound = 0;
+    const hasTextures = panelTextures.length > 0;
     for (let k = 0; k < config.rib_count; k++) {
+      const mat = panelMaterials[k];
+      if (!hasTextures) {
+        // No artwork → pure solid fabric color, no texture, no stripes.
+        mat.map = null;
+        mat.color.set(fabricColor);
+        mat.needsUpdate = true;
+        continue;
+      }
       const meshName = `canopy_panel_${String(k + 1).padStart(2, "0")}`;
       const uv = getPanelUv(meshName);
       const twoDIndex = uv?.twoDIndex ?? k;
       const tex = panelTextures[twoDIndex] ?? null;
-      const mat = panelMaterials[k];
       mat.map = tex;
       mat.color.set(tex ? "#ffffff" : fabricColor);
       mat.needsUpdate = true;

@@ -18,14 +18,14 @@ export interface PanelUvEntry {
 }
 
 export const panelUvCorrection: Record<string, PanelUvEntry> = {
-  canopy_panel_01: { twoDIndex: 1, rotationDeg: 0, flipX: false, flipY: false },
-  canopy_panel_02: { twoDIndex: 2, rotationDeg: 0, flipX: false, flipY: false },
-  canopy_panel_03: { twoDIndex: 3, rotationDeg: 0, flipX: false, flipY: false },
-  canopy_panel_04: { twoDIndex: 4, rotationDeg: 0, flipX: false, flipY: false },
-  canopy_panel_05: { twoDIndex: 5, rotationDeg: 0, flipX: false, flipY: false },
-  canopy_panel_06: { twoDIndex: 6, rotationDeg: 0, flipX: false, flipY: false },
-  canopy_panel_07: { twoDIndex: 7, rotationDeg: 0, flipX: false, flipY: false },
-  canopy_panel_08: { twoDIndex: 0, rotationDeg: 0, flipX: false, flipY: false },
+  canopy_panel_01: { twoDIndex: 0, rotationDeg: 0, flipX: false, flipY: false },
+  canopy_panel_02: { twoDIndex: 1, rotationDeg: 0, flipX: false, flipY: false },
+  canopy_panel_03: { twoDIndex: 2, rotationDeg: 0, flipX: false, flipY: false },
+  canopy_panel_04: { twoDIndex: 3, rotationDeg: 0, flipX: false, flipY: false },
+  canopy_panel_05: { twoDIndex: 4, rotationDeg: 0, flipX: false, flipY: false },
+  canopy_panel_06: { twoDIndex: 5, rotationDeg: 0, flipX: false, flipY: false },
+  canopy_panel_07: { twoDIndex: 6, rotationDeg: 0, flipX: false, flipY: false },
+  canopy_panel_08: { twoDIndex: 7, rotationDeg: 0, flipX: false, flipY: false },
 };
 
 export function getPanelUv(name: string): PanelUvEntry | null {

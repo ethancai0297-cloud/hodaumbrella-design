@@ -87,13 +87,25 @@ export const UmbrellaScene = forwardRef<SceneApi, Props>(function UmbrellaScene(
             intensity={0.25}
           />
           <Environment preset="studio" />
-          <UmbrellaModel
-            config={config}
-            texture={texture}
-            fabricColor={fabricColor}
-            capColor={capColor}
-            showFrame={showFrame}
-          />
+          {useGLB ? (
+            <Bounds fit clip observe margin={1.25}>
+              <GLBUmbrellaModel
+                config={config}
+                svg={svg}
+                fabricColor={fabricColor}
+                showFrame={showFrame}
+                textureDeps={textureDeps}
+              />
+            </Bounds>
+          ) : (
+            <UmbrellaModel
+              config={config}
+              texture={texture}
+              fabricColor={fabricColor}
+              capColor={capColor}
+              showFrame={showFrame}
+            />
+          )}
           <ContactShadows
             position={[0, -((config.shaft_length_cm) * 0.1) + (config.canopy_height_cm * 0.1 * 0.3) - 0.02, 0]}
             opacity={0.55}

@@ -1,5 +1,5 @@
 import { ArtworkItem, DoubleLayerStyle, RibCount, UmbrellaCategory } from "@/types/design";
-import { forwardRef, useImperativeHandle, useMemo, useRef } from "react";
+import { forwardRef, useImperativeHandle, useLayoutEffect, useMemo, useRef } from "react";
 
 export interface InnerLayerProps {
   fabricColor: string;
@@ -98,6 +98,15 @@ export const UmbrellaCanopy = forwardRef<SVGSVGElement, Props>(function Umbrella
 ) {
   const innerRef = useRef<SVGSVGElement>(null);
   useImperativeHandle(ref, () => innerRef.current as SVGSVGElement);
+
+  // Stamp a version attribute on every render so the 3D rasterizer's
+  // svgVersion probe always flips on any 2D edit (panel color, artwork
+  // upload/move, fabric color, layer toggle, etc.).
+  useLayoutEffect(() => {
+    if (innerRef.current) {
+      innerRef.current.setAttribute("data-version", String(Date.now()));
+    }
+  });
 
   const radius = category === "golf" ? 255 : category === "straight" ? 195 : 178;
   const centerR = radius * 0.022;

@@ -61,7 +61,7 @@ export const UmbrellaScene = forwardRef<SceneApi, Props>(function UmbrellaScene(
         shadows
         dpr={[1, 2]}
         gl={{ preserveDrawingBuffer: true, antialias: true }}
-        camera={{ position: [radius * 3.0, radius * 0.6, radius * 2.2], fov: 32 }}
+        camera={{ position: [radius * 1.9, radius * 0.45, radius * 1.45], fov: 40 }}
         onCreated={({ gl }) => {
           gl.toneMapping = THREE.ACESFilmicToneMapping;
           gl.toneMappingExposure = 1.05;
@@ -147,11 +147,11 @@ function SceneController({
     const target = new THREE.Vector3(0, canopyHeight * 0.4, 0);
     return {
       // Studio 3/4 side view, slightly below canopy equator (matches reference photo)
-      perspective: [new THREE.Vector3(radius * 3.0, radius * 0.6, radius * 2.2), target],
-      top: [new THREE.Vector3(0.001, radius * 4.2, 0), target],
-      front: [new THREE.Vector3(0, canopyHeight * 0.4, radius * 4.0), target],
-      side: [new THREE.Vector3(radius * 4.0, canopyHeight * 0.4, 0), target],
-      bottom: [new THREE.Vector3(0.001, -radius * 3.8, 0), target],
+      perspective: [new THREE.Vector3(radius * 1.9, radius * 0.45, radius * 1.45), target],
+      top: [new THREE.Vector3(0.001, radius * 2.6, 0), target],
+      front: [new THREE.Vector3(0, canopyHeight * 0.4, radius * 2.5), target],
+      side: [new THREE.Vector3(radius * 2.5, canopyHeight * 0.4, 0), target],
+      bottom: [new THREE.Vector3(0.001, -radius * 2.5, 0), target],
     };
   }, [radius, canopyHeight]);
 
@@ -197,7 +197,7 @@ function SceneController({
       enableRotate
       enablePan
       enableZoom
-      minDistance={radius * 1.4}
+      minDistance={radius * 1.1}
       maxDistance={radius * 8}
       minPolarAngle={0}
       maxPolarAngle={Math.PI}

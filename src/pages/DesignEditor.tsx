@@ -884,10 +884,15 @@ const DesignEditor = () => {
                       project.capColor,
                       project.panelColors,
                       project.artworkItems,
+                      project.innerLayer,
                       project.ribCount,
                       project.umbrellaCategory,
                       project.printingMethod,
+                      project.hasDoubleLayer,
+                      project.doubleLayerStyle,
                       dryToggle,
+                      selectedPanels,
+                      activeSurface,
                     ]}
                   />
                   <div className="absolute top-2 left-1/2 -translate-x-1/2 z-10 rounded-lg bg-card border border-border shadow-soft p-1 flex items-center gap-1 text-xs">

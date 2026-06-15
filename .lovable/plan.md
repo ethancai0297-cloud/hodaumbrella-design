@@ -1,55 +1,71 @@
-# Fix 3D preview: orbit rotation + missing artwork
+# Fix 3D preview size + live 2D→3D sync
 
-Two regressions on the Folding 21-inch 8-panel GLB preview. Both have a clear root cause.
+Two small, targeted changes. No 2D editor, GLB, or UV-map changes.
 
-## Problem 1 — Can't rotate, only "drag" the umbrella
+## 1. 3D umbrella appears too small
 
-`UmbrellaScene.tsx` wraps the GLB in `<Bounds fit clip observe margin={1.25}>`. The `observe` flag tells `Bounds` to **refit the camera every time the children mutate**. Our per-panel material pipeline triggers mutations constantly (`mat.needsUpdate = true`, texture swaps, frame visibility, etc.), so the camera keeps snapping back to a fitted pose. The user perceives this as: panning works (the controls "drag" the canopy translation feel), but rotation never sticks because Bounds yanks the camera back on every artwork/color change. That also explains why it feels worse when artwork is added.
+The 2D canopy renders at ~620px. In 3D, the camera sits very far back (`radius * 3.0`–`4.0`) with a narrow FOV (32°), so the umbrella visually occupies roughly half the panel even though the wrapper is full-size.
 
-## Problem 2 — Uploaded images / text not showing on the 3D canopy
+Fix in `src/components/3d/UmbrellaScene.tsx`:
 
-The 2D SVG contains `<image href={item.src}>` for uploaded artwork and logos (`src/components/UmbrellaCanopy.tsx` lines 275 / 321). `usePerPanelTextures.ts → rasterize()` clones the SVG, calls `XMLSerializer`, wraps it in an `image/svg+xml` blob and loads it through `new Image()`. When the browser renders that SVG-as-image, **nested `<image href="…">` resources are subject to a separate fetch with no document context**:
+- Widen FOV from `32` → `40`.
+- Move every camera preset closer:
+  - perspective: `[radius*3.0, radius*0.6, radius*2.2]` → `[radius*1.9, radius*0.45, radius*1.45]`
+  - top: `radius*4.2` → `radius*2.6`
+  - front/side: `radius*4.0` → `radius*2.5`
+  - bottom: `radius*3.8` → `radius*2.5`
+- Lower `OrbitControls minDistance` from `radius*1.4` → `radius*1.1` so users can keep zooming in.
 
-- `blob:` URLs created by the editor are scoped to the parent document; the SVG-as-image fetch can't read them.
-- Remote/object URLs without `crossOrigin` will either fail or taint and silently render as empty.
+Result: the canopy fills the 3D panel at the same visual scale as the 2D canvas, on both desktop and iPad.
 
-Result: the SVG rasterizes the panel outlines and solid fills but **omits every uploaded image and any text that depends on a remote font**, so the 3D canopy shows only the fabric colour — exactly the symptom reported.
+## 2. 2D edits (text, uploaded images, logos) don't appear in 3D until reload
 
-Text-as-`<text>` elements with system fonts do render, but the user's flow puts artwork through `<image>`, so nothing visible reaches the texture.
+`UmbrellaScene` re-rasterizes only when one of `textureDeps` changes by reference. Today's list (`fabricColor`, `panelColors`, `artworkItems`, …) covers most edits, but two cases silently miss:
 
-## Fix plan
+- **Live drag/resize/text-typing inside an artwork item.** Patches mutate item fields; the parent `artworkItems` array reference does change in `updateItem`, but the rasterizer only sees the SVG ref — and during fast typing the 140 ms debounce + same-reference SVG can drop frames.
+- **Inner-layer / pouch / panel-color tweaks that don't appear in `textureDeps`.** Inner-layer artwork edits never invalidate the canopy texture.
 
-Scope: `src/components/3d/UmbrellaScene.tsx` and `src/components/3d/usePerPanelTextures.ts` only. No changes to the 2D editor, GLB, registry, or UV correction map.
+Fix in two files:
 
-### 1. Restore free orbit rotation
+### `src/pages/DesignEditor.tsx` (only the `<UmbrellaScene>` instance in `viewMode === "3d"`)
 
-In `UmbrellaScene.tsx`:
-- Remove `Bounds` entirely. The camera is already positioned from `config` and the preset buttons (`perspective` / `top` / `front` / `side` / `bottom`) handle reframing, so `Bounds` is redundant.
-- Render `<GLBUmbrellaModel … />` directly inside `<Suspense>`.
-- Keep `OrbitControls` as-is (`enableDamping`, `minPolarAngle={0}`, `maxPolarAngle={Math.PI}`, `enableRotate`/`enablePan`/`enableZoom` all default-true). Add explicit `enableRotate` / `enablePan` / `enableZoom` props set to `true` for clarity and to defend against any future helper that flips them.
+Expand `textureDeps` so every visible 2D change triggers a 3D rebuild:
 
-### 2. Make uploaded artwork actually rasterize
+```ts
+textureDeps={[
+  project.fabricColor,
+  project.capColor,
+  project.panelColors,
+  project.artworkItems,        // outer artwork (already present)
+  project.innerLayer,          // inner-layer fabric + artwork
+  project.ribCount,
+  project.umbrellaCategory,
+  project.printingMethod,
+  project.hasDoubleLayer,
+  project.doubleLayerStyle,
+  dryToggle,
+  selectedPanels,              // selected-panel highlight in SVG
+  activeSurface,
+]}
+```
 
-In `usePerPanelTextures.ts → rasterize()`, before serializing the clone:
+### `src/components/3d/usePerPanelTextures.ts`
 
-1. Walk every `<image>` element in the clone (both `href` and the legacy `xlink:href`).
-2. For each, fetch the current `href` into a Blob, then convert that Blob to a `data:` URL via `FileReader.readAsDataURL`.
-3. Replace `href` (and `xlink:href`) on the clone with the inline data URL.
-4. Await all replacements (`Promise.all`) before calling `XMLSerializer`.
+- Drop the debounce from `140` ms to `60` ms so typing/drag feels live without thrashing the GPU.
+- Add a lightweight `SVGSVGElement` content-version probe: when `svg` is non-null, include `svg.childElementCount` and `svg.getAttribute("data-version")` (already bumped by the 2D editor on every meaningful edit; if missing we fall back to `Date.now() >> 8` on every deps change) in the effect dependency list so re-renders of the SVG (text edits, image uploads, drags) always retrigger rasterization.
 
-This works for blob URLs, object URLs, and same-origin uploads. For cross-origin URLs the `fetch` will throw → catch per-image, leave the original `href` in place, and continue (so a single bad image never breaks the whole canopy).
+No structural rewrites: only the debounce constant and the dep array change.
 
-Also, to keep text crisp regardless of font availability inside the SVG-as-image render path, leave existing `<text>` nodes untouched (no change needed).
+## Out of scope / unchanged
 
-### 3. Verification
+- 2D editor, panel order, UV correction map, GLB file, registry configs.
+- OrbitControls behavior (rotate/pan/zoom stay enabled, polar range unchanged).
+- PDF headless capture scene (separate instance, keeps its own deps).
 
-- Open the folding model in 3D. Left-drag should rotate freely around the canopy (top, side, bottom). Right-drag should pan. Wheel should zoom. None of these should "snap back".
-- Toggle `Show frame` and change fabric colour — camera position must stay where the user left it.
-- Upload an image artwork in the 2D editor, switch to 3D — the image should appear on the mapped panel(s) within ~150 ms (existing debounce).
-- Add a text artwork — text should appear on the 3D canopy with no radial stripes.
-- The `#1–8` debug toggle should still stamp panel numbers correctly.
+## Verification
 
-## Files touched
-
-- `src/components/3d/UmbrellaScene.tsx` — drop `Bounds`, render GLB model directly, keep controls explicit.
-- `src/components/3d/usePerPanelTextures.ts` — inline `<image>` hrefs as data URLs inside `rasterize()` before serialization.
+1. Open `/design` in 3D mode → canopy fills the panel at roughly the same diameter the 2D view shows.
+2. Switch to 2D, add a text layer, type characters → switch back to 3D within ~100 ms and confirm the text is on the canopy.
+3. Upload a logo in 2D, drag it across a panel → 3D updates while dragging (≤ 1 frame lag after release).
+4. Toggle inner-layer color on a golf umbrella → 3D canopy refreshes.
+5. iPad Safari: rotate, pinch-zoom, and drag still work; no regressions to the GLB rendering pipeline.

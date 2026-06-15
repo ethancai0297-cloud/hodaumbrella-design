@@ -41,7 +41,9 @@ export function usePerPanelTextures(
     sourceSize = 1024,
   } = options;
   const [textures, setTextures] = useState<THREE.CanvasTexture[]>([]);
+  const texturesRef = useRef<THREE.CanvasTexture[]>([]);
   const timerRef = useRef<number | null>(null);
+  const generationRef = useRef(0);
 
   // Probe the SVG for any structural change (text edits, image uploads, drags)
   // so we re-rasterize even when the parent forgets to bump textureDeps.
@@ -61,6 +63,8 @@ export function usePerPanelTextures(
       depsLen: deps.length,
     });
     if (timerRef.current) window.clearTimeout(timerRef.current);
+    const generation = ++generationRef.current;
+    let cancelled = false;
     timerRef.current = window.setTimeout(() => {
       const build: Promise<HTMLCanvasElement[] | null> = debugPanelNumbers
         ? Promise.resolve(buildDebug(ribCount, panelSize, fabricColor))
@@ -77,13 +81,14 @@ export function usePerPanelTextures(
               )
             : Promise.resolve(buildSolid(ribCount, panelSize, fabricColor)));
       void build.then((canvases) => {
+        if (cancelled || generation !== generationRef.current) return;
         if (!canvases) return;
         // eslint-disable-next-line no-console
         console.log("[3D] usePerPanelTextures built canvases", {
           count: canvases.length,
           mode: debugPanelNumbers ? "debug" : svg ? "svg" : "solid",
         });
-        setTextures((prev) => {
+        const prev = texturesRef.current;
           const next: THREE.CanvasTexture[] = [];
           for (let i = 0; i < canvases.length; i++) {
             const tex = prev[i] ?? new THREE.CanvasTexture(canvases[i]);
@@ -97,17 +102,23 @@ export function usePerPanelTextures(
             next.push(tex);
           }
           for (let i = canvases.length; i < prev.length; i++) prev[i].dispose();
-          return next;
-        });
+        texturesRef.current = next;
+        setTextures(next);
       });
     }, 60);
     return () => {
+      cancelled = true;
       if (timerRef.current) window.clearTimeout(timerRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [svg, svgVersion, ribCount, sourceSize, panelSize, fabricColor, debugPanelNumbers, flipY, ...deps]);
 
-  useEffect(() => () => textures.forEach((t) => t.dispose()), [textures]);
+  useEffect(() => () => {
+    if (timerRef.current) window.clearTimeout(timerRef.current);
+    generationRef.current += 1;
+    texturesRef.current.forEach((t) => t.dispose());
+    texturesRef.current = [];
+  }, []);
 
   return textures;
 }
@@ -258,7 +269,7 @@ async function rasterize(svg: SVGSVGElement, size: number): Promise<HTMLCanvasEl
       const c = document.createElement("canvas");
       c.width = size;
       c.height = size;
-      const ctx = c.getContext("2d")!;
+      const ctx = c.getContext("2d", { willReadFrequently: true })!;
       ctx.clearRect(0, 0, size, size);
       ctx.drawImage(img, 0, 0, size, size);
       try {
@@ -308,13 +319,13 @@ function unrollPanel(
   const W = size;
   const H = size;
 
-  const srcCtx = src.getContext("2d")!;
+  const srcCtx = src.getContext("2d", { willReadFrequently: true })!;
   const srcData = srcCtx.getImageData(0, 0, S, S).data;
 
   const out = document.createElement("canvas");
   out.width = W;
   out.height = H;
-  const outCtx = out.getContext("2d")!;
+  const outCtx = out.getContext("2d", { willReadFrequently: true })!;
 
   // Pre-fill with fabric color (opaque) so seam bleed stays inside palette.
   const fabric = parseHex(fabricColor);

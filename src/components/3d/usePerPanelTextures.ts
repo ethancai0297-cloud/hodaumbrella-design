@@ -51,6 +51,11 @@ export function usePerPanelTextures(
     ? `${svg.childElementCount}:${svg.getAttribute("data-version") ?? svg.innerHTML.length}`
     : "none";
 
+  // "Artwork" = any uploaded image or user text inside the canopy SVG.
+  // When none is present, skip SVG rasterization entirely so the canopy
+  // shows the pure fabric color (no stripes from rib outlines / wedges).
+  const hasArtwork = !!svg && !!svg.querySelector("image, text");
+
   useEffect(() => {
     if (!ribCount) return;
     // eslint-disable-next-line no-console

@@ -23,10 +23,12 @@ interface Props {
   showFrame: boolean;
   textureDeps: unknown[];
   background?: string;
+  debugPanelNumbers?: boolean;
+  textureFlipY?: boolean;
 }
 
 export const UmbrellaScene = forwardRef<SceneApi, Props>(function UmbrellaScene(
-  { config, svg, fabricColor, capColor, showFrame, textureDeps, background },
+  { config, svg, fabricColor, capColor, showFrame, textureDeps, background, debugPanelNumbers, textureFlipY },
   ref
 ) {
   const useGLB = !!config.model_file && config.model_file.toLowerCase().endsWith(".glb");
@@ -95,6 +97,8 @@ export const UmbrellaScene = forwardRef<SceneApi, Props>(function UmbrellaScene(
                 fabricColor={fabricColor}
                 showFrame={showFrame}
                 textureDeps={textureDeps}
+                debugPanelNumbers={debugPanelNumbers}
+                flipY={textureFlipY}
               />
             </Bounds>
           ) : (

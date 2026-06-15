@@ -1,63 +1,87 @@
+
 ## Goal
 
-Make the existing 3D preview look like the Goudainc reference photo (soft studio shot, scalloped canopy, realistic wood handle, 3/4 side view) while keeping every existing feature: 2D editor, view-mode toggle, frame toggle, camera presets, screenshot, headless PDF capture, save/undo/reset/PNG/AI, language switcher, pouch, double-layer.
+Fix the artwork mapping on the Folding 21" 8-panel GLB so each 2D panel lands on the correct 3D `canopy_panel_0X` mesh, with no stripe/wrap artifacts and a debug overlay to verify panel order before trusting real artwork. Keep the 2D editor and overall workflow unchanged.
 
-Reference: https://goudainc.com/product/custom-wood-frame-umbrellas/ (hero image — black floral all-over print on a wood-frame straight umbrella, soft cream backdrop).
+## Scope
 
-## What changes vs. today
+Only these files change. No 2D editor, storage, i18n schema, or export-pipeline rewrites.
 
-Today the canopy is a smooth dome made of flat-ish wedges with a sphere top cap and a flat blue-gray background. The reference shows:
+- `src/3d/models/registry.ts` — gate GLB to Folding + 8 panels
+- `src/3d/uvCorrection.ts` — formalize `panelUvCorrection` map + helpers
+- `src/components/3d/usePerPanelTextures.ts` — fix sampling, add fabric bg fill, debug-number mode, configurable `flipY`
+- `src/components/3d/GLBUmbrellaModel.tsx` — strict canopy-only material binding, per-panel mapping via UV correction, fabric color on unselected panels, debug pass-through
+- `src/components/3d/UmbrellaScene.tsx` — pass `debugPanelNumbers` + `flipY` props through
+- `src/pages/DesignEditor.tsx` — add temporary "Show panel numbers" toggle next to existing 3D controls (only visible in 3D mode for Folding 8-panel)
 
-1. Each panel **bows outward between adjacent ribs** (visible scalloped silhouette), and the fabric **dips back up at the rib tip** (the classic "pagoda" droop).
-2. A **sharper, pointier apex** (no visible sphere cap on top).
-3. **Wood J-hook handle** with warm wood material (not a flat brown cylinder section).
-4. **Soft cream/off-white studio backdrop** with a gentle floor gradient and a soft contact shadow — not a flat panel color.
-5. **3/4 side default camera** (slightly below canopy equator) instead of a high overhead angle.
-6. Richer fabric shading: ACES tone mapping, slightly lower ambient, stronger key light, fill light, subtle rim light.
+## Fixes
 
-## Files touched (all existing — no new files)
+### 1. GLB only for Folding + 8 panels
+In `registry.ts::findModel`, only return the folding GLB entry when `category === "folding" && ribCount === 8`. Straight/Golf and any other rib count fall back to the procedural `UmbrellaModel`. Removes the chance of the wrong mesh being skinned with sliced wedges. Other configs lose `model_file` so the existing `useGLB` check in `UmbrellaScene` keeps working.
 
-- `src/components/3d/buildUmbrellaGeometry.ts` — new panel profile with per-panel bow + tip droop; UVs updated to follow the bowed surface so artwork still maps correctly per wedge.
-- `src/components/3d/UmbrellaModel.tsx` — remove visible sphere top cap (replace with a tiny dark finial flush to apex), tune rib-tip size, refine J-hook curve, wood material (warmer color + lower roughness when handle_material is "wood").
-- `src/components/3d/UmbrellaScene.tsx` — cream gradient background, ACES filmic tone mapping, exposure tweak, key+fill+rim lighting, softer/larger contact shadow, default camera moved to 3/4 side (slightly below canopy), OrbitControls min polar tightened so users can't flip under the floor.
-- (No changes to 2D code, registry JSONs, export pipeline, i18n, or DesignEditor — the scene API/props stay identical.)
+### 2. Stripe / wrapping artifact root cause
+The current `unrollPanel` samples one wedge of the rasterized full-canopy SVG and writes into a rect texture. Stripes happen because (a) pixels at `v→0` (apex) all collapse to a single source pixel, smearing it horizontally; (b) UVs that land just outside the wedge bleed into adjacent panels because the texture has `ClampToEdgeWrapping` but the edge pixels are transparent over a white-cleared canvas — three.js then averages with neighbors creating vertical seams; (c) panels are indexed by `panelIndex - 0.5` but the 2D editor's `panelPath` actually starts at `-π/2 + i * sliceAngle - sliceAngle/2`, so the rotation offset is one half-slice off compared to the GLB which starts at upper-right (panel 1 = top-right per spec).
 
-## Geometry detail (panel bow + tip droop)
+Fixes in `usePerPanelTextures.ts`:
+- Pre-fill output canvas with the **fabric color** (opaque), not transparent. Eliminates seam bleed and gives unselected panels a clean look.
+- Add a **1-px guard inset** when sampling near `u=0` and `u=1` so we never read across the wedge boundary.
+- Replace per-pixel `ImageData` write with `ctx.drawImage` + a polar→cartesian mesh-grid using `save/clip` on a wedge `Path2D`, then warp via a single nearest-neighbor pass that snaps `r ≥ 1` (skips apex singularity row). Apex row is filled with the sampled center pixel only — kills the apex smear stripe.
+- Expose `flipY` as a parameter (default `true`, matching three.js convention) and apply it before the polar transform so PANEL_UV_FLIP_Y composes correctly.
+- Add `debugPanelNumbers: boolean` mode: when on, skip rasterization entirely and draw a fabric-color rect with the panel number (1–8) in large bold white text, centered. Returns one canvas per panel.
 
-For each panel the current code samples a `(rows × cols)` grid between rib angles `aA..aB`. New profile per vertex at radial `t` and angular `s` (`0..1` across the wedge):
+### 3. Correct panel index mapping
+Per spec: GLB `canopy_panel_01` = upper-right when viewed from top, going clockwise. The 2D editor numbers panel 0 = top, clockwise. So GLB panel 1 corresponds to 2D panel 0 or 1 depending on the half-slice offset — verified via the new debug numbers.
 
-```text
-bow(s)   = sin(pi * s)                 // 0 at rib edges, 1 mid-panel
-droop(t) = max(0, (t - 0.85)) * k_tip  // small dip near rim
-y = height * cos(t*pi/2)
-    - height * 0.10 * t^2              // base droop
-    + height * 0.08 * bow(s) * t       // panels puff outward
-    - height * 0.18 * droop(t)         // rib-tip dip
-r_offset = radius * 0.04 * bow(s) * t  // panel pushes out radially mid-wedge
+In `uvCorrection.ts` replace the loose arrays with a single canonical map:
+```ts
+export const panelUvCorrection: Record<string, {
+  twoDIndex: number; rotationDeg: number; flipX: boolean; flipY: boolean;
+}> = {
+  canopy_panel_01: { twoDIndex: 0, rotationDeg: 0, flipX: false, flipY: false },
+  canopy_panel_02: { twoDIndex: 1, rotationDeg: 0, flipX: false, flipY: false },
+  // ... through 08
+};
 ```
+Keep legacy exports as thin wrappers so existing imports still compile.
 
-UVs keep the existing top-down `(0.5 + 0.5·cos(angle)·t, 0.5 + 0.5·sin(angle)·t)` mapping so the rasterized SVG continues to land on the correct wedge — the bow only displaces position/normals, not UVs.
+### 4. Material binding (GLBUmbrellaModel.tsx)
+- Whitelist: only meshes whose lowercased name matches `^canopy_panel_(\d+)$` get a new material. Everything else (`shaft*`, `handle*`, `handle_string*`, `rib_frame*`, root group) keeps its baked material — explicit comment + early return per mesh.
+- For each canopy mesh: look up its entry in `panelUvCorrection`, fetch `panelTextures[entry.twoDIndex]`, set on the material. When `printArea === "selected"` and the 2D panel isn't in the selected set, set `mat.map = null` and `mat.color = fabricColor` instead.
+- `texture.wrapS/T = ClampToEdgeWrapping`, `flipY` from prop, `needsUpdate = true`. Never `RepeatWrapping`.
+- Per-panel material instances so toggling selection on one panel doesn't invalidate others.
 
-Bump `radialSegments` to 16 and `angularSegments` to 10 for smooth scallops without a noticeable perf cost.
+### 5. Per-panel repeat & selected modes
+`usePerPanelTextures` already receives the SVG of the full canopy. Add a `mode: "wrap" | "repeat" | "selected"` + `selectedPanels: number[]` param. Logic:
+- **wrap** → slice the full canopy raster (current behavior, with fixes above).
+- **repeat** → rasterize one panel wedge (panel 0) and clone its canvas to all selected; non-selected get a fabric-color canvas.
+- **selected** → same as repeat but unselected panels return a plain fabric canvas (no artwork).
 
-## Lighting & background
+DesignEditor passes `printArea`, `selectedPanels`, and `fabricColor` through props.
 
-- `gl.toneMapping = ACESFilmicToneMapping`, `toneMappingExposure ≈ 1.05`.
-- Background: CSS gradient on the `<Canvas>` wrapper from `#f7f3ec` (top) to `#e9e3d6` (bottom) — keeps existing `background` prop as override.
-- Lights: ambient 0.35, directional key 1.2 (upper-front-right, shadow on), directional fill 0.4 (opposite side, no shadow), directional rim 0.25 (behind, slightly above).
-- `ContactShadows`: opacity 0.55, blur 3.0, scale `radius * 5`, positioned just under the handle tip.
+### 6. Debug "Show panel numbers" toggle
+- Add `const [debugPanelNumbers, setDebugPanelNumbers] = useState(false)` in `DesignEditor`.
+- Render a small ghost button alongside the existing "Show/Hide frame" button, only when `viewMode==="3d"` and the active model is `folding_21in_8panel_standard`.
+- Pass through `UmbrellaScene` → `GLBUmbrellaModel` → `usePerPanelTextures`. When true, hook returns the number-stamped canvases regardless of SVG state.
 
-## Camera
+### 7. iPad Safari smoothness
+- Already using `dpr={[1, 2]}` — keep.
+- Debounce texture rebuild already exists (140 ms). Bump panel canvases to `256×256` when `debugPanelNumbers` is true to cut GPU upload cost.
+- Ensure we dispose old textures (already done) and don't recreate `MeshStandardMaterial` per render — current code already memoizes; verify no new allocation per panel-select change.
 
-Default position changes from `[r·2.4, r·1.8, r·2.4]` (high 3/4) to `[r·3.0, r·0.6, r·2.2]` (lower 3/4 side, similar to reference). `OrbitControls` `maxPolarAngle = Math.PI * 0.52` so the camera can't go below the floor. Existing Top/Front/Side/Bottom/Reset presets stay; "Reset" now restores this new default.
+## Technical Notes
 
-## Out of scope (unchanged)
+- No GLB edits. All correction lives in `uvCorrection.ts`.
+- `flipY` default = `true` (three.js convention). If after debug numbers look mirrored, flip to `false` in the registry's UV correction without touching code.
+- The 2D wedge angle offset will be visually confirmed via debug numbers; if `canopy_panel_01` shows "2" rather than "1", we shift `twoDIndex` values by one in `panelUvCorrection` only — no other code changes.
 
-- Texture pipeline (`useCanopyTexture.ts`) — already produces the correct top-down rasterization.
-- Model registry, GLB swap path, PDF export, headless capture, 2D editor, i18n keys, pouch, double-layer toggle, animations.
+## Out of Scope
 
-## Risk / verification
+Procedural model styling, 2D editor, PDF/export pipeline, i18n strings beyond the toggle label, pouch/double-layer, opening/closing animation.
 
-- Verify per-panel artwork still aligns at rib seams after bow (UVs unchanged, so it should — visually confirm in preview with a striped test design).
-- Verify headless PDF capture still works (no scene API change).
-- Verify mobile perf: bumped segments add ~480 verts per panel × 8 = ~3.8k extra — negligible.
+## Verification Checklist
+
+1. Switch to Folding + 8 panels, enter 3D mode, toggle "Show panel numbers" → digits 1–8 appear once each, in clockwise order starting upper-right.
+2. Turn off debug; load a wrap-mode design → no vertical stripes, no apex smear, panel boundaries crisp.
+3. Switch to "Per-panel repeat" with 3 selected → only those 3 panels show artwork; rest are fabric color.
+4. Switch to Straight or 6-panel → falls back to procedural model (no GLB load).
+5. Rotate the model on touch device → smooth, no texture rebuild on rotation.

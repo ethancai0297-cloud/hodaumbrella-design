@@ -46,27 +46,18 @@ export const UmbrellaScene = forwardRef<SceneApi, Props>(function UmbrellaScene(
 
   const radius = (config.canopy_diameter_cm / 2) * 0.1;
 
-  // Soft studio backdrop similar to the reference product photo
-  const wrapperStyle: React.CSSProperties = {
-    width: "100%",
-    height: "100%",
-    background:
-      background ??
-      "radial-gradient(120% 80% at 50% 25%, #fbf8f1 0%, #f1ebdd 55%, #e2d9c6 100%)",
-  };
-
   return (
-    <div style={wrapperStyle}>
+    <div className="w-full h-full bg-gradient-subtle">
       <Canvas
         shadows
         dpr={[1, 2]}
         gl={{ preserveDrawingBuffer: true, antialias: true }}
-        camera={{ position: [radius * 1.9, radius * 0.45, radius * 1.45], fov: 40 }}
+        camera={{ position: [radius * 1.45, radius * 0.4, radius * 1.1], fov: 50 }}
         onCreated={({ gl }) => {
           gl.toneMapping = THREE.ACESFilmicToneMapping;
           gl.toneMappingExposure = 1.05;
         }}
-        style={{ width: "100%", height: "100%", background: "transparent" }}
+        style={{ width: "100%", height: "100%", background: background ?? "transparent" }}
       >
         <Suspense fallback={null}>
           <ambientLight intensity={0.35} />

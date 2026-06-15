@@ -188,7 +188,7 @@ function SceneController({
       enableRotate
       enablePan
       enableZoom
-      minDistance={radius * 1.1}
+      minDistance={radius * 0.9}
       maxDistance={radius * 8}
       minPolarAngle={0}
       maxPolarAngle={Math.PI}

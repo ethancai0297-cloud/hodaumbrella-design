@@ -1,5 +1,5 @@
 import { Canvas, useThree } from "@react-three/fiber";
-import { OrbitControls, Environment, ContactShadows, Bounds } from "@react-three/drei";
+import { OrbitControls, Environment, ContactShadows } from "@react-three/drei";
 import { Suspense, forwardRef, useEffect, useImperativeHandle, useMemo, useRef } from "react";
 import * as THREE from "three";
 import type { UmbrellaModelConfig } from "@/3d/models/registry";
@@ -90,17 +90,15 @@ export const UmbrellaScene = forwardRef<SceneApi, Props>(function UmbrellaScene(
           />
           <Environment preset="studio" />
           {useGLB ? (
-            <Bounds fit clip observe margin={1.25}>
-              <GLBUmbrellaModel
-                config={config}
-                svg={svg}
-                fabricColor={fabricColor}
-                showFrame={showFrame}
-                textureDeps={textureDeps}
-                debugPanelNumbers={debugPanelNumbers}
-                flipY={textureFlipY}
-              />
-            </Bounds>
+            <GLBUmbrellaModel
+              config={config}
+              svg={svg}
+              fabricColor={fabricColor}
+              showFrame={showFrame}
+              textureDeps={textureDeps}
+              debugPanelNumbers={debugPanelNumbers}
+              flipY={textureFlipY}
+            />
           ) : (
             <UmbrellaModel
               config={config}
@@ -196,6 +194,9 @@ function SceneController({
       makeDefault
       enableDamping
       dampingFactor={0.08}
+      enableRotate
+      enablePan
+      enableZoom
       minDistance={radius * 1.4}
       maxDistance={radius * 8}
       minPolarAngle={0}

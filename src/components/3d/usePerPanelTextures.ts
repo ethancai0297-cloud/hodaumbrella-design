@@ -139,6 +139,44 @@ function buildDebug(ribCount: number, panelSize: number, fabricColor: string) {
   return out;
 }
 
+const XLINK_NS = "http://www.w3.org/1999/xlink";
+
+async function urlToDataUrl(url: string): Promise<string | null> {
+  try {
+    if (url.startsWith("data:")) return url;
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const blob = await res.blob();
+    return await new Promise<string | null>((resolve) => {
+      const r = new FileReader();
+      r.onload = () => resolve(typeof r.result === "string" ? r.result : null);
+      r.onerror = () => resolve(null);
+      r.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
+}
+
+async function inlineImages(root: SVGSVGElement): Promise<void> {
+  const imgs = Array.from(root.querySelectorAll("image"));
+  await Promise.all(
+    imgs.map(async (el) => {
+      const href =
+        el.getAttribute("href") ||
+        el.getAttributeNS(XLINK_NS, "href") ||
+        "";
+      if (!href || href.startsWith("data:")) return;
+      const data = await urlToDataUrl(href);
+      if (!data) return;
+      el.setAttribute("href", data);
+      if (el.hasAttributeNS(XLINK_NS, "href")) {
+        el.setAttributeNS(XLINK_NS, "href", data);
+      }
+    }),
+  );
+}
+
 async function rasterize(svg: SVGSVGElement, size: number): Promise<HTMLCanvasElement | null> {
   try {
     // Clone and strip strokes so rib/panel outlines from the 2D editor
@@ -159,6 +197,13 @@ async function rasterize(svg: SVGSVGElement, size: number): Promise<HTMLCanvasEl
         e.style.strokeWidth = "0";
       }
     });
+
+    // Inline every <image href="..."> as a data: URL. SVG-as-image rendering
+    // can't reach blob: URLs or cross-origin resources from the parent
+    // document context, so without this step uploaded artwork silently
+    // disappears from the 3D canopy.
+    await inlineImages(clone);
+
     const xml = new XMLSerializer().serializeToString(clone);
     const blob = new Blob([xml], { type: "image/svg+xml;charset=utf-8" });
     const url = URL.createObjectURL(blob);

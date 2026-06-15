@@ -8,42 +8,58 @@ import {
 
 /**
  * Rasterize the top-down canopy SVG and unroll each panel wedge into its
- * own rectangular CanvasTexture. The result is a fixed-length array of
- * CanvasTextures (length = ribCount). Each texture is sized so panel
- * geometry UVs in [0,1]² fill the panel.
+ * own rectangular CanvasTexture (length = ribCount). The SVG already
+ * encodes selected-panel / per-panel-repeat / full-wrap rendering, so we
+ * just need to slice it cleanly per panel.
  *
  * v = 0 → panel apex (center of canopy)
  * v = 1 → panel outer edge (rib tip)
  * u = 0 → left rib
  * u = 1 → right rib
  *
- * Per-panel UV rotation/flip is applied here, controlled by
- * PANEL_UV_ROTATION_DEG / PANEL_UV_FLIP_X / PANEL_UV_FLIP_Y so it can be
- * tuned without editing the GLB.
+ * Debug mode bypasses the SVG and stamps a large panel number (1..ribCount)
+ * on each panel so we can visually verify panel order before trusting
+ * real artwork.
  */
 export function usePerPanelTextures(
   svg: SVGSVGElement | null,
   ribCount: number,
   deps: unknown[],
-  panelSize = 512,
-  sourceSize = 1024,
+  options: {
+    fabricColor?: string;
+    debugPanelNumbers?: boolean;
+    flipY?: boolean;
+    panelSize?: number;
+    sourceSize?: number;
+  } = {},
 ) {
+  const {
+    fabricColor = "#cccccc",
+    debugPanelNumbers = false,
+    flipY = false,
+    panelSize = 512,
+    sourceSize = 1024,
+  } = options;
   const [textures, setTextures] = useState<THREE.CanvasTexture[]>([]);
   const timerRef = useRef<number | null>(null);
 
   useEffect(() => {
-    if (!svg || !ribCount) return;
+    if (!ribCount) return;
     if (timerRef.current) window.clearTimeout(timerRef.current);
     timerRef.current = window.setTimeout(() => {
-      void buildAll(svg, ribCount, sourceSize, panelSize).then((canvases) => {
+      const build = debugPanelNumbers
+        ? Promise.resolve(buildDebug(ribCount, panelSize, fabricColor))
+        : (svg
+            ? buildAll(svg, ribCount, sourceSize, panelSize, fabricColor)
+            : Promise.resolve(buildSolid(ribCount, panelSize, fabricColor)));
+      void build.then((canvases) => {
         if (!canvases) return;
         setTextures((prev) => {
-          // Reuse existing textures when count matches
           const next: THREE.CanvasTexture[] = [];
           for (let i = 0; i < canvases.length; i++) {
             const tex = prev[i] ?? new THREE.CanvasTexture(canvases[i]);
             tex.image = canvases[i];
-            tex.flipY = false;
+            tex.flipY = flipY;
             tex.colorSpace = THREE.SRGBColorSpace;
             tex.anisotropy = 8;
             tex.wrapS = THREE.ClampToEdgeWrapping;
@@ -51,7 +67,6 @@ export function usePerPanelTextures(
             tex.needsUpdate = true;
             next.push(tex);
           }
-          // Dispose extras if ribCount shrank
           for (let i = canvases.length; i < prev.length; i++) prev[i].dispose();
           return next;
         });
@@ -61,7 +76,7 @@ export function usePerPanelTextures(
       if (timerRef.current) window.clearTimeout(timerRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [svg, ribCount, sourceSize, panelSize, ...deps]);
+  }, [svg, ribCount, sourceSize, panelSize, fabricColor, debugPanelNumbers, flipY, ...deps]);
 
   useEffect(() => () => textures.forEach((t) => t.dispose()), [textures]);
 
@@ -73,12 +88,53 @@ async function buildAll(
   ribCount: number,
   sourceSize: number,
   panelSize: number,
+  fabricColor: string,
 ): Promise<HTMLCanvasElement[] | null> {
   const src = await rasterize(svg, sourceSize);
   if (!src) return null;
   const out: HTMLCanvasElement[] = [];
   for (let i = 0; i < ribCount; i++) {
-    out.push(unrollPanel(src, i, ribCount, panelSize));
+    out.push(unrollPanel(src, i, ribCount, panelSize, fabricColor));
+  }
+  return out;
+}
+
+function buildSolid(ribCount: number, panelSize: number, fabricColor: string) {
+  return Array.from({ length: ribCount }, () => solidCanvas(panelSize, fabricColor));
+}
+
+function solidCanvas(size: number, color: string) {
+  const c = document.createElement("canvas");
+  c.width = size;
+  c.height = size;
+  const ctx = c.getContext("2d")!;
+  ctx.fillStyle = color;
+  ctx.fillRect(0, 0, size, size);
+  return c;
+}
+
+function buildDebug(ribCount: number, panelSize: number, fabricColor: string) {
+  const out: HTMLCanvasElement[] = [];
+  for (let i = 0; i < ribCount; i++) {
+    const c = solidCanvas(panelSize, fabricColor);
+    const ctx = c.getContext("2d")!;
+    // Apex marker stripe (top of panel UV = v=0)
+    ctx.fillStyle = "rgba(255,255,255,0.25)";
+    ctx.fillRect(0, 0, panelSize, Math.max(4, panelSize * 0.04));
+    // Outer-edge marker (v=1)
+    ctx.fillStyle = "rgba(0,0,0,0.25)";
+    ctx.fillRect(0, panelSize - Math.max(4, panelSize * 0.04), panelSize, panelSize);
+    // Number
+    ctx.fillStyle = "#ffffff";
+    ctx.strokeStyle = "#000000";
+    ctx.lineWidth = panelSize * 0.03;
+    ctx.font = `bold ${Math.floor(panelSize * 0.55)}px sans-serif`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    const label = String(i + 1);
+    ctx.strokeText(label, panelSize / 2, panelSize / 2);
+    ctx.fillText(label, panelSize / 2, panelSize / 2);
+    out.push(c);
   }
   return out;
 }
@@ -117,12 +173,16 @@ async function rasterize(svg: SVGSVGElement, size: number): Promise<HTMLCanvasEl
  *   a0 = -π/2 + (i - 0.5) * sliceAngle
  *   a1 = a0 + sliceAngle
  * (matches src/components/UmbrellaCanopy.tsx::panelPath).
+ *
+ * Pre-fills with fabric color so any sampling miss or wedge-edge bleed
+ * shows up as fabric — not as a vertical stripe of an adjacent panel.
  */
 function unrollPanel(
   src: HTMLCanvasElement,
   panelIndex: number,
   ribCount: number,
   size: number,
+  fabricColor: string,
 ): HTMLCanvasElement {
   const sliceAngle = (Math.PI * 2) / ribCount;
   const a0 = -Math.PI / 2 + (panelIndex - 0.5) * sliceAngle;
@@ -130,9 +190,8 @@ function unrollPanel(
   const S = src.width;
   const cx = S / 2;
   const cy = S / 2;
-  const R = S / 2;
+  const R = S / 2 - 1; // 1-px safety inset to avoid the canvas edge
 
-  // Rect canvas: width = arc at outer edge, height = radius.
   const W = size;
   const H = size;
 
@@ -143,21 +202,36 @@ function unrollPanel(
   out.width = W;
   out.height = H;
   const outCtx = out.getContext("2d")!;
-  const outImg = outCtx.createImageData(W, H);
+
+  // Pre-fill with fabric color (opaque) so seam bleed stays inside palette.
+  const fabric = parseHex(fabricColor);
+  outCtx.fillStyle = fabricColor;
+  outCtx.fillRect(0, 0, W, H);
+
+  const outImg = outCtx.getImageData(0, 0, W, H);
   const outData = outImg.data;
 
   const rot = PANEL_UV_ROTATION_DEG[panelIndex] || 0;
   const flipX = PANEL_UV_FLIP_X[panelIndex] || false;
   const flipY = PANEL_UV_FLIP_Y[panelIndex] || false;
 
+  // Skip the very top apex pixel row (v=0) to avoid singular-point smear.
+  // Fill it with the SVG center pixel so the apex looks consistent.
+  const centerI = (Math.floor(cy) * S + Math.floor(cx)) * 4;
+  const apexR = srcData[centerI];
+  const apexG = srcData[centerI + 1];
+  const apexB = srcData[centerI + 2];
+  const apexA = srcData[centerI + 3];
+
+  // 1-px inset on u to keep sampling strictly inside the wedge.
+  const uPad = 0.5 / W;
+
   for (let py = 0; py < H; py++) {
     for (let px = 0; px < W; px++) {
-      // Apply correction in output space
       let u = px / (W - 1);
       let v = py / (H - 1);
       if (flipX) u = 1 - u;
       if (flipY) v = 1 - v;
-      // Rotate UV around (0.5, 0.5)
       if (rot) {
         const rad = (rot * Math.PI) / 180;
         const cu = u - 0.5;
@@ -168,29 +242,60 @@ function unrollPanel(
         v = rv;
       }
 
-      // v=0 apex (r=0), v=1 outer edge (r=R)
+      const di = (py * W + px) * 4;
+
+      // Apex row: just stamp center pixel, skip warp singularity.
+      if (v <= 0.002) {
+        outData[di] = apexR;
+        outData[di + 1] = apexG;
+        outData[di + 2] = apexB;
+        outData[di + 3] = apexA || 255;
+        continue;
+      }
+
+      const uClamped = Math.min(1 - uPad, Math.max(uPad, u));
       const r = v * R;
-      const angle = a0 + u * sliceAngle;
+      const angle = a0 + uClamped * sliceAngle;
       const sx = cx + r * Math.cos(angle);
       const sy = cy + r * Math.sin(angle);
 
       const ix = sx | 0;
       const iy = sy | 0;
-      const di = (py * W + px) * 4;
       if (ix < 0 || iy < 0 || ix >= S || iy >= S) {
-        outData[di] = 0;
-        outData[di + 1] = 0;
-        outData[di + 2] = 0;
-        outData[di + 3] = 0;
+        outData[di] = fabric.r;
+        outData[di + 1] = fabric.g;
+        outData[di + 2] = fabric.b;
+        outData[di + 3] = 255;
       } else {
         const si = (iy * S + ix) * 4;
-        outData[di] = srcData[si];
-        outData[di + 1] = srcData[si + 1];
-        outData[di + 2] = srcData[si + 2];
-        outData[di + 3] = srcData[si + 3];
+        const a = srcData[si + 3];
+        if (a < 8) {
+          // Transparent source → keep fabric background, don't bleed.
+          outData[di] = fabric.r;
+          outData[di + 1] = fabric.g;
+          outData[di + 2] = fabric.b;
+          outData[di + 3] = 255;
+        } else {
+          outData[di] = srcData[si];
+          outData[di + 1] = srcData[si + 1];
+          outData[di + 2] = srcData[si + 2];
+          outData[di + 3] = 255;
+        }
       }
     }
   }
   outCtx.putImageData(outImg, 0, 0);
   return out;
+}
+
+function parseHex(hex: string): { r: number; g: number; b: number } {
+  const m = hex.replace("#", "");
+  const v = m.length === 3
+    ? m.split("").map((c) => c + c).join("")
+    : m.padEnd(6, "0").slice(0, 6);
+  return {
+    r: parseInt(v.slice(0, 2), 16) || 0,
+    g: parseInt(v.slice(2, 4), 16) || 0,
+    b: parseInt(v.slice(4, 6), 16) || 0,
+  };
 }

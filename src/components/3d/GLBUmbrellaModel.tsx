@@ -13,6 +13,9 @@ interface Props {
   textureDeps: unknown[];
   debugPanelNumbers?: boolean;
   flipY?: boolean;
+  /** Yaw rotation offset (degrees) around vertical axis to align 3D top
+   *  view with the 2D editor layout. Default 22.5° = half panel for 8-rib. */
+  modelYawOffsetDeg?: number;
 }
 
 /**

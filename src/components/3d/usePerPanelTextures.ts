@@ -73,7 +73,7 @@ export function usePerPanelTextures(
     timerRef.current = window.setTimeout(() => {
       const build: Promise<HTMLCanvasElement[] | null> = debugPanelNumbers
         ? Promise.resolve(buildDebug(ribCount, panelSize, fabricColor))
-        : (svg
+        : (svg && hasArtwork
             ? buildAll(svg, ribCount, sourceSize, panelSize, fabricColor).then(
                 (out) => {
                   if (out) return out;

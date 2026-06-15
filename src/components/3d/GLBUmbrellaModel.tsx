@@ -154,8 +154,9 @@ export function GLBUmbrellaModel({
   }, [root, panelMaterials, showFrame]);
 
   if (!root) return null;
+  const yaw = (modelYawOffsetDeg * Math.PI) / 180;
   return (
-    <>
+    <group rotation={[0, yaw, 0]}>
       <primitive object={root} />
       {debugPanelNumbers &&
         panelCenters.map(({ index, pos }) => (
@@ -190,7 +191,7 @@ export function GLBUmbrellaModel({
             </div>
           </Html>
         ))}
-    </>
+    </group>
   );
 }
 

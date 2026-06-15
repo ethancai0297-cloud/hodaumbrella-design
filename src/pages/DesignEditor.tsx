@@ -103,6 +103,11 @@ const DesignEditor = () => {
   const sceneRef = useRef<SceneApi | null>(null);
   const headlessSceneRef = useRef<SceneApi | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
+  const [svgEl, setSvgEl] = useState<SVGSVGElement | null>(null);
+  const setCanopySvg = (el: SVGSVGElement | null) => {
+    (svgRef as React.MutableRefObject<SVGSVGElement | null>).current = el;
+    setSvgEl(el);
+  };
   const pouchSvgRef = useRef<SVGSVGElement>(null);
   const innerOnlySvgRef = useRef<SVGSVGElement>(null);
 
@@ -115,6 +120,29 @@ const DesignEditor = () => {
       if (p) setProject(p);
     }
   }, [id]);
+
+  // Bump a version attribute on the canopy SVG so the 3D rasterizer's
+  // svgVersion probe always flips on any 2D edit — even when arrays
+  // mutate in place without reference changes.
+  useEffect(() => {
+    if (!svgEl) return;
+    svgEl.setAttribute("data-version", String(Date.now()));
+  }, [
+    svgEl,
+    project.artworkItems,
+    project.panelColors,
+    project.fabricColor,
+    project.capColor,
+    project.innerLayer,
+    project.hasDoubleLayer,
+    project.doubleLayerStyle,
+    project.printingMethod,
+    project.ribCount,
+    project.umbrellaCategory,
+    dryToggle,
+    selectedPanels,
+    activeSurface,
+  ]);
 
   // history (simple undo/redo)
   const historyRef = useRef<DesignProject[]>([]);
@@ -806,7 +834,7 @@ const DesignEditor = () => {
                 style={{ display: activeSurface === "pouch" ? "none" : "block" }}
               >
                 <UmbrellaCanopy
-                  ref={svgRef}
+                  ref={setCanopySvg}
                   category={project.umbrellaCategory}
                   ribCount={project.ribCount}
                   fabricColor={project.fabricColor}
@@ -874,7 +902,7 @@ const DesignEditor = () => {
                   <UmbrellaScene
                     ref={(api) => { sceneRef.current = api; }}
                     config={model3d}
-                    svg={svgRef.current}
+                    svg={svgEl}
                     fabricColor={project.fabricColor}
                     capColor={project.capColor}
                     showFrame={showFrame}
@@ -968,7 +996,7 @@ const DesignEditor = () => {
                   }
                 }}
                 config={model3d}
-                svg={svgRef.current}
+                svg={svgEl}
                 fabricColor={project.fabricColor}
                 capColor={project.capColor}
                 showFrame={showFrame}

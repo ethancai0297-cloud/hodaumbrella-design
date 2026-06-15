@@ -269,7 +269,7 @@ async function rasterize(svg: SVGSVGElement, size: number): Promise<HTMLCanvasEl
       const c = document.createElement("canvas");
       c.width = size;
       c.height = size;
-      const ctx = c.getContext("2d")!;
+      const ctx = c.getContext("2d", { willReadFrequently: true })!;
       ctx.clearRect(0, 0, size, size);
       ctx.drawImage(img, 0, 0, size, size);
       try {
@@ -319,13 +319,13 @@ function unrollPanel(
   const W = size;
   const H = size;
 
-  const srcCtx = src.getContext("2d")!;
+  const srcCtx = src.getContext("2d", { willReadFrequently: true })!;
   const srcData = srcCtx.getImageData(0, 0, S, S).data;
 
   const out = document.createElement("canvas");
   out.width = W;
   out.height = H;
-  const outCtx = out.getContext("2d")!;
+  const outCtx = out.getContext("2d", { willReadFrequently: true })!;
 
   // Pre-fill with fabric color (opaque) so seam bleed stays inside palette.
   const fabric = parseHex(fabricColor);

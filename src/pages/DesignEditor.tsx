@@ -103,6 +103,11 @@ const DesignEditor = () => {
   const sceneRef = useRef<SceneApi | null>(null);
   const headlessSceneRef = useRef<SceneApi | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
+  const [svgEl, setSvgEl] = useState<SVGSVGElement | null>(null);
+  const setCanopySvg = (el: SVGSVGElement | null) => {
+    (svgRef as React.MutableRefObject<SVGSVGElement | null>).current = el;
+    setSvgEl(el);
+  };
   const pouchSvgRef = useRef<SVGSVGElement>(null);
   const innerOnlySvgRef = useRef<SVGSVGElement>(null);
 

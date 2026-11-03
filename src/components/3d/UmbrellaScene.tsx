@@ -164,10 +164,12 @@ function SceneController({
       const target = new THREE.Vector3(0, 0, 0);
       return {
         perspective: [new THREE.Vector3(0, 1.2, 4.2), target],
-        top: [new THREE.Vector3(0.001, 4.2, 0), target],
+        // Tiny +Z offset (not +X) so lookAt resolves screen-up to world -Z,
+        // which makes the top view match the 2D editor orientation exactly.
+        top: [new THREE.Vector3(0, 6.0, 0.001), target],
         front: [new THREE.Vector3(0, 0.4, 4.2), target],
         side: [new THREE.Vector3(4.2, 0.4, 0), target],
-        bottom: [new THREE.Vector3(0.001, -4.2, 0), target],
+        bottom: [new THREE.Vector3(0, -6.0, 0.001), target],
       };
     }
     const target = new THREE.Vector3(0, canopyHeight * 0.4, 0);

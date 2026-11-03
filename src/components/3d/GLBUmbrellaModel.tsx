@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 import * as THREE from "three";
 import { useGLTF, Html } from "@react-three/drei";
 import type { UmbrellaModelConfig } from "@/3d/models/registry";
-import { usePerPanelTextures } from "./usePerPanelTextures";
-import { getPanelUv } from "@/3d/uvCorrection";
+import { applyCanopyTexture, measureCanopy } from "@/3d/canopyProjection";
+import { useCanopyProjectionTexture } from "./useCanopyProjectionTexture";
 
 interface Props {
   config: UmbrellaModelConfig;
@@ -12,17 +12,22 @@ interface Props {
   showFrame: boolean;
   textureDeps: unknown[];
   debugPanelNumbers?: boolean;
+  /** Kept for API compatibility; the projection handles orientation. */
   flipY?: boolean;
-  /** Yaw rotation offset (degrees) around vertical axis to align 3D top
-   *  view with the 2D editor layout. Default 22.5° = half panel for 8-rib. */
+  /** Kept for API compatibility; orientation is now computed automatically
+   *  from the model's canopy tips (see canopyProjection.ts). */
   modelYawOffsetDeg?: number;
 }
 
 /**
- * GLB-backed umbrella preview for Folding 21" 8-panel. Loads the GLB,
- * applies per-panel canopy textures generated from the live 2D editor SVG,
- * and leaves all hardware meshes (handle_*, shaft_*, rib_frame*, handle
- * string, root) untouched with their baked materials.
+ * GLB-backed umbrella preview.
+ *
+ * The 2D editor is a top-down drawing of the canopy, so instead of relying
+ * on the GLB's authored UVs (which are overlapping/mirrored on the folding
+ * model), we re-project UVs for every `canopy_panel_*` mesh from the top
+ * view and bind ONE texture rasterized from the live 2D SVG. The model is
+ * also auto-rotated so its octagon matches the 2D "flat-top" layout.
+ * Hardware meshes (handle, shaft, ribs...) keep their baked materials.
  */
 export function GLBUmbrellaModel({
   config,
@@ -31,132 +36,110 @@ export function GLBUmbrellaModel({
   showFrame,
   textureDeps,
   debugPanelNumbers = false,
-  flipY = false,
-  modelYawOffsetDeg = 22.5,
 }: Props) {
   const gltf = useGLTF(config.model_file);
-  // Note: debug numbers are rendered as floating 3D labels (see below), not
-  // stamped into the canopy texture. So we never pass debugPanelNumbers
-  // through to the texture builder.
-  const panelTextures = usePerPanelTextures(svg, config.rib_count, textureDeps, {
-    fabricColor,
-    debugPanelNumbers: false,
-    flipY,
-  });
+  const texture = useCanopyProjectionTexture(svg, config.category, textureDeps);
 
-  // One material instance per 3D panel so selection / color changes on one
-  // panel never invalidate the others.
-  const panelMaterials = useMemo(() => {
-    return Array.from({ length: config.rib_count }, () =>
+  // Fallback material (no SVG yet): solid fabric color.
+  const solidMaterial = useMemo(
+    () =>
       new THREE.MeshStandardMaterial({
-        color: "#ffffff",
+        color: fabricColor,
         side: THREE.DoubleSide,
         roughness: 0.78,
-        metalness: 0.0,
-      })
-    );
-  }, [config.rib_count]);
-
-  // Sync per-panel texture + fabric color through the UV correction map.
+        metalness: 0,
+      }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
   useEffect(() => {
-    let bound = 0;
-    const hasTextures = panelTextures.length > 0;
-    for (let k = 0; k < config.rib_count; k++) {
-      const mat = panelMaterials[k];
-      if (!hasTextures) {
-        mat.map = null;
-        mat.color.set(fabricColor);
-        mat.needsUpdate = true;
-        continue;
-      }
-      const meshName = `canopy_panel_${String(k + 1).padStart(2, "0")}`;
-      const uv = getPanelUv(meshName);
-      const twoDIndex = uv?.twoDIndex ?? k;
-      const tex = panelTextures[twoDIndex] ?? null;
-      mat.map = tex;
-      mat.color.set(tex ? "#ffffff" : fabricColor);
-      mat.needsUpdate = true;
-      if (tex) bound++;
-    }
-    // eslint-disable-next-line no-console
-    console.log("[3D] GLB panel materials updated", {
-      rib_count: config.rib_count,
-      texturesAvailable: panelTextures.length,
-      withTexture: bound,
-      fabricColor,
-    });
-  }, [panelTextures, fabricColor, panelMaterials, config.rib_count]);
+    solidMaterial.color.set(fabricColor);
+    solidMaterial.needsUpdate = true;
+  }, [solidMaterial, fabricColor]);
 
-  // Clone + normalize scene.
-  const root = useMemo(() => {
+  // Clone + normalize: scale longest dimension to ~3.2 units, put the
+  // canopy center on the Y axis, then project UVs. Done once per GLB.
+  const { root, panelCenters, canopyMaterial } = useMemo(() => {
     const cloned = gltf?.scene?.clone(true);
-    if (!cloned) return null;
+    if (!cloned) return { root: null, panelCenters: [], canopyMaterial: null };
+
     const box = new THREE.Box3().setFromObject(cloned);
-    const size = new THREE.Vector3();
-    const center = new THREE.Vector3();
-    box.getSize(size);
-    box.getCenter(center);
-    cloned.position.sub(center);
+    const size = box.getSize(new THREE.Vector3());
     const maxDim = Math.max(size.x, size.y, size.z) || 1;
-    const targetSize = 3.2;
-    cloned.scale.setScalar(targetSize / maxDim);
-    return cloned;
-  }, [gltf]);
+    cloned.scale.setScalar(3.2 / maxDim);
+    cloned.updateMatrixWorld(true);
 
-  // Bind canopy panel materials + collect per-panel world-space centers for
-  // floating debug labels.
-  const [panelCenters, setPanelCenters] = useState<
-    Array<{ index: number; pos: [number, number, number] }>
-  >([]);
+    // Center: XZ on the canopy, Y on the whole umbrella.
+    const canopy = measureCanopy(cloned);
+    const full = new THREE.Box3().setFromObject(cloned).getCenter(new THREE.Vector3());
+    cloned.position.set(-canopy.center.x, -full.y, -canopy.center.z);
+    cloned.updateMatrixWorld(true);
 
-  useEffect(() => {
-    if (!root) return;
-    const meshes: string[] = [];
-    const matched: string[] = [];
+    // Placeholder texture; the real one is swapped in below.
+    const placeholder = new THREE.CanvasTexture(document.createElement("canvas"));
+    const result = applyCanopyTexture(cloned, placeholder, {
+      align: "flat-top",
+      panelCount: config.panel_count || 8,
+      rotateModel: true,
+      material: () =>
+        new THREE.MeshStandardMaterial({
+          color: "#ffffff",
+          side: THREE.DoubleSide,
+          roughness: 0.78,
+          metalness: 0,
+        }),
+    });
+    placeholder.dispose();
+
     const centers: Array<{ index: number; pos: [number, number, number] }> = [];
-    // Make sure world matrices reflect the normalization applied above.
-    root.updateMatrixWorld(true);
-    root.traverse((obj) => {
+    cloned.traverse((obj) => {
       if (!(obj instanceof THREE.Mesh)) return;
-      meshes.push(obj.name);
-      const name = obj.name.toLowerCase().replace(/\s+/g, "_");
-      const m = name.match(/^canopy_panel_(\d+)$/);
-      if (m) {
-        const k = parseInt(m[1], 10) - 1;
-        if (k >= 0 && k < panelMaterials.length) {
-          obj.material = panelMaterials[k];
-          obj.castShadow = true;
-          obj.receiveShadow = true;
-          matched.push(obj.name);
-          // Compute panel center in world space.
-          const box = new THREE.Box3().setFromObject(obj);
-          const c = new THREE.Vector3();
-          box.getCenter(c);
-          centers.push({ index: k + 1, pos: [c.x, c.y, c.z] });
-        }
-        return;
-      }
-      if (name.startsWith("rib_frame")) {
-        obj.visible = showFrame;
-        return;
-      }
       obj.castShadow = true;
       obj.receiveShadow = true;
+      const m = obj.name.toLowerCase().replace(/\s+/g, "_").match(/^canopy_panel_(\d+)$/);
+      if (m) {
+        const c = new THREE.Box3().setFromObject(obj).getCenter(new THREE.Vector3());
+        centers.push({ index: parseInt(m[1], 10), pos: [c.x, c.y, c.z] });
+      }
     });
     centers.sort((a, b) => a.index - b.index);
-    setPanelCenters(centers);
     // eslint-disable-next-line no-console
-    console.log("[3D] GLB meshes scanned", {
-      allMeshes: meshes,
-      canopyPanelsBound: matched,
-      panelCenters: centers,
+    console.log("[3D] GLB prepared", {
+      model: config.model_id,
+      panels: result.panels.length,
+      modelYawDeg: result.modelYawDeg,
     });
-  }, [root, panelMaterials, showFrame]);
+    return {
+      root: cloned,
+      panelCenters: centers,
+      canopyMaterial: result.material as THREE.MeshStandardMaterial,
+    };
+  }, [gltf, config.model_id, config.panel_count]);
+
+  // Bind the live texture (or solid color) to the canopy panels.
+  useEffect(() => {
+    if (!root || !canopyMaterial) return;
+    const mat = texture ? canopyMaterial : solidMaterial;
+    if (texture) {
+      canopyMaterial.map = texture;
+      canopyMaterial.needsUpdate = true;
+    }
+    root.traverse((obj) => {
+      if (obj instanceof THREE.Mesh && /canopy/i.test(obj.name)) obj.material = mat;
+    });
+  }, [root, canopyMaterial, solidMaterial, texture]);
+
+  // Frame visibility.
+  useEffect(() => {
+    if (!root) return;
+    root.traverse((obj) => {
+      if (obj instanceof THREE.Mesh && obj.name.toLowerCase().startsWith("rib_frame")) obj.visible = showFrame;
+    });
+  }, [root, showFrame]);
 
   if (!root) return null;
-  const yaw = (modelYawOffsetDeg * Math.PI) / 180;
   return (
-    <group rotation={[0, yaw, 0]}>
+    <group>
       <primitive object={root} />
       {debugPanelNumbers &&
         panelCenters.map(({ index, pos }) => (
@@ -195,5 +178,6 @@ export function GLBUmbrellaModel({
   );
 }
 
-// Preload registered GLB
+// Preload registered GLBs
 useGLTF.preload("/models/folding_21in_8panel_standard.glb");
+useGLTF.preload("/models/straight_23in_8panel_standard.glb");

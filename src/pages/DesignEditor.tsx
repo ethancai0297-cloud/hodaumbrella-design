@@ -942,7 +942,7 @@ const DesignEditor = () => {
                       {showFrame ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
                       {showFrame ? t("threeD.hideFrame") : t("threeD.showFrame")}
                     </button>
-                    {model3d.model_id === "folding_21in_8panel_standard" && (
+                    {model3d && (
                       <button
                         onClick={() => setDebugPanelNumbers((v) => !v)}
                         className={cn(

@@ -222,8 +222,8 @@ const dict: Dict = {
   "view.2d": { en: "2D Design", zh: "2D 设计" },
   "view.3d": { en: "3D Preview", zh: "3D 预览" },
   "threeD.unavailable": {
-    en: "3D preview is currently available only for the 21-inch 8-panel folding umbrella. Please use the 2D preview for this specification.",
-    zh: "3D 预览目前仅支持 21 英寸 8 片折叠伞。该规格请使用 2D 预览。",
+    en: "3D preview is currently available for 8-panel folding and straight umbrellas. Please use the 2D preview for this specification.",
+    zh: "3D 预览目前支持 8 片折叠伞和直骨伞。该规格请使用 2D 预览。",
   },
   "threeD.showFrame": { en: "Show frame", zh: "显示骨架" },
   "threeD.hideFrame": { en: "Hide frame", zh: "隐藏骨架" },

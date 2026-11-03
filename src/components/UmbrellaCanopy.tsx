@@ -1,6 +1,10 @@
 import { ArtworkItem, DoubleLayerStyle, RibCount, UmbrellaCategory } from "@/types/design";
 import { forwardRef, useImperativeHandle, useLayoutEffect, useMemo, useRef } from "react";
 
+/** Canopy outer radius in SVG viewBox units (viewBox is -300 -300 600 600). Shared with the 3D projection. */
+export const canopy2DRadius = (category: string) =>
+  category === "golf" ? 255 : category === "straight" ? 195 : 178;
+
 export interface InnerLayerProps {
   fabricColor: string;
   panelColors?: Record<number, string>;
@@ -108,7 +112,7 @@ export const UmbrellaCanopy = forwardRef<SVGSVGElement, Props>(function Umbrella
     }
   });
 
-  const radius = category === "golf" ? 255 : category === "straight" ? 195 : 178;
+  const radius = canopy2DRadius(category);
   const centerR = radius * 0.022;
   const hasInner = !!innerLayer && !forceSingleLayer;
 

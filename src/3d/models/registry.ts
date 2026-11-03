@@ -32,22 +32,24 @@ export interface UmbrellaModelConfig {
   uv_template_file: string;
 }
 
+// Golf config exists but its GLB has not been delivered yet — keep it out
+// of the active list until /public/models/golf_30in_8panel_standard.glb lands.
+void golf;
 const MODELS: UmbrellaModelConfig[] = [
   folding as UmbrellaModelConfig,
   straight as UmbrellaModelConfig,
-  golf as UmbrellaModelConfig,
 ];
 
 export function findModel(
   category: UmbrellaCategory,
   ribCount: RibCount
 ): UmbrellaModelConfig | null {
-  // Only Folding + 8 panel is currently supported in 3D. Straight, Golf,
-  // and folding with other rib counts (6/7/10) intentionally return null
-  // so the editor shows the "3D preview unavailable" fallback.
-  if (category !== "folding" || ribCount !== 8) return null;
+  // A model is available only when a GLB with the matching category AND
+  // panel count exists. Other combinations (golf, 6/7/10 ribs) return null
+  // so the editor shows the "3D preview unavailable" fallback until a
+  // matching GLB is added here.
   const match = MODELS.find(
-    (m) => m.model_id === "folding_21in_8panel_standard"
+    (m) => m.category === category && m.panel_count === ribCount
   );
   if (!match || !match.model_file?.toLowerCase().endsWith(".glb")) return null;
   return match;

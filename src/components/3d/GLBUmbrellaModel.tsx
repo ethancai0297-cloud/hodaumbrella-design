@@ -46,8 +46,10 @@ export function GLBUmbrellaModel({
       new THREE.MeshStandardMaterial({
         color: fabricColor,
         side: THREE.DoubleSide,
-        roughness: 0.78,
+        roughness: 0.95,
         metalness: 0,
+        envMapIntensity: 0.15,
+        toneMapped: false,
       }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
@@ -85,8 +87,12 @@ export function GLBUmbrellaModel({
         new THREE.MeshStandardMaterial({
           color: "#ffffff",
           side: THREE.DoubleSide,
-          roughness: 0.78,
+          roughness: 0.95,
           metalness: 0,
+          // Keep printed colors faithful to the 2D swatches: no ACES tone
+          // mapping on the canopy and only a touch of the bright studio HDRI.
+          envMapIntensity: 0.15,
+          toneMapped: false,
         }),
     });
     placeholder.dispose();

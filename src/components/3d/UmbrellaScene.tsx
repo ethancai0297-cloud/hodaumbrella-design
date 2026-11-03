@@ -81,11 +81,13 @@ export const UmbrellaScene = forwardRef<SceneApi, Props>(function UmbrellaScene(
         style={{ width: "100%", height: "100%", background: background ?? "transparent" }}
       >
         <Suspense fallback={null}>
-          <ambientLight intensity={0.35} />
+          {/* Lighting is tuned so a canopy facing the camera shows the 2D
+              swatch color almost 1:1 (canopy material is not tone-mapped). */}
+          <hemisphereLight intensity={0.55} color="#ffffff" groundColor="#d9dde4" />
           {/* Key light */}
           <directionalLight
             position={[radius * 3.5, radius * 4.5, radius * 2.5]}
-            intensity={1.2}
+            intensity={0.5}
             castShadow
             shadow-mapSize-width={1024}
             shadow-mapSize-height={1024}
@@ -93,7 +95,7 @@ export const UmbrellaScene = forwardRef<SceneApi, Props>(function UmbrellaScene(
           {/* Fill light */}
           <directionalLight
             position={[-radius * 3, radius * 2.2, radius * 1.5]}
-            intensity={0.4}
+            intensity={0.2}
           />
           {/* Rim light */}
           <directionalLight
@@ -166,10 +168,10 @@ function SceneController({
         perspective: [new THREE.Vector3(0, 1.2, 4.2), target],
         // Tiny +Z offset (not +X) so lookAt resolves screen-up to world -Z,
         // which makes the top view match the 2D editor orientation exactly.
-        top: [new THREE.Vector3(0, 6.0, 0.001), target],
+        top: [new THREE.Vector3(0, 7.5, 0.001), target],
         front: [new THREE.Vector3(0, 0.4, 4.2), target],
         side: [new THREE.Vector3(4.2, 0.4, 0), target],
-        bottom: [new THREE.Vector3(0, -6.0, 0.001), target],
+        bottom: [new THREE.Vector3(0, -7.5, 0.001), target],
       };
     }
     const target = new THREE.Vector3(0, canopyHeight * 0.4, 0);

@@ -1,0 +1,14 @@
+{
+  // Cloudflare Workers config: a tiny API (worker/index.ts) in front of the
+  // Vite build output (dist/), served as a single-page app.
+  "name": "hodaumbrella-design",
+  "main": "worker/index.ts",
+  "compatibility_date": "2026-01-01",
+  // Don't wipe plain-text variables set in the dashboard on each deploy.
+  "keep_vars": true,
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application"
+  }
+}

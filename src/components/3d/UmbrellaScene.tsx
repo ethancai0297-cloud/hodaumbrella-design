@@ -114,7 +114,8 @@ export const UmbrellaScene = forwardRef<SceneApi, Props>(function UmbrellaScene(
             position={[-radius * 1.5, radius * 3, -radius * 3.5]}
             intensity={0.25}
           />
-          <Environment preset="studio" />
+          {/* Self-hosted HDRI: the drei presets download from a GitHub CDN, which is unreachable from mainland China. */}
+          <Environment files="/hdri/studio_small_03_1k.hdr" />
           {useGLB ? (
             <GLBUmbrellaModel
               config={config}

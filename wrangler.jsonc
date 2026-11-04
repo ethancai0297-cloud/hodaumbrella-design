@@ -4,6 +4,8 @@
   "name": "hodaumbrella-design",
   "main": "worker/index.ts",
   "compatibility_date": "2026-01-01",
+  // Don't wipe plain-text variables set in the dashboard on each deploy.
+  "keep_vars": true,
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS",

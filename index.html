@@ -13,7 +13,8 @@
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Non-blocking: if Google Fonts is unreachable (e.g. mainland China) the page still renders with system fonts. -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
     <meta property="og:title" content="Hoda Umbrella-design generator">
   <meta name="twitter:title" content="Hoda Umbrella-design generator">
   <meta property="og:description" content="Create realistic umbrella rendering previews for silkscreen logos or full digital print designs. Built for umbrella factories, sales teams, and clients.">

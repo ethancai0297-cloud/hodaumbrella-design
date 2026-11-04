@@ -269,7 +269,7 @@ export const DisplayBox3D = ({ variant, boxType, dimensions, className }: Props)
           <DimsCtx.Provider value={safeDims}>
             <BoxMesh variant={variant} boxType={boxType} />
           </DimsCtx.Provider>
-          <Environment preset="city" environmentIntensity={0.4} />
+          <Environment files="/hdri/potsdamer_platz_1k.hdr" environmentIntensity={0.4} />
         </Suspense>
 
         <OrbitControls enablePan={false} minDistance={4} maxDistance={16} target={[0, 0, 0]} />

@@ -322,7 +322,7 @@ export const Carton3D = ({ variant, className }: Props) => {
 
         <Suspense fallback={null}>
           <CartonMesh variant={variant} />
-          <Environment preset="warehouse" environmentIntensity={0.4} />
+          <Environment files="/hdri/empty_warehouse_01_1k.hdr" environmentIntensity={0.4} />
         </Suspense>
 
         <OrbitControls

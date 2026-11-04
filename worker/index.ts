@@ -93,9 +93,14 @@ async function analyzeMark(req: Request, env: Env): Promise<Response> {
   if (!upstream.ok) {
     const txt = await upstream.text();
     console.error("DashScope error", upstream.status, txt);
-    if (upstream.status === 401) return json({ error: "千问 API key 无效或未配置" }, 500);
+    let detail = txt.slice(0, 300);
+    try {
+      const j = JSON.parse(txt) as { error?: { message?: string; code?: string }; message?: string; code?: string };
+      detail = j.error?.message || j.message || j.error?.code || j.code || detail;
+    } catch {}
+    if (upstream.status === 401) return json({ error: `千问 API key 无效或未配置：${detail}` }, 500);
     if (upstream.status === 429) return json({ error: "调用过于频繁，请稍后再试" }, 429);
-    return json({ error: `AI 请求失败 (${upstream.status})` }, 502);
+    return json({ error: `AI 请求失败 (${upstream.status})：${detail}`, endpoint: base, model }, 502);
   }
 
   const data = (await upstream.json()) as { choices?: Array<{ message?: { content?: string | Array<{ text?: string }> } }> };

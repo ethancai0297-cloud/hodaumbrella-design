@@ -1,0 +1,285 @@
+import { Canvas, useThree } from "@react-three/fiber";
+import { OrbitControls, Environment, ContactShadows } from "@react-three/drei";
+import { Suspense, forwardRef, useEffect, useImperativeHandle, useMemo, useRef } from "react";
+import * as THREE from "three";
+import type { UmbrellaModelConfig } from "@/3d/models/registry";
+import { UmbrellaModel } from "./UmbrellaModel";
+import { useCanopyTexture } from "./useCanopyTexture";
+import { GLBUmbrellaModel } from "./GLBUmbrellaModel";
+
+export type CameraPreset = "perspective" | "hero" | "top" | "front" | "side" | "bottom";
+
+export interface SceneApi {
+  setView: (preset: CameraPreset) => void;
+  /** Resolves once the canopy texture has been bound (or after `timeoutMs`). */
+  waitReady: (timeoutMs?: number) => Promise<boolean>;
+  captureView: (preset: CameraPreset) => Promise<string>;
+  setShowFrame: (show: boolean) => void;
+}
+
+interface Props {
+  config: UmbrellaModelConfig;
+  svg: SVGSVGElement | null;
+  fabricColor: string;
+  capColor?: string;
+  showFrame: boolean;
+  textureDeps: unknown[];
+  background?: string;
+  debugPanelNumbers?: boolean;
+  textureFlipY?: boolean;
+}
+
+export const UmbrellaScene = forwardRef<SceneApi, Props>(function UmbrellaScene(
+  { config, svg, fabricColor, capColor, showFrame, textureDeps, background, debugPanelNumbers, textureFlipY },
+  ref
+) {
+  const useGLB = !!config.model_file && config.model_file.toLowerCase().endsWith(".glb");
+  // Legacy procedural texture (used only for procedural fallback path)
+  const texture = useCanopyTexture(svg, textureDeps);
+  const apiRef = useRef<InternalApi | null>(null);
+
+  useImperativeHandle(ref, () => ({
+    setView: (p) => apiRef.current?.setView(p),
+    waitReady: async (ms = 8000) => {
+      // The inner controller mounts after Suspense resolves (GLB + HDRI
+      // loaded); wait for it before asking about the texture.
+      const start = performance.now();
+      while (!apiRef.current) {
+        if (performance.now() - start > ms) return false;
+        await new Promise((r) => setTimeout(r, 100));
+      }
+      return apiRef.current.waitReady(ms - (performance.now() - start));
+    },
+    captureView: async (p) => (await apiRef.current?.captureView(p)) ?? "",
+    setShowFrame: () => {
+      /* parent owns this prop; no-op here */
+    },
+  }));
+
+  useEffect(() => {
+    if (!useGLB) return;
+    // eslint-disable-next-line no-console
+    console.log("[3D] UmbrellaScene GLB props", {
+      modelId: config.model_id,
+      hasSvg: !!svg,
+      svgOuterHTMLLength: svg?.outerHTML?.length ?? 0,
+      svgDataVersion: svg?.getAttribute("data-version") ?? null,
+      fabricColor,
+      debugPanelNumbers,
+      textureDepsLen: textureDeps?.length ?? 0,
+    });
+  }, [useGLB, config.model_id, svg, fabricColor, debugPanelNumbers, textureDeps]);
+
+  // When the GLB path is active the model is auto-normalized to ~3.2 world
+  // units (see GLBUmbrellaModel), so the camera frame is fixed and does
+  // NOT scale with config.canopy_diameter_cm.
+  const radius = useGLB ? 1.6 : (config.canopy_diameter_cm / 2) * 0.1;
+  const canopyHeight = useGLB ? 1.2 : config.canopy_height_cm * 0.1;
+  const initialCamera: [number, number, number] = useGLB
+    ? [0, 1.2, 4.2]
+    : [radius * 1.45, radius * 0.4, radius * 1.1];
+
+  return (
+    <div className="w-full h-full bg-gradient-subtle">
+      <Canvas
+        shadows
+        dpr={[1, 2]}
+        gl={{ preserveDrawingBuffer: true, antialias: true }}
+        camera={{ position: initialCamera, fov: 45, near: 0.01, far: 1000 }}
+        onCreated={({ gl }) => {
+          gl.toneMapping = THREE.ACESFilmicToneMapping;
+          gl.toneMappingExposure = 1.05;
+        }}
+        style={{ width: "100%", height: "100%", background: background ?? "transparent" }}
+      >
+        <Suspense fallback={null}>
+          {/* Lighting is tuned so a canopy facing the camera shows the 2D
+              swatch color almost 1:1 (canopy material is not tone-mapped). */}
+          <hemisphereLight intensity={0.55} color="#ffffff" groundColor="#d9dde4" />
+          {/* Key light */}
+          <directionalLight
+            position={[radius * 3.5, radius * 4.5, radius * 2.5]}
+            intensity={0.5}
+            castShadow
+            shadow-mapSize-width={1024}
+            shadow-mapSize-height={1024}
+          />
+          {/* Fill light */}
+          <directionalLight
+            position={[-radius * 3, radius * 2.2, radius * 1.5]}
+            intensity={0.2}
+          />
+          {/* Rim light */}
+          <directionalLight
+            position={[-radius * 1.5, radius * 3, -radius * 3.5]}
+            intensity={0.25}
+          />
+          <Environment preset="studio" />
+          {useGLB ? (
+            <GLBUmbrellaModel
+              config={config}
+              svg={svg}
+              fabricColor={fabricColor}
+              showFrame={showFrame}
+              textureDeps={textureDeps}
+              debugPanelNumbers={debugPanelNumbers}
+              flipY={textureFlipY}
+            />
+          ) : (
+            <UmbrellaModel
+              config={config}
+              texture={texture}
+              fabricColor={fabricColor}
+              capColor={capColor}
+              showFrame={showFrame}
+            />
+          )}
+          <ContactShadows
+            position={[0, useGLB ? -1.6 : -((config.shaft_length_cm) * 0.1) + (config.canopy_height_cm * 0.1 * 0.3) - 0.05, 0]}
+            opacity={0.35}
+            scale={radius * 5}
+            blur={3.0}
+            far={radius * 2.5}
+          />
+          <SceneController
+            radius={radius}
+            canopyHeight={canopyHeight}
+            useGLB={useGLB}
+            register={(api) => (apiRef.current = api)}
+          />
+        </Suspense>
+      </Canvas>
+    </div>
+  );
+});
+
+interface InternalApi {
+  setView: (preset: CameraPreset) => void;
+  waitReady: (timeoutMs?: number) => Promise<boolean>;
+  captureView: (preset: CameraPreset) => Promise<string>;
+}
+
+function SceneController({
+  radius,
+  canopyHeight,
+  useGLB,
+  register,
+}: {
+  radius: number;
+  canopyHeight: number;
+  useGLB: boolean;
+  register: (api: InternalApi) => void;
+}) {
+  const { camera, gl, scene } = useThree();
+  const controlsRef = useRef<any>(null);
+
+  const presets = useMemo<Record<CameraPreset, [THREE.Vector3, THREE.Vector3]>>(() => {
+    if (useGLB) {
+      // Normalized GLB model: longest dim ~3.2, centered at origin.
+      const target = new THREE.Vector3(0, 0, 0);
+      return {
+        perspective: [new THREE.Vector3(0, 1.2, 4.2), target],
+        // 3/4 view from above-front-right: shows the printed canopy and the
+        // umbrella's shape at once. Used as the hero shot in exports.
+        hero: [new THREE.Vector3(2.4, 2.9, -3.4), new THREE.Vector3(0, 0.2, 0)],
+        // Tiny +Z offset (not +X) so lookAt resolves screen-up to world -Z,
+        // which makes the top view match the 2D editor orientation exactly.
+        top: [new THREE.Vector3(0, 7.5, 0.001), target],
+        front: [new THREE.Vector3(0, 0.4, 4.2), target],
+        side: [new THREE.Vector3(4.2, 0.4, 0), target],
+        bottom: [new THREE.Vector3(0, -7.5, 0.001), target],
+      };
+    }
+    const target = new THREE.Vector3(0, canopyHeight * 0.4, 0);
+    return {
+      perspective: [new THREE.Vector3(radius * 1.45, radius * 0.4, radius * 1.1), target],
+      hero: [new THREE.Vector3(radius * 1.3, radius * 1.3, radius * 1.5), target],
+      top: [new THREE.Vector3(0.001, radius * 2.0, 0), target],
+      front: [new THREE.Vector3(0, canopyHeight * 0.4, radius * 1.9), target],
+      side: [new THREE.Vector3(radius * 1.9, canopyHeight * 0.4, 0), target],
+      bottom: [new THREE.Vector3(0.001, -radius * 1.9, 0), target],
+    };
+  }, [radius, canopyHeight, useGLB]);
+
+  useEffect(() => {
+    const api: InternalApi = {
+      setView: (p) => {
+        const [pos, tgt] = presets[p];
+        camera.position.copy(pos);
+        camera.lookAt(tgt);
+        if (controlsRef.current) {
+          controlsRef.current.target.copy(tgt);
+          controlsRef.current.update();
+        }
+      },
+      waitReady: async (timeoutMs = 8000) => {
+        const start = performance.now();
+        const ready = () => {
+          let ok = false;
+          scene.traverse((o) => {
+            const m = o as THREE.Mesh;
+            if (m.isMesh && /canopy/i.test(m.name)) {
+              const mat = m.material as THREE.MeshStandardMaterial;
+              if (mat?.map) ok = true;
+            }
+          });
+          return ok;
+        };
+        while (!ready()) {
+          if (performance.now() - start > timeoutMs) return false;
+          await new Promise((r) => setTimeout(r, 100));
+        }
+        // one more frame so the texture upload is visible
+        await new Promise((r) => requestAnimationFrame(() => r(null)));
+        return true;
+      },
+      captureView: async (p) => {
+        const [pos, tgt] = presets[p];
+        const prevPos = camera.position.clone();
+        const prevTgt = controlsRef.current?.target?.clone();
+        camera.position.copy(pos);
+        camera.lookAt(tgt);
+        camera.updateProjectionMatrix();
+        await new Promise((r) => requestAnimationFrame(() => r(null)));
+        // Render onto white so exported PNGs / PDF cells are not transparent.
+        const prevClear = gl.getClearColor(new THREE.Color());
+        const prevAlpha = gl.getClearAlpha();
+        gl.setClearColor("#ffffff", 1);
+        gl.render(scene, camera);
+        const url = gl.domElement.toDataURL("image/png");
+        gl.setClearColor(prevClear, prevAlpha);
+        if (prevPos) camera.position.copy(prevPos);
+        if (prevTgt && controlsRef.current) {
+          controlsRef.current.target.copy(prevTgt);
+          controlsRef.current.update();
+        }
+        gl.render(scene, camera);
+        return url;
+      },
+    };
+    register(api);
+  }, [presets, camera, gl, scene, register]);
+
+  const orbitTarget: [number, number, number] = useGLB
+    ? [0, 0, 0]
+    : [0, canopyHeight * 0.4, 0];
+  const orbitMin = useGLB ? 1.8 : radius * 0.9;
+  const orbitMax = useGLB ? 12 : radius * 8;
+
+  return (
+    <OrbitControls
+      ref={controlsRef}
+      makeDefault
+      enableDamping
+      dampingFactor={0.08}
+      enableRotate
+      enablePan
+      enableZoom
+      minDistance={orbitMin}
+      maxDistance={orbitMax}
+      minPolarAngle={0}
+      maxPolarAngle={Math.PI}
+      target={orbitTarget}
+    />
+  );
+}

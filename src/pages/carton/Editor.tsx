@@ -10,7 +10,6 @@ import { BrandHeader } from "@/components/BrandHeader";
 import { MarkTable } from "@/components/MarkTable";
 import { Carton3D } from "@/components/Carton3D";
 import { formatMeas, resolveDims, tryParseMeas } from "@/lib/meas";
-import { supabase } from "@/integrations/supabase/client";
 import {
   MarkVariant,
   ShippingMarkProject,
@@ -94,11 +93,14 @@ export default function CartonEditor() {
     setAnalyzing(true);
     try {
       const dataUrl = await readDataUrl(file);
-      const { data, error } = await supabase.functions.invoke("analyze-mark", {
-        body: { imageDataUrl: dataUrl },
+      const res = await fetch("/api/analyze-mark", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageDataUrl: dataUrl }),
       });
-      if (error) throw error;
-      const f = (data as any)?.fields ?? {};
+      const data = (await res.json().catch(() => ({}))) as { fields?: Record<string, string>; error?: string };
+      if (!res.ok) throw new Error(data.error || `识别失败 (${res.status})`);
+      const f = data.fields ?? {};
       const newVariant: MarkVariant = {
         ...createEmptyVariant(),
         id: crypto.randomUUID(),

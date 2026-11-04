@@ -167,6 +167,7 @@ export async function exportPdfSummary(
   pouchPngDataUrl?: string,
   innerLayerPngDataUrl?: string,
   threeD?: {
+    hero: string;
     top: string;
     front: string;
     side: string;
@@ -374,25 +375,46 @@ export async function exportPdfSummary(
     pdf.setFontSize(10);
     pdf.text(threeD.displayName, 40, 84);
 
-    // Three captures in a row
-    const gap = 12;
-    const cellW = (pageW - 80 - gap * 2) / 3;
-    const cellH = cellW; // square captures
-    const labels = ["Top view", "Front view", "Side view"];
-    const urls = [threeD.top, threeD.front, threeD.side];
-    const yImg = 100;
+    // Hero 3/4 view on top, then three orthographic-style captures in a row
+    const contentW = pageW - 80;
+    const heroH = contentW * 0.62;
+    const yHero = 96;
+    try {
+      const props = pdf.getImageProperties(threeD.hero);
+      const ratio = props.height / props.width;
+      let drawW = contentW;
+      let drawH = drawW * ratio;
+      if (drawH > heroH) {
+        drawH = heroH;
+        drawW = drawH / ratio;
+      }
+      pdf.addImage(threeD.hero, "PNG", 40 + (contentW - drawW) / 2, yHero + (heroH - drawH) / 2, drawW, drawH);
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.warn("[pdf] hero image failed", e);
+    }
     pdf.setFontSize(9);
     pdf.setTextColor(110, 110, 120);
+    pdf.text("3D rendering (3/4 view)", pageW / 2, yHero + heroH + 14, { align: "center" });
+
+    const gap = 12;
+    const cellW = (contentW - gap * 2) / 3;
+    const cellH = cellW * 0.8;
+    const labels = ["Top view", "Front view", "Side view"];
+    const urls = [threeD.top, threeD.front, threeD.side];
+    const yImg = yHero + heroH + 30;
     urls.forEach((u, i) => {
       const x = 40 + i * (cellW + gap);
       try {
         const props = pdf.getImageProperties(u);
         const ratio = props.height / props.width;
-        const drawH = Math.min(cellH, cellW * ratio);
-        const drawW = drawH === cellH ? cellH / ratio : cellW;
-        const ox = x + (cellW - drawW) / 2;
-        const oy = yImg + (cellH - drawH) / 2;
-        pdf.addImage(u, "PNG", ox, oy, drawW, drawH);
+        let drawW = cellW;
+        let drawH = drawW * ratio;
+        if (drawH > cellH) {
+          drawH = cellH;
+          drawW = drawH / ratio;
+        }
+        pdf.addImage(u, "PNG", x + (cellW - drawW) / 2, yImg + (cellH - drawH) / 2, drawW, drawH);
       } catch {}
       pdf.text(labels[i], x + cellW / 2, yImg + cellH + 14, { align: "center" });
     });

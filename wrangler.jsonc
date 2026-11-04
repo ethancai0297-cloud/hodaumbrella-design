@@ -1,10 +1,12 @@
 {
-  // Cloudflare Workers config: serve the Vite build output (dist/) as a static
-  // single-page app. The name must match the Worker name in the dashboard.
+  // Cloudflare Workers config: a tiny API (worker/index.ts) in front of the
+  // Vite build output (dist/), served as a single-page app.
   "name": "hodaumbrella-design",
+  "main": "worker/index.ts",
   "compatibility_date": "2026-01-01",
   "assets": {
     "directory": "./dist",
+    "binding": "ASSETS",
     "not_found_handling": "single-page-application"
   }
 }

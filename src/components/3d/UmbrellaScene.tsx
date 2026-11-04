@@ -7,10 +7,12 @@ import { UmbrellaModel } from "./UmbrellaModel";
 import { useCanopyTexture } from "./useCanopyTexture";
 import { GLBUmbrellaModel } from "./GLBUmbrellaModel";
 
-export type CameraPreset = "perspective" | "top" | "front" | "side" | "bottom";
+export type CameraPreset = "perspective" | "hero" | "top" | "front" | "side" | "bottom";
 
 export interface SceneApi {
   setView: (preset: CameraPreset) => void;
+  /** Resolves once the canopy texture has been bound (or after `timeoutMs`). */
+  waitReady: (timeoutMs?: number) => Promise<boolean>;
   captureView: (preset: CameraPreset) => Promise<string>;
   setShowFrame: (show: boolean) => void;
 }
@@ -38,6 +40,16 @@ export const UmbrellaScene = forwardRef<SceneApi, Props>(function UmbrellaScene(
 
   useImperativeHandle(ref, () => ({
     setView: (p) => apiRef.current?.setView(p),
+    waitReady: async (ms = 8000) => {
+      // The inner controller mounts after Suspense resolves (GLB + HDRI
+      // loaded); wait for it before asking about the texture.
+      const start = performance.now();
+      while (!apiRef.current) {
+        if (performance.now() - start > ms) return false;
+        await new Promise((r) => setTimeout(r, 100));
+      }
+      return apiRef.current.waitReady(ms - (performance.now() - start));
+    },
     captureView: async (p) => (await apiRef.current?.captureView(p)) ?? "",
     setShowFrame: () => {
       /* parent owns this prop; no-op here */
@@ -143,6 +155,7 @@ export const UmbrellaScene = forwardRef<SceneApi, Props>(function UmbrellaScene(
 
 interface InternalApi {
   setView: (preset: CameraPreset) => void;
+  waitReady: (timeoutMs?: number) => Promise<boolean>;
   captureView: (preset: CameraPreset) => Promise<string>;
 }
 
@@ -166,6 +179,9 @@ function SceneController({
       const target = new THREE.Vector3(0, 0, 0);
       return {
         perspective: [new THREE.Vector3(0, 1.2, 4.2), target],
+        // 3/4 view from above-front-right: shows the printed canopy and the
+        // umbrella's shape at once. Used as the hero shot in exports.
+        hero: [new THREE.Vector3(2.4, 2.9, -3.4), new THREE.Vector3(0, 0.2, 0)],
         // Tiny +Z offset (not +X) so lookAt resolves screen-up to world -Z,
         // which makes the top view match the 2D editor orientation exactly.
         top: [new THREE.Vector3(0, 7.5, 0.001), target],
@@ -177,6 +193,7 @@ function SceneController({
     const target = new THREE.Vector3(0, canopyHeight * 0.4, 0);
     return {
       perspective: [new THREE.Vector3(radius * 1.45, radius * 0.4, radius * 1.1), target],
+      hero: [new THREE.Vector3(radius * 1.3, radius * 1.3, radius * 1.5), target],
       top: [new THREE.Vector3(0.001, radius * 2.0, 0), target],
       front: [new THREE.Vector3(0, canopyHeight * 0.4, radius * 1.9), target],
       side: [new THREE.Vector3(radius * 1.9, canopyHeight * 0.4, 0), target],
@@ -195,6 +212,27 @@ function SceneController({
           controlsRef.current.update();
         }
       },
+      waitReady: async (timeoutMs = 8000) => {
+        const start = performance.now();
+        const ready = () => {
+          let ok = false;
+          scene.traverse((o) => {
+            const m = o as THREE.Mesh;
+            if (m.isMesh && /canopy/i.test(m.name)) {
+              const mat = m.material as THREE.MeshStandardMaterial;
+              if (mat?.map) ok = true;
+            }
+          });
+          return ok;
+        };
+        while (!ready()) {
+          if (performance.now() - start > timeoutMs) return false;
+          await new Promise((r) => setTimeout(r, 100));
+        }
+        // one more frame so the texture upload is visible
+        await new Promise((r) => requestAnimationFrame(() => r(null)));
+        return true;
+      },
       captureView: async (p) => {
         const [pos, tgt] = presets[p];
         const prevPos = camera.position.clone();
@@ -203,8 +241,13 @@ function SceneController({
         camera.lookAt(tgt);
         camera.updateProjectionMatrix();
         await new Promise((r) => requestAnimationFrame(() => r(null)));
+        // Render onto white so exported PNGs / PDF cells are not transparent.
+        const prevClear = gl.getClearColor(new THREE.Color());
+        const prevAlpha = gl.getClearAlpha();
+        gl.setClearColor("#ffffff", 1);
         gl.render(scene, camera);
         const url = gl.domElement.toDataURL("image/png");
+        gl.setClearColor(prevClear, prevAlpha);
         if (prevPos) camera.position.copy(prevPos);
         if (prevTgt && controlsRef.current) {
           controlsRef.current.target.copy(prevTgt);

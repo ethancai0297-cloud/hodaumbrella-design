@@ -58,6 +58,8 @@ import { findModel } from "@/3d/models/registry";
 import { UmbrellaScene, type SceneApi, type CameraPreset } from "@/components/3d/UmbrellaScene";
 
 const SILKSCREEN_LIMITS = [1, 2, 4, 8];
+/** Native pixel size of the 2D canopy SVG; it is scaled down to fit the viewport. */
+const CANVAS_SIZE = 620;
 
 const newId = () =>
   typeof crypto !== "undefined" && "randomUUID" in crypto
@@ -91,6 +93,24 @@ const DesignEditor = () => {
   const [selectedPanels, setSelectedPanels] = useState<number[]>([]);
   const [selectedItem, setSelectedItem] = useState<string | null>(null);
   const [zoom, setZoom] = useState(1);
+  // Fit the 2D canvas into whatever space the center column has (minus the
+  // floating toolbar), so it is always fully visible and centered. The zoom
+  // buttons multiply on top of this fit scale.
+  const mainRef = useRef<HTMLDivElement>(null);
+  const [fitScale, setFitScale] = useState(1);
+  useEffect(() => {
+    const el = mainRef.current;
+    if (!el) return;
+    const measure = () => {
+      const w = el.clientWidth - 48;
+      const h = el.clientHeight - 64 - 96; // toolbar + bottom note
+      setFitScale(Math.max(0.3, Math.min(1, w / CANVAS_SIZE, h / CANVAS_SIZE)));
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
   const [activeSurface, setActiveSurface] = useState<"canopy" | "inner" | "pouch">("canopy");
   const [dryToggle, setDryToggle] = useState<"auto" | "dry" | "wet">("auto");
   const [artworkHover, setArtworkHover] = useState(false);
@@ -370,7 +390,7 @@ const DesignEditor = () => {
   const handleExportPng = async () => {
     try {
       if (viewMode === "3d" && sceneRef.current) {
-        const url = await sceneRef.current.captureView("perspective");
+        const url = await sceneRef.current.captureView("hero");
         downloadDataUrl(url, `${project.projectName.replace(/\s+/g, "_")}_3d.png`);
         return;
       }
@@ -409,6 +429,7 @@ const DesignEditor = () => {
 
       let threeD:
         | {
+            hero: string;
             top: string;
             front: string;
             side: string;
@@ -421,12 +442,14 @@ const DesignEditor = () => {
       if (model3d) {
         const api = await acquireSceneApi();
         if (api) {
-          // small settle delay so canopy texture is ready
-          await new Promise((r) => setTimeout(r, 350));
+          // wait until the canopy texture (rasterized from the 2D SVG) is bound
+          await api.waitReady();
+          const hero = await api.captureView("hero");
           const top = await api.captureView("top");
           const front = await api.captureView("front");
           const side = await api.captureView("side");
           threeD = {
+            hero,
             top,
             front,
             side,
@@ -484,7 +507,7 @@ const DesignEditor = () => {
   const colorChangeHint = project.printingMethod === "color-change";
 
   return (
-    <div className="min-h-screen bg-muted/30 flex flex-col">
+    <div className="h-screen bg-muted/30 flex flex-col overflow-hidden">
       {/* Top bar */}
       <header className="h-14 border-b border-border bg-card flex items-center px-4 gap-3 shrink-0">
         <Link to="/" className="text-muted-foreground hover:text-foreground transition flex items-center gap-1.5 text-sm">
@@ -513,7 +536,7 @@ const DesignEditor = () => {
         </div>
       </header>
 
-      <div className="flex-1 grid grid-cols-[280px_1fr_320px] min-h-0">
+      <div className="flex-1 grid grid-cols-[260px_1fr_300px] xl:grid-cols-[280px_1fr_320px] min-h-0">
         {/* Left sidebar */}
         <aside className="border-r border-border bg-card overflow-y-auto p-5">
           <WizardPanel
@@ -697,7 +720,7 @@ const DesignEditor = () => {
         </aside>
 
         {/* Canvas */}
-        <main className="relative overflow-auto bg-gradient-subtle">
+        <main ref={mainRef} className="relative overflow-hidden bg-gradient-subtle min-h-0">
           <div className="absolute top-4 left-4 right-4 flex items-center gap-2 z-10">
             <div className="rounded-lg bg-card border border-border shadow-soft px-3 py-2 text-xs flex items-center gap-3">
               <span className="text-muted-foreground">{t("canvas.panels")}</span>
@@ -827,10 +850,12 @@ const DesignEditor = () => {
           )}
 
           <div
-            className="min-h-full grid place-items-center p-12 pt-20"
+            className="absolute inset-0 pt-16 grid place-items-center overflow-hidden"
             style={{ display: viewMode === "2d" ? "grid" : "none" }}
           >
-            <div style={{ transform: `scale(${zoom})`, transformOrigin: "center" }}>
+            <div
+              style={{ transform: `scale(${zoom * fitScale})`, transformOrigin: "center" }}
+            >
               <div
                 style={{ display: activeSurface === "pouch" ? "none" : "block" }}
               >
@@ -848,7 +873,7 @@ const DesignEditor = () => {
                   onItemChange={(id, patch) =>
                     activeSurface === "canopy" && updateItem(id, patch)
                   }
-                  size={620}
+                  size={CANVAS_SIZE}
                   onArtworkHoverChange={setArtworkHover}
                   dryMode={
                     project.printingMethod === "color-change" &&
@@ -958,7 +983,7 @@ const DesignEditor = () => {
                     )}
                     <button
                       onClick={async () => {
-                        const url = await sceneRef.current?.captureView("perspective");
+                        const url = await sceneRef.current?.captureView("hero");
                         if (url) downloadDataUrl(url, `${project.projectName.replace(/\s+/g, "_")}_3d.png`);
                       }}
                       className="px-2.5 py-1 rounded-md text-muted-foreground hover:bg-muted transition flex items-center gap-1"
@@ -982,7 +1007,7 @@ const DesignEditor = () => {
               the user clicks "PDF" while still in 2D mode. */}
           {headlessCapture && model3d && (
             <div
-              style={{ position: "fixed", left: -99999, top: -99999, width: 720, height: 720, pointerEvents: "none" }}
+              style={{ position: "fixed", left: -99999, top: -99999, width: 1000, height: 800, pointerEvents: "none" }}
               aria-hidden
             >
               <UmbrellaScene

@@ -8,7 +8,7 @@ import { UmbrellaModel } from "./UmbrellaModel";
 import { useCanopyTexture } from "./useCanopyTexture";
 import { GLBUmbrellaModel } from "./GLBUmbrellaModel";
 
-export type CameraPreset = "perspective" | "hero" | "top" | "front" | "side" | "bottom" | "handle" | "handleAngle";
+export type CameraPreset = "perspective" | "hero" | "top" | "front" | "side" | "bottom" | "handle" | "handleAngle" | "handleFlat";
 
 export interface SceneApi {
   setView: (preset: CameraPreset) => void;
@@ -218,6 +218,7 @@ function SceneController({
         // bottom of the normalized model, ~1.14 units below center.
         handle: [new THREE.Vector3(0.3, -0.95, 0.9), new THREE.Vector3(0, -1.08, 0)],
         handleAngle: [new THREE.Vector3(0.85, -0.85, 0.35), new THREE.Vector3(0, -1.08, 0)],
+        handleFlat: [new THREE.Vector3(0, -1.1, 1.0), new THREE.Vector3(0, -1.1, 0)],
       };
     }
     const target = new THREE.Vector3(0, canopyHeight * 0.4, 0);
@@ -230,6 +231,7 @@ function SceneController({
       bottom: [new THREE.Vector3(0.001, -radius * 1.9, 0), target],
       handle: [new THREE.Vector3(0.001, -radius * 1.9, 0), target],
       handleAngle: [new THREE.Vector3(0.001, -radius * 1.9, 0), target],
+      handleFlat: [new THREE.Vector3(0.001, -radius * 1.9, 0), target],
     };
   }, [radius, canopyHeight, useGLB]);
 

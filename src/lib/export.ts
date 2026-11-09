@@ -161,20 +161,31 @@ async function imageToDataUrl(src: string): Promise<{ data: string; w: number; h
   }
 }
 
-/** One row of the handle-design spec table. `swatch` draws a color chip. */
-export interface HandleSpecRow {
-  label: string;
-  value: string;
-  swatch?: string;
-}
-
 /** Handle (伞头) page content for the PDF. */
 export interface HandleDesignExport {
   title: string;
   front: string;
   angle: string;
-  rows: HandleSpecRow[];
-  logo?: string;
+  /** Straight-on shot rotated to lie horizontally, so the logo reads upright. */
+  flat?: string;
+}
+
+/** Rotate an image 90° clockwise (vertical handle -> horizontal). */
+export async function rotate90cw(dataUrl: string): Promise<string> {
+  const img = await new Promise<HTMLImageElement>((res, rej) => {
+    const i = new Image();
+    i.onload = () => res(i);
+    i.onerror = rej;
+    i.src = dataUrl;
+  });
+  const c = document.createElement("canvas");
+  c.width = img.height;
+  c.height = img.width;
+  const ctx = c.getContext("2d")!;
+  ctx.translate(c.width, 0);
+  ctx.rotate(Math.PI / 2);
+  ctx.drawImage(img, 0, 0);
+  return c.toDataURL("image/png");
 }
 
 /**
@@ -278,30 +289,11 @@ export async function exportPdfSummary(
   let y = project.customerName ? 165 : 150;
   const ribIn = PANEL_LENGTH_IN[project.umbrellaCategory];
   const ribCm = PANEL_LENGTH_CM[project.umbrellaCategory];
-  const diaCm = Math.round(ribCm * 2 * 10) / 10;
   const rows: [string, string][] = [
     ["Category", project.umbrellaCategory],
     ["Rib / panel count", String(project.ribCount)],
     ["Rib length", `${ribIn}" (${ribCm} cm)`],
-    ["Approx. canopy diameter", `${diaCm} cm`],
-    ["Printing method", project.printingMethod],
-    ["Fabric color", project.fabricColor],
-    ["Artwork items", String(project.artworkItems.length)],
-    [
-      "Panels used",
-      Array.from(new Set(project.artworkItems.flatMap((a) => a.panels)))
-        .map((p) => p + 1)
-        .sort((a, b) => a - b)
-        .join(", ") || "—",
-    ],
   ];
-  if (project.hasPouch) {
-    const ps = POUCH_SIZE_CM[project.umbrellaCategory];
-    rows.push(["Pouch (front)", `${ps.w} × ${ps.h} cm`]);
-    rows.push(["Pouch (spread)", `${ps.w * 2} × ${ps.h} cm`]);
-    rows.push(["Pouch artwork items", String((project.pouchArtwork || []).length)]);
-  }
-
 
   pdf.setTextColor(20, 24, 30);
   pdf.setFontSize(12);
@@ -481,31 +473,7 @@ export async function exportPdfSummary(
       pdf.text(labels[i], x + cellW / 2, yImg + cellH + 14, { align: "center" });
     });
 
-    // Spec block
     let sy = yImg + cellH + 40;
-    pdf.setFont("helvetica", "bold");
-    pdf.setFontSize(11);
-    pdf.setTextColor(20, 24, 30);
-    pdf.text("Model details", 40, sy);
-    sy += 16;
-    pdf.setFont("helvetica", "normal");
-    pdf.setFontSize(10);
-    const specRows: [string, string][] = [
-      ["Model ID", threeD.modelId],
-      ["Top cap style", threeD.topCap],
-      ["Handle style", threeD.handle],
-      ...(threeD.handleColor ? ([["Handle color", threeD.handleColor]] as [string, string][]) : []),
-      ...(threeD.handleInsert ? ([["Handle insert", threeD.handleInsert]] as [string, string][]) : []),
-      ...(threeD.midSection ? ([["Middle section", threeD.midSection]] as [string, string][]) : []),
-    ];
-    specRows.forEach(([k, v]) => {
-      pdf.setTextColor(110, 110, 120);
-      pdf.text(k, 40, sy);
-      pdf.setTextColor(20, 24, 30);
-      pdf.text(v, 180, sy);
-      sy += 14;
-    });
-
     sy += 8;
     pdf.setFont("helvetica", "italic");
     pdf.setTextColor(110, 110, 120);
@@ -566,50 +534,27 @@ export async function exportPdfSummary(
       pdf.text(label, x + cellW / 2, yImg + cellH + 14, { align: "center" });
     });
 
-    let sy = yImg + cellH + 44;
-    pdf.setFont("helvetica", "bold");
-    pdf.setFontSize(11);
-    pdf.setTextColor(20, 24, 30);
-    pdf.text("Handle specification", 40, sy);
-    sy += 18;
-    pdf.setFont("helvetica", "normal");
-    pdf.setFontSize(10);
-    const hexToRgb = (h: string) => {
-      const m = h.replace("#", "");
-      const v = m.length === 3 ? m.split("").map((c) => c + c).join("") : m;
-      return [0, 2, 4].map((k) => parseInt(v.slice(k, k + 2), 16) || 0) as [number, number, number];
-    };
-    handleDesign.rows.forEach((r) => {
-      pdf.setTextColor(110, 110, 120);
-      pdf.text(r.label, 40, sy);
-      let vx = 200;
-      if (r.swatch) {
-        const [cr, cg, cb] = hexToRgb(r.swatch);
-        pdf.setFillColor(cr, cg, cb);
-        pdf.setDrawColor(180);
-        pdf.roundedRect(vx, sy - 9, 22, 12, 2, 2, "FD");
-        vx += 30;
-      }
-      pdf.setTextColor(20, 24, 30);
-      pdf.text(r.value, vx, sy);
-      sy += 20;
-    });
-
-    if (handleDesign.logo) {
-      sy += 6;
-      pdf.setTextColor(110, 110, 120);
-      pdf.text("Insert logo artwork", 40, sy);
+    // Horizontal straight-on view: the handle lies flat so the insert logo reads upright
+    let sy = yImg + cellH + 34;
+    if (handleDesign.flat) {
+      const fH = 200;
+      pdf.setDrawColor(230);
+      pdf.roundedRect(40, sy, contentW, fH, 6, 6, "S");
       try {
-        const props = pdf.getImageProperties(handleDesign.logo);
+        const props = pdf.getImageProperties(handleDesign.flat);
         const ratio = props.height / props.width;
-        let w = 140, h = w * ratio;
-        if (h > 70) { h = 70; w = h / ratio; }
-        // mid-grey backdrop so both light and dark logos stay visible
-        pdf.setFillColor(138, 143, 153);
-        pdf.rect(200, sy - 12, w + 12, h + 12, "F");
-        pdf.addImage(handleDesign.logo, "PNG", 200 + 6, sy - 6, w, h);
-        sy += h + 10;
+        let drawW = contentW - 30;
+        let drawH = drawW * ratio;
+        if (drawH > fH - 24) {
+          drawH = fH - 24;
+          drawW = drawH / ratio;
+        }
+        pdf.addImage(handleDesign.flat, "PNG", 40 + (contentW - drawW) / 2, sy + (fH - drawH) / 2, drawW, drawH);
       } catch {}
+      pdf.setFontSize(9);
+      pdf.setTextColor(110, 110, 120);
+      pdf.text("Horizontal view (logo upright)", pageW / 2, sy + fH + 14, { align: "center" });
+      sy += fH + 20;
     }
 
     sy += 16;

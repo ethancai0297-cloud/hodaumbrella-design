@@ -66,6 +66,7 @@ import {
   exportAiFile,
   exportPdfSummary,
   HandleDesignExport,
+  rotate90cw,
   svgPairToPngDataUrl,
   svgToPngDataUrl,
   trimWhite,
@@ -470,23 +471,6 @@ const DesignEditor = () => {
     });
   };
 
-  /** jsPDF only embeds PNG/JPEG reliably: redraw any logo (SVG, WebP...) as PNG. */
-  const rasterizeToPng = (src: string) =>
-    new Promise<string>((resolve, reject) => {
-      const img = new Image();
-      img.onload = () => {
-        const max = 800;
-        const s = Math.min(1, max / Math.max(img.width || max, img.height || max));
-        const c = document.createElement("canvas");
-        c.width = Math.max(1, Math.round((img.width || max) * s));
-        c.height = Math.max(1, Math.round((img.height || max) * s));
-        c.getContext("2d")!.drawImage(img, 0, 0, c.width, c.height);
-        resolve(c.toDataURL("image/png"));
-      };
-      img.onerror = reject;
-      img.src = src;
-    });
-
   const handleExportPdf = async () => {
     if (!svgRef.current) return;
     try {
@@ -528,35 +512,8 @@ const DesignEditor = () => {
           if (hasHandleDesign) {
             const front = await trimWhite(await api.captureView("handle"));
             const angle = await trimWhite(await api.captureView("handleAngle"));
-            const same = "Same as handle";
-            const rows: HandleDesignExport["rows"] = [
-              { label: "Handle color", value: handleColor.toUpperCase(), swatch: handleColor },
-            ];
-            if (model3d.handle_insert) {
-              rows.push(
-                { label: `Insert (${HANDLE_INSERT_SIZE_MM.w} x ${HANDLE_INSERT_SIZE_MM.h} mm)`, value: `${insert.color.toUpperCase()} · ${normalizeFinish(insert.finish)}`, swatch: insert.color },
-                { label: "Insert logo", value: insert.logoFileName ?? "None" }
-              );
-            }
-            if (model3d.mid_section) {
-              rows.push(
-                { label: "Middle section · body", value: mid.bodyColor ? mid.bodyColor.toUpperCase() : same, swatch: mid.bodyColor ?? handleColor },
-                {
-                  label: "Middle section · accent",
-                  value: mid.accentColor ? `${mid.accentColor.toUpperCase()} · ${normalizeFinish(mid.accentFinish)}` : same,
-                  swatch: mid.accentColor ?? handleColor,
-                }
-              );
-            }
-            let logo: string | undefined;
-            if (insert.logoSrc) {
-              try {
-                logo = await rasterizeToPng(insert.logoSrc);
-              } catch {
-                logo = undefined;
-              }
-            }
-            handleDesign = { title: model3d.handle_style, front, angle, rows, logo };
+            const flat = await rotate90cw(await trimWhite(await api.captureView("handleFlat"), 20));
+            handleDesign = { title: model3d.handle_style, front, angle, flat };
           }
           threeD = {
             hero,

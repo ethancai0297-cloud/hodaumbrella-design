@@ -39,8 +39,16 @@
     "width_mm": 15,
     "length_mm": 70
   },
+  "mid_section": {
+    "body_mesh": "mid_body",
+    "accent_mesh": "mid_accent",
+    "width_mm": 32,
+    "height_mm": 30.5
+  },
   "canopy_material": "210T_pongee",
   "canopy_layer": "single",
   "model_file": "/models/golf_30in_8panel_standard.glb",
-  "uv_template_file": "/models/golf_30in_8panel_standard_uv.png"
+  "uv_template_file": "/models/golf_30in_8panel_standard_uv.png",
+  "runner_below_apex_cm": 19,
+  "stretcher_length_cm": 28
 }

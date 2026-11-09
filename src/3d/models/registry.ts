@@ -32,6 +32,10 @@ export interface UmbrellaModelConfig {
   handle_dimensions?: Record<string, number>;
   /** Present when the handle has a customizable insert mesh in the GLB. */
   handle_insert?: { mesh: string; width_mm: number; length_mm: number };
+  /** Present when the GLB has the two-zone middle section (中段) above the handle. */
+  mid_section?: { body_mesh: string; accent_mesh: string; width_mm: number; height_mm: number };
+  runner_below_apex_cm?: number;
+  stretcher_length_cm?: number;
   model_file: string;
   uv_template_file: string;
 }

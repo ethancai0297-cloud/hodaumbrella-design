@@ -3,7 +3,7 @@ import { OrbitControls, Environment, ContactShadows } from "@react-three/drei";
 import { Suspense, forwardRef, useEffect, useImperativeHandle, useMemo, useRef } from "react";
 import * as THREE from "three";
 import type { UmbrellaModelConfig } from "@/3d/models/registry";
-import type { HandleInsertOptions } from "@/types/design";
+import type { HandleInsertOptions, MidSectionOptions } from "@/types/design";
 import { UmbrellaModel } from "./UmbrellaModel";
 import { useCanopyTexture } from "./useCanopyTexture";
 import { GLBUmbrellaModel } from "./GLBUmbrellaModel";
@@ -24,6 +24,7 @@ interface Props {
   fabricColor: string;
   capColor?: string;
   handleInsert?: HandleInsertOptions;
+  midSection?: MidSectionOptions;
   showFrame: boolean;
   textureDeps: unknown[];
   background?: string;
@@ -32,7 +33,7 @@ interface Props {
 }
 
 export const UmbrellaScene = forwardRef<SceneApi, Props>(function UmbrellaScene(
-  { config, svg, fabricColor, capColor, handleInsert, showFrame, textureDeps, background, debugPanelNumbers, textureFlipY },
+  { config, svg, fabricColor, capColor, handleInsert, midSection, showFrame, textureDeps, background, debugPanelNumbers, textureFlipY },
   ref
 ) {
   const useGLB = !!config.model_file && config.model_file.toLowerCase().endsWith(".glb");
@@ -127,6 +128,7 @@ export const UmbrellaScene = forwardRef<SceneApi, Props>(function UmbrellaScene(
               textureDeps={textureDeps}
               debugPanelNumbers={debugPanelNumbers}
               handleInsert={handleInsert}
+              midSection={midSection}
               flipY={textureFlipY}
             />
           ) : (
@@ -194,7 +196,7 @@ function SceneController({
         bottom: [new THREE.Vector3(0, -7.5, 0.001), target],
         // Close-up of the handle (BSS-ST-1 insert). The handle sits at the
         // bottom of the normalized model, ~1.14 units below center.
-        handle: [new THREE.Vector3(0.25, -1.0, 0.75), new THREE.Vector3(0, -1.14, 0)],
+        handle: [new THREE.Vector3(0.3, -0.95, 0.9), new THREE.Vector3(0, -1.08, 0)],
       };
     }
     const target = new THREE.Vector3(0, canopyHeight * 0.4, 0);

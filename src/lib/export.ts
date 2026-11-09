@@ -176,6 +176,7 @@ export async function exportPdfSummary(
     handle: string;
     displayName: string;
     handleInsert?: string;
+    midSection?: string;
   }
 ) {
   const pdf = new jsPDF({ unit: "pt", format: "a4" });
@@ -434,6 +435,7 @@ export async function exportPdfSummary(
       ["Top cap style", threeD.topCap],
       ["Handle style", threeD.handle],
       ...(threeD.handleInsert ? ([["Handle insert", threeD.handleInsert]] as [string, string][]) : []),
+      ...(threeD.midSection ? ([["Middle section", threeD.midSection]] as [string, string][]) : []),
     ];
     specRows.forEach(([k, v]) => {
       pdf.setTextColor(110, 110, 120);

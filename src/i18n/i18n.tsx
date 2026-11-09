@@ -117,6 +117,12 @@ const dict: Dict = {
   "insert.removeLogo": { en: "Remove logo", zh: "移除 Logo" },
   "insert.logoSize": { en: "Logo size", zh: "Logo 大小" },
   "insert.logoTooLarge": { en: "Logo must be under 2 MB", zh: "Logo 文件需小于 2 MB" },
+  "mid.title": { en: "Middle section (open button)", zh: "中段配色（开伞按钮）" },
+  "mid.desc": { en: "Two zones, each customizable. Not set = same as the handle.", zh: "两个区域可分别定制，未设置时与手柄同色。" },
+  "mid.body": { en: "Body color", zh: "主体颜色" },
+  "mid.accent": { en: "Accent color (rims, button frame, arrows)", zh: "装饰颜色（边条、按钮框、箭头）" },
+  "mid.accentFinish": { en: "Accent finish", zh: "装饰色工艺" },
+  "mid.sameAsHandle": { en: "Same as handle", zh: "同手柄色" },
   "insert.preview3d": { en: "Switch to 3D Preview to see the insert on the handle.", zh: "切换到 3D 预览查看盖片在手柄上的效果。" },
 
   // Fabric

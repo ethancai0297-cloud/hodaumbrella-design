@@ -49,6 +49,8 @@ import {
   HANDLE_INSERT_SIZE_MM,
   HandleInsertFinish,
   HandleInsertOptions,
+  MID_SECTION_PRESETS,
+  MidSectionOptions,
   POUCH_SIZE_CM,
   PouchView,
   PrintingMethod,
@@ -261,6 +263,11 @@ const DesignEditor = () => {
   const insert: HandleInsertOptions = { ...DEFAULT_HANDLE_INSERT, ...project.handleInsert };
   const updateInsert = (patch: Partial<HandleInsertOptions>) =>
     updateProject({ handleInsert: { ...insert, ...patch } });
+  // Middle section (中段): body + accent colors; undefined = same as handle
+  const mid: MidSectionOptions = project.midSection ?? {};
+  const updateMid = (patch: Partial<MidSectionOptions>) =>
+    updateProject({ midSection: { ...mid, ...patch } });
+  const handleColor = model3d?.handle_color ?? "#1a1a1a";
   const insertLogoInputRef = useRef<HTMLInputElement>(null);
   const handleInsertLogo = (file: File) => {
     if (file.size > 2 * 1024 * 1024) {
@@ -458,6 +465,7 @@ const DesignEditor = () => {
             handle: string;
             displayName: string;
             handleInsert?: string;
+            midSection?: string;
           }
         | undefined;
       if (model3d) {
@@ -481,6 +489,11 @@ const DesignEditor = () => {
             handleInsert: model3d.handle_insert
               ? `${HANDLE_INSERT_SIZE_MM.w}×${HANDLE_INSERT_SIZE_MM.h} mm · ${insert.color} · ${insert.finish ?? "matte"}${
                   insert.logoFileName ? ` · logo: ${insert.logoFileName}` : " · no logo"
+                }`
+              : undefined,
+            midSection: model3d.mid_section
+              ? `body ${mid.bodyColor ?? "same as handle"} · accent ${mid.accentColor ?? "same as handle"}${
+                  mid.accentColor ? ` (${mid.accentFinish ?? "metal"})` : ""
                 }`
               : undefined,
           };
@@ -841,6 +854,80 @@ const DesignEditor = () => {
               </section>
             </>
           )}
+
+          {model3d?.mid_section && (
+            <>
+              <Separator className="my-5" />
+              <section>
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">{t("mid.title")}</h3>
+                <p className="text-xs text-muted-foreground mb-3">{t("mid.desc")}</p>
+                {([
+                  ["bodyColor", "mid.body"],
+                  ["accentColor", "mid.accent"],
+                ] as const).map(([key, label]) => {
+                  const value = mid[key];
+                  return (
+                    <div key={key} className="mb-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <Label className="text-xs">{t(label)}</Label>
+                        <button
+                          onClick={() => updateMid({ [key]: undefined })}
+                          className={cn(
+                            "text-xs px-2 py-0.5 rounded border transition",
+                            value ? "border-border text-muted-foreground hover:bg-muted" : "border-primary text-primary"
+                          )}
+                        >
+                          {t("mid.sameAsHandle")}
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-4 gap-2">
+                        {MID_SECTION_PRESETS.map((c) => (
+                          <button
+                            key={c.value}
+                            onClick={() => updateMid({ [key]: c.value })}
+                            title={t(`color.${c.name}`)}
+                            aria-label={c.name}
+                            className={cn(
+                              "h-9 rounded-md border-2 transition",
+                              value === c.value ? "border-primary scale-105" : "border-border"
+                            )}
+                            style={{ background: c.value }}
+                          />
+                        ))}
+                      </div>
+                      <div className="mt-2 flex items-center gap-2">
+                        <Input
+                          type="color"
+                          value={value ?? handleColor}
+                          onChange={(e) => updateMid({ [key]: e.target.value })}
+                          className="h-9 w-14 p-1"
+                        />
+                        <Input
+                          value={value ?? ""}
+                          placeholder={t("mid.sameAsHandle")}
+                          onChange={(e) => updateMid({ [key]: e.target.value || undefined })}
+                          className="h-9 text-xs"
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+                <Label className="text-xs mb-2 block">{t("mid.accentFinish")}</Label>
+                <div className="grid grid-cols-3 gap-2">
+                  {(["matte", "gloss", "metal"] as HandleInsertFinish[]).map((f) => (
+                    <Button
+                      key={f}
+                      size="sm"
+                      variant={(mid.accentFinish ?? "metal") === f ? "default" : "outline"}
+                      onClick={() => updateMid({ accentFinish: f })}
+                    >
+                      {t(`insert.finish.${f}`)}
+                    </Button>
+                  ))}
+                </div>
+              </section>
+            </>
+          )}
         </aside>
 
         {/* Canvas */}
@@ -1056,6 +1143,7 @@ const DesignEditor = () => {
                     fabricColor={project.fabricColor}
                     capColor={project.capColor}
                     handleInsert={model3d.handle_insert ? insert : undefined}
+                    midSection={model3d.mid_section ? mid : undefined}
                     showFrame={showFrame}
                     debugPanelNumbers={debugPanelNumbers}
                     textureDeps={[
@@ -1153,6 +1241,7 @@ const DesignEditor = () => {
                 fabricColor={project.fabricColor}
                 capColor={project.capColor}
                 handleInsert={model3d.handle_insert ? insert : undefined}
+                midSection={model3d.mid_section ? mid : undefined}
                 showFrame={showFrame}
                 textureDeps={[project]}
               />

@@ -1,5 +1,6 @@
 import { useEffect, useMemo } from "react";
-import type { HandleInsertOptions } from "@/types/design";
+import type { HandleInsertOptions, MidSectionOptions } from "@/types/design";
+import { applyMidZone, findMidSection } from "@/3d/midSection";
 import {
   applyInsertFinish,
   findHandleInsert,
@@ -22,6 +23,8 @@ interface Props {
   debugPanelNumbers?: boolean;
   /** Customization of the handle insert mesh (`handle_insert`), if the GLB has one. */
   handleInsert?: HandleInsertOptions;
+  /** Colors of the two-zone middle section (`mid_body` / `mid_accent`), if the GLB has one. */
+  midSection?: MidSectionOptions;
   /** Kept for API compatibility; the projection handles orientation. */
   flipY?: boolean;
   /** Kept for API compatibility; orientation is now computed automatically
@@ -47,6 +50,7 @@ export function GLBUmbrellaModel({
   textureDeps,
   debugPanelNumbers = false,
   handleInsert,
+  midSection,
 }: Props) {
   const gltf = useGLTF(config.model_file);
   const texture = useCanopyProjectionTexture(svg, config.category, textureDeps);
@@ -175,6 +179,14 @@ export function GLBUmbrellaModel({
       cancelled = true;
     };
   }, [insert, handleInsert?.color, handleInsert?.finish, handleInsert?.logoSrc, handleInsert?.logoScale]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Middle section (中段): two independently colored zones, default = handle color.
+  const mid = useMemo(() => (root ? findMidSection(root) : null), [root]);
+  useEffect(() => {
+    if (!mid) return;
+    applyMidZone(mid.body, midSection?.bodyColor, "matte");
+    applyMidZone(mid.accent, midSection?.accentColor, midSection?.accentFinish ?? "metal");
+  }, [mid, midSection?.bodyColor, midSection?.accentColor, midSection?.accentFinish]);
 
   // Frame visibility.
   useEffect(() => {

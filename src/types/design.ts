@@ -66,6 +66,29 @@ export const HANDLE_INSERT_PRESETS: { name: string; value: string }[] = [
   { name: "Green", value: "#1f7a4d" },
 ];
 
+/**
+ * Colors of the middle section (中段 / open button) above the BSS-ST-1 handle.
+ * Two independent zones; an unset color means "same as the handle".
+ */
+export interface MidSectionOptions {
+  /** Main body (the wide band). */
+  bodyColor?: string;
+  /** Accent parts: top/bottom rims, button frame, chevrons. */
+  accentColor?: string;
+  accentFinish?: HandleInsertFinish;
+}
+
+export const MID_SECTION_PRESETS: { name: string; value: string }[] = [
+  { name: "Gold", value: "#c9a250" },
+  { name: "Silver", value: "#b9bcc2" },
+  { name: "Black", value: "#111418" },
+  { name: "White", value: "#f5f6f8" },
+  { name: "Navy", value: "#25335a" },
+  { name: "Red", value: "#c0252c" },
+  { name: "Royal Blue", value: "#1f56c3" },
+  { name: "Green", value: "#1f7a4d" },
+];
+
 export interface DesignProject {
   id: string;
   projectName: string;
@@ -78,6 +101,8 @@ export interface DesignProject {
   capColor?: string;
   /** Only used by models whose handle has a customizable insert (golf + BSS-ST-1). */
   handleInsert?: HandleInsertOptions;
+  /** Only used by models with a customizable middle section (golf + BSS-ST-1). */
+  midSection?: MidSectionOptions;
   artworkItems: ArtworkItem[];
   hasPouch?: boolean;
   pouchArtwork?: ArtworkItem[];

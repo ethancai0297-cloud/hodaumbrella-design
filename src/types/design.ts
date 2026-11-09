@@ -32,6 +32,40 @@ export interface InnerLayerData {
   artworkItems: ArtworkItem[];
 }
 
+/** Surface finish of the BSS-ST-1 handle insert (盖片). */
+export type HandleInsertFinish = "matte" | "gloss" | "metal";
+
+/** Customization of the BSS-ST-1 handle insert, a 15 × 70 mm plate on the handle. */
+export interface HandleInsertOptions {
+  color: string;
+  finish?: HandleInsertFinish;
+  /** Data URL of the logo printed / engraved on the insert. */
+  logoSrc?: string;
+  logoFileName?: string;
+  /** Logo size relative to the printable area, 0.2–1. */
+  logoScale?: number;
+}
+
+export const DEFAULT_HANDLE_INSERT: HandleInsertOptions = {
+  color: "#8a8d93",
+  finish: "metal",
+  logoScale: 0.6,
+};
+
+/** Printable area of the insert, millimetres. */
+export const HANDLE_INSERT_SIZE_MM = { w: 15, h: 70 };
+
+export const HANDLE_INSERT_PRESETS: { name: string; value: string }[] = [
+  { name: "Silver", value: "#8a8d93" },
+  { name: "Black", value: "#111418" },
+  { name: "White", value: "#f5f6f8" },
+  { name: "Gold", value: "#b8964b" },
+  { name: "Red", value: "#c0252c" },
+  { name: "Navy", value: "#0f1f3d" },
+  { name: "Royal Blue", value: "#1f56c3" },
+  { name: "Green", value: "#1f7a4d" },
+];
+
 export interface DesignProject {
   id: string;
   projectName: string;
@@ -42,6 +76,8 @@ export interface DesignProject {
   fabricColor: string;
   panelColors?: Record<number, string>;
   capColor?: string;
+  /** Only used by models whose handle has a customizable insert (golf + BSS-ST-1). */
+  handleInsert?: HandleInsertOptions;
   artworkItems: ArtworkItem[];
   hasPouch?: boolean;
   pouchArtwork?: ArtworkItem[];

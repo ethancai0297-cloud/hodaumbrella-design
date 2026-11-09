@@ -42,8 +42,13 @@ import { LanguageToggle } from "@/components/LanguageToggle";
 import { useI18n } from "@/i18n/i18n";
 import {
   ArtworkItem,
+  DEFAULT_HANDLE_INSERT,
   DesignProject,
   FABRIC_PRESETS,
+  HANDLE_INSERT_PRESETS,
+  HANDLE_INSERT_SIZE_MM,
+  HandleInsertFinish,
+  HandleInsertOptions,
   POUCH_SIZE_CM,
   PouchView,
   PrintingMethod,
@@ -252,6 +257,21 @@ const DesignEditor = () => {
     });
   };
 
+  // Handle insert (BSS-ST-1 盖片) customization
+  const insert: HandleInsertOptions = { ...DEFAULT_HANDLE_INSERT, ...project.handleInsert };
+  const updateInsert = (patch: Partial<HandleInsertOptions>) =>
+    updateProject({ handleInsert: { ...insert, ...patch } });
+  const insertLogoInputRef = useRef<HTMLInputElement>(null);
+  const handleInsertLogo = (file: File) => {
+    if (file.size > 2 * 1024 * 1024) {
+      toast({ title: t("insert.logoTooLarge"), variant: "destructive" });
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => updateInsert({ logoSrc: String(reader.result), logoFileName: file.name });
+    reader.readAsDataURL(file);
+  };
+
   // upload artwork
   const fileInputRef = useRef<HTMLInputElement>(null);
   const handleUpload = (file: File) => {
@@ -437,6 +457,7 @@ const DesignEditor = () => {
             topCap: string;
             handle: string;
             displayName: string;
+            handleInsert?: string;
           }
         | undefined;
       if (model3d) {
@@ -457,6 +478,11 @@ const DesignEditor = () => {
             topCap: model3d.top_cap_style,
             handle: model3d.handle_style,
             displayName: model3d.display_name,
+            handleInsert: model3d.handle_insert
+              ? `${HANDLE_INSERT_SIZE_MM.w}×${HANDLE_INSERT_SIZE_MM.h} mm · ${insert.color} · ${insert.finish ?? "matte"}${
+                  insert.logoFileName ? ` · logo: ${insert.logoFileName}` : " · no logo"
+                }`
+              : undefined,
           };
         }
         setHeadlessCapture(null);
@@ -717,6 +743,104 @@ const DesignEditor = () => {
               />
             </div>
           </section>
+
+          {model3d?.handle_insert && (
+            <>
+              <Separator className="my-5" />
+              <section>
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">{t("insert.title")}</h3>
+                <p className="text-xs text-muted-foreground mb-3">
+                  {t("insert.desc")} {HANDLE_INSERT_SIZE_MM.w} × {HANDLE_INSERT_SIZE_MM.h} mm
+                </p>
+                <div className="grid grid-cols-4 gap-2">
+                  {HANDLE_INSERT_PRESETS.map((c) => (
+                    <button
+                      key={c.value}
+                      onClick={() => updateInsert({ color: c.value })}
+                      title={t(`color.${c.name}`)}
+                      aria-label={c.name}
+                      className={cn(
+                        "h-9 rounded-md border-2 transition",
+                        insert.color === c.value ? "border-primary scale-105" : "border-border"
+                      )}
+                      style={{ background: c.value }}
+                    />
+                  ))}
+                </div>
+                <div className="mt-2 flex items-center gap-2">
+                  <Input
+                    type="color"
+                    value={insert.color}
+                    onChange={(e) => updateInsert({ color: e.target.value })}
+                    className="h-9 w-14 p-1"
+                  />
+                  <Input
+                    value={insert.color}
+                    onChange={(e) => updateInsert({ color: e.target.value })}
+                    className="h-9 text-xs"
+                  />
+                </div>
+
+                <Label className="text-xs mt-4 mb-2 block">{t("insert.finish")}</Label>
+                <div className="grid grid-cols-3 gap-2">
+                  {(["matte", "gloss", "metal"] as HandleInsertFinish[]).map((f) => (
+                    <Button
+                      key={f}
+                      size="sm"
+                      variant={insert.finish === f ? "default" : "outline"}
+                      onClick={() => updateInsert({ finish: f })}
+                    >
+                      {t(`insert.finish.${f}`)}
+                    </Button>
+                  ))}
+                </div>
+
+                <Label className="text-xs mt-4 mb-2 block">{t("insert.logo")}</Label>
+                <input
+                  ref={insertLogoInputRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/svg+xml,image/webp"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) handleInsertLogo(f);
+                    e.target.value = "";
+                  }}
+                />
+                {insert.logoSrc ? (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <img src={insert.logoSrc} alt="" className="h-9 w-9 object-contain rounded border border-border bg-muted" />
+                      <span className="text-xs truncate flex-1">{insert.logoFileName}</span>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        aria-label={t("insert.removeLogo")}
+                        onClick={() => updateInsert({ logoSrc: undefined, logoFileName: undefined })}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <Label className="text-xs block">{t("insert.logoSize")}</Label>
+                    <input
+                      type="range"
+                      min={0.2}
+                      max={1}
+                      step={0.05}
+                      value={insert.logoScale ?? 0.6}
+                      onChange={(e) => updateInsert({ logoScale: parseFloat(e.target.value) })}
+                      className="w-full"
+                    />
+                  </div>
+                ) : (
+                  <Button size="sm" variant="outline" className="w-full" onClick={() => insertLogoInputRef.current?.click()}>
+                    <Upload className="h-4 w-4 mr-1" /> {t("insert.uploadLogo")}
+                  </Button>
+                )}
+                <p className="text-xs text-muted-foreground mt-3">{t("insert.preview3d")}</p>
+              </section>
+            </>
+          )}
         </aside>
 
         {/* Canvas */}
@@ -931,6 +1055,7 @@ const DesignEditor = () => {
                     svg={svgEl}
                     fabricColor={project.fabricColor}
                     capColor={project.capColor}
+                    handleInsert={model3d.handle_insert ? insert : undefined}
                     showFrame={showFrame}
                     debugPanelNumbers={debugPanelNumbers}
                     textureDeps={[
@@ -950,7 +1075,9 @@ const DesignEditor = () => {
                     ]}
                   />
                   <div className="absolute top-2 left-1/2 -translate-x-1/2 z-10 rounded-lg bg-card border border-border shadow-soft p-1 flex items-center gap-1 text-xs">
-                    {(["perspective", "top", "front", "side", "bottom"] as CameraPreset[]).map((p) => (
+                    {(
+                      ["perspective", "top", "front", "side", "bottom", ...(model3d.handle_insert ? ["handle"] : [])] as CameraPreset[]
+                    ).map((p) => (
                       <button
                         key={p}
                         onClick={() => sceneRef.current?.setView(p)}
@@ -1025,6 +1152,7 @@ const DesignEditor = () => {
                 svg={svgEl}
                 fabricColor={project.fabricColor}
                 capColor={project.capColor}
+                handleInsert={model3d.handle_insert ? insert : undefined}
                 showFrame={showFrame}
                 textureDeps={[project]}
               />

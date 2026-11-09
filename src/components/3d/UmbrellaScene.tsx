@@ -3,11 +3,12 @@ import { OrbitControls, Environment, ContactShadows } from "@react-three/drei";
 import { Suspense, forwardRef, useEffect, useImperativeHandle, useMemo, useRef } from "react";
 import * as THREE from "three";
 import type { UmbrellaModelConfig } from "@/3d/models/registry";
+import type { HandleInsertOptions } from "@/types/design";
 import { UmbrellaModel } from "./UmbrellaModel";
 import { useCanopyTexture } from "./useCanopyTexture";
 import { GLBUmbrellaModel } from "./GLBUmbrellaModel";
 
-export type CameraPreset = "perspective" | "hero" | "top" | "front" | "side" | "bottom";
+export type CameraPreset = "perspective" | "hero" | "top" | "front" | "side" | "bottom" | "handle";
 
 export interface SceneApi {
   setView: (preset: CameraPreset) => void;
@@ -22,6 +23,7 @@ interface Props {
   svg: SVGSVGElement | null;
   fabricColor: string;
   capColor?: string;
+  handleInsert?: HandleInsertOptions;
   showFrame: boolean;
   textureDeps: unknown[];
   background?: string;
@@ -30,7 +32,7 @@ interface Props {
 }
 
 export const UmbrellaScene = forwardRef<SceneApi, Props>(function UmbrellaScene(
-  { config, svg, fabricColor, capColor, showFrame, textureDeps, background, debugPanelNumbers, textureFlipY },
+  { config, svg, fabricColor, capColor, handleInsert, showFrame, textureDeps, background, debugPanelNumbers, textureFlipY },
   ref
 ) {
   const useGLB = !!config.model_file && config.model_file.toLowerCase().endsWith(".glb");
@@ -124,6 +126,7 @@ export const UmbrellaScene = forwardRef<SceneApi, Props>(function UmbrellaScene(
               showFrame={showFrame}
               textureDeps={textureDeps}
               debugPanelNumbers={debugPanelNumbers}
+              handleInsert={handleInsert}
               flipY={textureFlipY}
             />
           ) : (
@@ -189,6 +192,9 @@ function SceneController({
         front: [new THREE.Vector3(0, 0.4, 4.2), target],
         side: [new THREE.Vector3(4.2, 0.4, 0), target],
         bottom: [new THREE.Vector3(0, -7.5, 0.001), target],
+        // Close-up of the handle (BSS-ST-1 insert). The handle sits at the
+        // bottom of the normalized model, ~1.14 units below center.
+        handle: [new THREE.Vector3(0.25, -1.0, 0.75), new THREE.Vector3(0, -1.14, 0)],
       };
     }
     const target = new THREE.Vector3(0, canopyHeight * 0.4, 0);
@@ -199,6 +205,7 @@ function SceneController({
       front: [new THREE.Vector3(0, canopyHeight * 0.4, radius * 1.9), target],
       side: [new THREE.Vector3(radius * 1.9, canopyHeight * 0.4, 0), target],
       bottom: [new THREE.Vector3(0.001, -radius * 1.9, 0), target],
+      handle: [new THREE.Vector3(0.001, -radius * 1.9, 0), target],
     };
   }, [radius, canopyHeight, useGLB]);
 
@@ -264,7 +271,7 @@ function SceneController({
   const orbitTarget: [number, number, number] = useGLB
     ? [0, 0, 0]
     : [0, canopyHeight * 0.4, 0];
-  const orbitMin = useGLB ? 1.8 : radius * 0.9;
+  const orbitMin = useGLB ? 0.5 : radius * 0.9;
   const orbitMax = useGLB ? 12 : radius * 8;
 
   return (

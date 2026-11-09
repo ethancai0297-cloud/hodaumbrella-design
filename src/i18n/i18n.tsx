@@ -105,6 +105,20 @@ const dict: Dict = {
   "cap.title": { en: "Cap color (top center)", zh: "顶帽颜色（中心）" },
   "cap.custom": { en: "Custom hex", zh: "自定义十六进制" },
 
+  // Handle insert (BSS-ST-1)
+  "insert.title": { en: "Handle insert (BSS-ST-1)", zh: "手柄盖片（BSS-ST-1）" },
+  "insert.desc": { en: "Customizable plate on the patented handle ·", zh: "专利手柄侧面的可定制盖片 ·" },
+  "insert.finish": { en: "Finish", zh: "表面工艺" },
+  "insert.finish.matte": { en: "Matte", zh: "哑光" },
+  "insert.finish.gloss": { en: "Gloss", zh: "亮面" },
+  "insert.finish.metal": { en: "Metallic", zh: "金属" },
+  "insert.logo": { en: "Logo on insert", zh: "盖片 Logo" },
+  "insert.uploadLogo": { en: "Upload logo", zh: "上传 Logo" },
+  "insert.removeLogo": { en: "Remove logo", zh: "移除 Logo" },
+  "insert.logoSize": { en: "Logo size", zh: "Logo 大小" },
+  "insert.logoTooLarge": { en: "Logo must be under 2 MB", zh: "Logo 文件需小于 2 MB" },
+  "insert.preview3d": { en: "Switch to 3D Preview to see the insert on the handle.", zh: "切换到 3D 预览查看盖片在手柄上的效果。" },
+
   // Fabric
   "fabric.title": { en: "Fabric color", zh: "伞布颜色" },
   "fabric.applyToAll": { en: "No panels selected — color applies to all panels.", zh: "未选择面板 — 颜色将应用到全部面板。" },
@@ -118,6 +132,8 @@ const dict: Dict = {
   "color.Green": { en: "Green", zh: "绿色" },
   "color.Royal Blue": { en: "Royal Blue", zh: "宝蓝" },
   "color.Grey": { en: "Grey", zh: "灰色" },
+  "color.Silver": { en: "Silver", zh: "银色" },
+  "color.Gold": { en: "Gold", zh: "金色" },
 
   // Canvas overlay
   "canvas.panels": { en: "Panels", zh: "面板" },
@@ -231,6 +247,7 @@ const dict: Dict = {
   "threeD.front": { en: "Front", zh: "正面" },
   "threeD.side": { en: "Side", zh: "侧面" },
   "threeD.bottom": { en: "Bottom", zh: "底视" },
+  "threeD.handle": { en: "Handle", zh: "手柄" },
   "threeD.reset": { en: "Reset", zh: "复位" },
   "threeD.screenshot": { en: "Screenshot", zh: "截图" },
 };

@@ -1,4 +1,12 @@
 import { useEffect, useMemo } from "react";
+import type { HandleInsertOptions } from "@/types/design";
+import {
+  applyInsertFinish,
+  findHandleInsert,
+  makeInsertMaterial,
+  paintInsertTexture,
+  projectInsertUVs,
+} from "@/3d/handleInsert";
 import * as THREE from "three";
 import { useGLTF, Html } from "@react-three/drei";
 import type { UmbrellaModelConfig } from "@/3d/models/registry";
@@ -12,6 +20,8 @@ interface Props {
   showFrame: boolean;
   textureDeps: unknown[];
   debugPanelNumbers?: boolean;
+  /** Customization of the handle insert mesh (`handle_insert`), if the GLB has one. */
+  handleInsert?: HandleInsertOptions;
   /** Kept for API compatibility; the projection handles orientation. */
   flipY?: boolean;
   /** Kept for API compatibility; orientation is now computed automatically
@@ -36,6 +46,7 @@ export function GLBUmbrellaModel({
   showFrame,
   textureDeps,
   debugPanelNumbers = false,
+  handleInsert,
 }: Props) {
   const gltf = useGLTF(config.model_file);
   const texture = useCanopyProjectionTexture(svg, config.category, textureDeps);
@@ -135,6 +146,36 @@ export function GLBUmbrellaModel({
     });
   }, [root, canopyMaterial, solidMaterial, texture]);
 
+  // Handle insert (BSS-ST-1 盖片): projected UVs + painted color/logo texture.
+  const insert = useMemo(() => {
+    if (!root) return null;
+    const mesh = findHandleInsert(root);
+    if (!mesh) return null;
+    projectInsertUVs(mesh);
+    const material = makeInsertMaterial();
+    mesh.material = material;
+    return { mesh, material };
+  }, [root]);
+
+  useEffect(() => {
+    if (!insert || !handleInsert) return;
+    let cancelled = false;
+    applyInsertFinish(insert.material, handleInsert.finish);
+    paintInsertTexture(handleInsert).then((tex) => {
+      if (cancelled) {
+        tex.dispose();
+        return;
+      }
+      const old = insert.material.map;
+      insert.material.map = tex;
+      insert.material.needsUpdate = true;
+      old?.dispose();
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [insert, handleInsert?.color, handleInsert?.finish, handleInsert?.logoSrc, handleInsert?.logoScale]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Frame visibility.
   useEffect(() => {
     if (!root) return;
@@ -187,3 +228,4 @@ export function GLBUmbrellaModel({
 // Preload registered GLBs
 useGLTF.preload("/models/folding_21in_8panel_standard.glb");
 useGLTF.preload("/models/straight_23in_8panel_standard.glb");
+useGLTF.preload("/models/golf_30in_8panel_standard.glb");

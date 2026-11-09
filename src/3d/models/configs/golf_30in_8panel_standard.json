@@ -1,7 +1,7 @@
 {
   "model_id": "golf_30in_8panel_standard",
   "category": "golf",
-  "display_name": "Golf umbrella · 30\" · 8 panel",
+  "display_name": "Golf umbrella · 30\" · 8 panel · BSS-ST-1 handle",
   "rib_count": 8,
   "panel_count": 8,
   "rib_length_inch": 30,
@@ -10,17 +10,35 @@
   "canopy_height_cm": 34,
   "canopy_arc_length_cm": 78,
   "shaft_length_cm": 100,
-  "shaft_diameter_mm": 19,
+  "shaft_diameter_mm": 14,
   "shaft_color": "#161616",
   "top_cap_style": "rounded_dome",
-  "top_cap_dimensions": { "radius_mm": 12, "height_mm": 16 },
+  "top_cap_dimensions": {
+    "radius_mm": 12,
+    "height_mm": 16
+  },
   "top_cap_color": "#111111",
   "rib_tip_style": "rubberized_tip",
-  "rib_tip_dimensions": { "radius_mm": 5 },
+  "rib_tip_dimensions": {
+    "radius_mm": 5
+  },
   "ferrule_style": "extended_alloy",
-  "handle_style": "eva_grip",
-  "handle_material": "EVA_foam",
-  "handle_color": "#222222",
+  "handle_style": "BSS-ST-1 straight handle (patented)",
+  "handle_material": "TBD",
+  "handle_color": "#1a1a1a",
+  "handle_dimensions": {
+    "length_mm": 119.5,
+    "width_mm": 32,
+    "bore_mm": 14,
+    "bore_depth_mm": 84,
+    "counterbore_mm": 18.2,
+    "counterbore_depth_mm": 23
+  },
+  "handle_insert": {
+    "mesh": "handle_insert",
+    "width_mm": 15,
+    "length_mm": 70
+  },
   "canopy_material": "210T_pongee",
   "canopy_layer": "single",
   "model_file": "/models/golf_30in_8panel_standard.glb",

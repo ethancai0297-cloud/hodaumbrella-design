@@ -28,16 +28,19 @@ export interface UmbrellaModelConfig {
   handle_color: string;
   canopy_material: string;
   canopy_layer: string;
+  /** Handle measurements, mm (golf / BSS-ST-1). */
+  handle_dimensions?: Record<string, number>;
+  /** Present when the handle has a customizable insert mesh in the GLB. */
+  handle_insert?: { mesh: string; width_mm: number; length_mm: number };
   model_file: string;
   uv_template_file: string;
 }
 
-// Golf config exists but its GLB has not been delivered yet — keep it out
-// of the active list until /public/models/golf_30in_8panel_standard.glb lands.
-void golf;
+// Golf: 30" 8-panel with the BSS-ST-1 handle (customizable insert).
 const MODELS: UmbrellaModelConfig[] = [
   folding as UmbrellaModelConfig,
   straight as UmbrellaModelConfig,
+  golf as UmbrellaModelConfig,
 ];
 
 export function findModel(
@@ -45,7 +48,7 @@ export function findModel(
   ribCount: RibCount
 ): UmbrellaModelConfig | null {
   // A model is available only when a GLB with the matching category AND
-  // panel count exists. Other combinations (golf, 6/7/10 ribs) return null
+  // panel count exists. Other combinations (e.g. 6/7/10 ribs) return null
   // so the editor shows the "3D preview unavailable" fallback until a
   // matching GLB is added here.
   const match = MODELS.find(

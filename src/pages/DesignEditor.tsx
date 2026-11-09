@@ -49,6 +49,7 @@ import {
   HANDLE_INSERT_PRESETS,
   HANDLE_INSERT_SIZE_MM,
   HandleInsertFinish,
+  normalizeFinish,
   HandleInsertOptions,
   MID_SECTION_PRESETS,
   MidSectionOptions,
@@ -503,14 +504,14 @@ const DesignEditor = () => {
             handle: model3d.handle_style,
             displayName: model3d.display_name,
             handleInsert: model3d.handle_insert
-              ? `${HANDLE_INSERT_SIZE_MM.w}×${HANDLE_INSERT_SIZE_MM.h} mm · ${insert.color} · ${insert.finish ?? "matte"}${
+              ? `${HANDLE_INSERT_SIZE_MM.w}×${HANDLE_INSERT_SIZE_MM.h} mm · ${insert.color} · ${normalizeFinish(insert.finish)}${
                   insert.logoFileName ? ` · logo: ${insert.logoFileName}` : " · no logo"
                 }`
               : undefined,
             handleColor: hasHandleDesign ? handleColor : undefined,
             midSection: model3d.mid_section
               ? `body ${mid.bodyColor ?? "same as handle"} · accent ${mid.accentColor ?? "same as handle"}${
-                  mid.accentColor ? ` (${mid.accentFinish ?? "metal"})` : ""
+                  mid.accentColor ? ` (${normalizeFinish(mid.accentFinish)})` : ""
                 }`
               : undefined,
           };
@@ -879,12 +880,12 @@ const DesignEditor = () => {
                 </div>
 
                 <Label className="text-xs mt-4 mb-2 block">{t("insert.finish")}</Label>
-                <div className="grid grid-cols-3 gap-2">
-                  {(["matte", "gloss", "metal"] as HandleInsertFinish[]).map((f) => (
+                <div className="grid grid-cols-2 gap-2">
+                  {(["matte", "gloss"] as HandleInsertFinish[]).map((f) => (
                     <Button
                       key={f}
                       size="sm"
-                      variant={insert.finish === f ? "default" : "outline"}
+                      variant={normalizeFinish(insert.finish) === f ? "default" : "outline"}
                       onClick={() => updateInsert({ finish: f })}
                     >
                       {t(`insert.finish.${f}`)}
@@ -997,12 +998,12 @@ const DesignEditor = () => {
                   );
                 })}
                 <Label className="text-xs mb-2 block">{t("mid.accentFinish")}</Label>
-                <div className="grid grid-cols-3 gap-2">
-                  {(["matte", "gloss", "metal"] as HandleInsertFinish[]).map((f) => (
+                <div className="grid grid-cols-2 gap-2">
+                  {(["matte", "gloss"] as HandleInsertFinish[]).map((f) => (
                     <Button
                       key={f}
                       size="sm"
-                      variant={(mid.accentFinish ?? "metal") === f ? "default" : "outline"}
+                      variant={normalizeFinish(mid.accentFinish) === f ? "default" : "outline"}
                       onClick={() => updateMid({ accentFinish: f })}
                     >
                       {t(`insert.finish.${f}`)}

@@ -20,7 +20,6 @@ const TEX_H = 1400;
 const FINISH: Record<HandleInsertFinish, { metalness: number; roughness: number }> = {
   matte: { metalness: 0, roughness: 0.75 },
   gloss: { metalness: 0, roughness: 0.18 },
-  metal: { metalness: 0.9, roughness: 0.28 },
 };
 
 export function findHandleInsert(root: THREE.Object3D): THREE.Mesh | null {

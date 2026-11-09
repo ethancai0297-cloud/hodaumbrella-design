@@ -208,7 +208,7 @@ export function GLBUmbrellaModel({
   useEffect(() => {
     if (!mid) return;
     applyMidZone(mid.body, midSection?.bodyColor, "matte", handleColor);
-    applyMidZone(mid.accent, midSection?.accentColor, midSection?.accentFinish ?? "metal", handleColor);
+    applyMidZone(mid.accent, midSection?.accentColor, midSection?.accentFinish === "gloss" ? "gloss" : "matte", handleColor);
   }, [mid, midSection?.bodyColor, midSection?.accentColor, midSection?.accentFinish, handleColor]);
 
   // Frame visibility.

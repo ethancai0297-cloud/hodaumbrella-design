@@ -32,8 +32,11 @@ export interface InnerLayerData {
   artworkItems: ArtworkItem[];
 }
 
-/** Surface finish of the BSS-ST-1 handle insert (盖片). */
-export type HandleInsertFinish = "matte" | "gloss" | "metal";
+/** Surface finish of the BSS-ST-1 insert (盖片) and middle-section accent: matte or gloss only. */
+export type HandleInsertFinish = "matte" | "gloss";
+
+/** Older saved designs may still say "metal"; treat anything unknown as matte. */
+export const normalizeFinish = (f?: string): HandleInsertFinish => (f === "gloss" ? "gloss" : "matte");
 
 /** Customization of the BSS-ST-1 handle insert, a 15 × 70 mm plate on the handle. */
 export interface HandleInsertOptions {
@@ -48,7 +51,7 @@ export interface HandleInsertOptions {
 
 export const DEFAULT_HANDLE_INSERT: HandleInsertOptions = {
   color: "#8a8d93",
-  finish: "metal",
+  finish: "matte",
   logoScale: 0.6,
 };
 

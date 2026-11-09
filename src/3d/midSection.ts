@@ -16,7 +16,6 @@ export interface MidSectionZone {
 const FINISH: Record<HandleInsertFinish, { metalness: number; roughness: number }> = {
   matte: { metalness: 0, roughness: 0.75 },
   gloss: { metalness: 0, roughness: 0.18 },
-  metal: { metalness: 1, roughness: 0.32 },
 };
 
 export function findMidSection(root: THREE.Object3D, bodyName = "mid_body", accentName = "mid_accent") {

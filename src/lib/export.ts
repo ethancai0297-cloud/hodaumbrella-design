@@ -161,6 +161,64 @@ async function imageToDataUrl(src: string): Promise<{ data: string; w: number; h
   }
 }
 
+/** One row of the handle-design spec table. `swatch` draws a color chip. */
+export interface HandleSpecRow {
+  label: string;
+  value: string;
+  swatch?: string;
+}
+
+/** Handle (伞头) page content for the PDF. */
+export interface HandleDesignExport {
+  title: string;
+  front: string;
+  angle: string;
+  rows: HandleSpecRow[];
+  logo?: string;
+}
+
+/**
+ * Crop the near-white border off a rendered capture so a small subject
+ * (e.g. the handle) fills its cell. Keeps `pad` px of white around it.
+ */
+export async function trimWhite(dataUrl: string, pad = 24): Promise<string> {
+  const img = await new Promise<HTMLImageElement>((res, rej) => {
+    const i = new Image();
+    i.onload = () => res(i);
+    i.onerror = rej;
+    i.src = dataUrl;
+  });
+  const c = document.createElement("canvas");
+  c.width = img.width;
+  c.height = img.height;
+  const ctx = c.getContext("2d")!;
+  ctx.drawImage(img, 0, 0);
+  const { data, width, height } = ctx.getImageData(0, 0, c.width, c.height);
+  let x0 = width, y0 = height, x1 = -1, y1 = -1;
+  for (let y = 0; y < height; y += 2) {
+    for (let x = 0; x < width; x += 2) {
+      const k = (y * width + x) * 4;
+      if (data[k] < 238 || data[k + 1] < 238 || data[k + 2] < 238) {
+        if (x < x0) x0 = x;
+        if (x > x1) x1 = x;
+        if (y < y0) y0 = y;
+        if (y > y1) y1 = y;
+      }
+    }
+  }
+  if (x1 < 0) return dataUrl;
+  x0 = Math.max(0, x0 - pad); y0 = Math.max(0, y0 - pad);
+  x1 = Math.min(width, x1 + pad); y1 = Math.min(height, y1 + pad);
+  const out = document.createElement("canvas");
+  out.width = x1 - x0;
+  out.height = y1 - y0;
+  const octx = out.getContext("2d")!;
+  octx.fillStyle = "#ffffff";
+  octx.fillRect(0, 0, out.width, out.height);
+  octx.drawImage(c, x0, y0, out.width, out.height, 0, 0, out.width, out.height);
+  return out.toDataURL("image/png");
+}
+
 export async function exportPdfSummary(
   project: DesignProject,
   pngDataUrl: string,
@@ -178,7 +236,8 @@ export async function exportPdfSummary(
     handleInsert?: string;
     handleColor?: string;
     midSection?: string;
-  }
+  },
+  handleDesign?: HandleDesignExport
 ) {
   const pdf = new jsPDF({ unit: "pt", format: "a4" });
   const pageW = pdf.internal.pageSize.getWidth();
@@ -455,6 +514,111 @@ export async function exportPdfSummary(
       "The 3D preview is for sales visualization only. Final production details, materials, dimensions and finishing must be confirmed by the factory designer.";
     const dLines = pdf.splitTextToSize(disclaimer, pageW - 80);
     pdf.text(dLines, 40, sy);
+
+    pdf.setDrawColor(220);
+    pdf.line(40, pageH - 40, pageW - 40, pageH - 40);
+    pdf.setFontSize(9);
+    pdf.setTextColor(140);
+    pdf.text(COMPANY_NAME, 40, pageH - 24);
+    pdf.text(new Date().toLocaleDateString(), pageW - 40, pageH - 24, { align: "right" });
+  }
+
+  // Optional handle (伞头) design page: two close-ups + spec table with swatches
+  if (handleDesign) {
+    pdf.addPage();
+    pdf.setFillColor(186, 220, 240);
+    pdf.rect(0, 0, pageW, 60, "F");
+    pdf.setTextColor(15, 31, 61);
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(14);
+    pdf.text("Handle Design", 40, 38);
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(10);
+    pdf.setTextColor(20, 24, 30);
+    pdf.text(handleDesign.title, 40, 84);
+
+    const contentW = pageW - 80;
+    const gap = 16;
+    const cellW = (contentW - gap) / 2;
+    const cellH = 330;
+    const yImg = 100;
+    const shots: [string, string][] = [
+      [handleDesign.front, "Front (insert & open button)"],
+      [handleDesign.angle, "3/4 view"],
+    ];
+    shots.forEach(([u, label], i) => {
+      const x = 40 + i * (cellW + gap);
+      pdf.setDrawColor(230);
+      pdf.roundedRect(x, yImg, cellW, cellH, 6, 6, "S");
+      try {
+        const props = pdf.getImageProperties(u);
+        const ratio = props.height / props.width;
+        let drawW = cellW - 20;
+        let drawH = drawW * ratio;
+        if (drawH > cellH - 20) {
+          drawH = cellH - 20;
+          drawW = drawH / ratio;
+        }
+        pdf.addImage(u, "PNG", x + (cellW - drawW) / 2, yImg + (cellH - drawH) / 2, drawW, drawH);
+      } catch {}
+      pdf.setFontSize(9);
+      pdf.setTextColor(110, 110, 120);
+      pdf.text(label, x + cellW / 2, yImg + cellH + 14, { align: "center" });
+    });
+
+    let sy = yImg + cellH + 44;
+    pdf.setFont("helvetica", "bold");
+    pdf.setFontSize(11);
+    pdf.setTextColor(20, 24, 30);
+    pdf.text("Handle specification", 40, sy);
+    sy += 18;
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(10);
+    const hexToRgb = (h: string) => {
+      const m = h.replace("#", "");
+      const v = m.length === 3 ? m.split("").map((c) => c + c).join("") : m;
+      return [0, 2, 4].map((k) => parseInt(v.slice(k, k + 2), 16) || 0) as [number, number, number];
+    };
+    handleDesign.rows.forEach((r) => {
+      pdf.setTextColor(110, 110, 120);
+      pdf.text(r.label, 40, sy);
+      let vx = 200;
+      if (r.swatch) {
+        const [cr, cg, cb] = hexToRgb(r.swatch);
+        pdf.setFillColor(cr, cg, cb);
+        pdf.setDrawColor(180);
+        pdf.roundedRect(vx, sy - 9, 22, 12, 2, 2, "FD");
+        vx += 30;
+      }
+      pdf.setTextColor(20, 24, 30);
+      pdf.text(r.value, vx, sy);
+      sy += 20;
+    });
+
+    if (handleDesign.logo) {
+      sy += 6;
+      pdf.setTextColor(110, 110, 120);
+      pdf.text("Insert logo artwork", 40, sy);
+      try {
+        const props = pdf.getImageProperties(handleDesign.logo);
+        const ratio = props.height / props.width;
+        let w = 140, h = w * ratio;
+        if (h > 70) { h = 70; w = h / ratio; }
+        // mid-grey backdrop so both light and dark logos stay visible
+        pdf.setFillColor(138, 143, 153);
+        pdf.rect(200, sy - 12, w + 12, h + 12, "F");
+        pdf.addImage(handleDesign.logo, "PNG", 200 + 6, sy - 6, w, h);
+        sy += h + 10;
+      } catch {}
+    }
+
+    sy += 16;
+    pdf.setFont("helvetica", "italic");
+    pdf.setTextColor(110, 110, 120);
+    pdf.setFontSize(9);
+    const note =
+      "Colors on screen are indicative. Final handle, insert and middle-section colors are matched to physical samples before production.";
+    pdf.text(pdf.splitTextToSize(note, pageW - 80), 40, Math.min(sy, pageH - 60));
 
     pdf.setDrawColor(220);
     pdf.line(40, pageH - 40, pageW - 40, pageH - 40);

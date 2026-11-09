@@ -8,7 +8,7 @@ import { UmbrellaModel } from "./UmbrellaModel";
 import { useCanopyTexture } from "./useCanopyTexture";
 import { GLBUmbrellaModel } from "./GLBUmbrellaModel";
 
-export type CameraPreset = "perspective" | "hero" | "top" | "front" | "side" | "bottom" | "handle";
+export type CameraPreset = "perspective" | "hero" | "top" | "front" | "side" | "bottom" | "handle" | "handleAngle";
 
 export interface SceneApi {
   setView: (preset: CameraPreset) => void;
@@ -217,6 +217,7 @@ function SceneController({
         // Close-up of the handle (BSS-ST-1 insert). The handle sits at the
         // bottom of the normalized model, ~1.14 units below center.
         handle: [new THREE.Vector3(0.3, -0.95, 0.9), new THREE.Vector3(0, -1.08, 0)],
+        handleAngle: [new THREE.Vector3(0.85, -0.85, 0.35), new THREE.Vector3(0, -1.08, 0)],
       };
     }
     const target = new THREE.Vector3(0, canopyHeight * 0.4, 0);
@@ -228,6 +229,7 @@ function SceneController({
       side: [new THREE.Vector3(radius * 1.9, canopyHeight * 0.4, 0), target],
       bottom: [new THREE.Vector3(0.001, -radius * 1.9, 0), target],
       handle: [new THREE.Vector3(0.001, -radius * 1.9, 0), target],
+      handleAngle: [new THREE.Vector3(0.001, -radius * 1.9, 0), target],
     };
   }, [radius, canopyHeight, useGLB]);
 
@@ -274,6 +276,12 @@ function SceneController({
         applyPan();
         camera.position.copy(pos);
         camera.lookAt(tgt);
+        // Point the controls at the same target, otherwise their next update
+        // swings the camera back to the old target (e.g. handle close-ups).
+        if (controlsRef.current) {
+          controlsRef.current.target.copy(tgt);
+          controlsRef.current.update();
+        }
         camera.updateProjectionMatrix();
         await new Promise((r) => requestAnimationFrame(() => r(null)));
         // Render onto white so exported PNGs / PDF cells are not transparent.

@@ -17,9 +17,12 @@ export const HANDLE_INSERT_MESH = /^handle_insert$/i;
 const TEX_W = 300;
 const TEX_H = 1400;
 
-const FINISH: Record<HandleInsertFinish, { metalness: number; roughness: number }> = {
-  matte: { metalness: 0, roughness: 0.75 },
-  gloss: { metalness: 0, roughness: 0.18 },
+// The insert never shows mirror-like reflections: a highlight would wash out
+// the logo/text. Matte vs gloss is a production spec; on screen gloss only gets
+// a faint sheen.
+const FINISH: Record<HandleInsertFinish, { metalness: number; roughness: number; env: number }> = {
+  matte: { metalness: 0, roughness: 0.95, env: 0 },
+  gloss: { metalness: 0, roughness: 0.8, env: 0.15 },
 };
 
 export function findHandleInsert(root: THREE.Object3D): THREE.Mesh | null {
@@ -162,12 +165,18 @@ export async function paintInsertTexture(opts: HandleInsertOptions): Promise<THR
 
 export function makeInsertMaterial(finish: HandleInsertFinish = "matte") {
   const f = FINISH[finish] ?? FINISH.matte;
-  return new THREE.MeshStandardMaterial({ color: "#ffffff", metalness: f.metalness, roughness: f.roughness });
+  return new THREE.MeshStandardMaterial({
+    color: "#ffffff",
+    metalness: f.metalness,
+    roughness: f.roughness,
+    envMapIntensity: f.env,
+  });
 }
 
 export function applyInsertFinish(mat: THREE.MeshStandardMaterial, finish: HandleInsertFinish = "matte") {
   const f = FINISH[finish] ?? FINISH.matte;
   mat.metalness = f.metalness;
   mat.roughness = f.roughness;
+  mat.envMapIntensity = f.env;
   mat.needsUpdate = true;
 }

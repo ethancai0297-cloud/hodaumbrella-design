@@ -68,45 +68,91 @@ export function projectInsertUVs(mesh: THREE.Mesh) {
   geo.setAttribute("uv", new THREE.BufferAttribute(raw, 2));
 }
 
-function loadImage(src: string): Promise<HTMLImageElement> {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    img.onload = () => resolve(img);
-    img.onerror = reject;
-    img.src = src;
-  });
+const imageCache = new Map<string, Promise<HTMLImageElement>>();
+export function loadImage(src: string): Promise<HTMLImageElement> {
+  let p = imageCache.get(src);
+  if (!p) {
+    p = new Promise((resolve, reject) => {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.onload = () => resolve(img);
+      img.onerror = reject;
+      img.src = src;
+    });
+    imageCache.set(src, p);
+  }
+  return p;
 }
 
-/** Paint base color + optional logo into a texture for the insert. */
+/** The insert's horizontal frame: 70 × 15 mm at 20 px/mm (canopy end on the left). */
+export const INSERT_FRAME = { w: TEX_H, h: TEX_W };
+
+/** Bounding box of the artwork group (logo + text) in frame px, before rotation. */
+export function insertArtSize(ctx: CanvasRenderingContext2D, opts: HandleInsertOptions, logo?: HTMLImageElement | null) {
+  const H = INSERT_FRAME.h;
+  const scale = opts.artScale ?? opts.logoScale ?? 0.6;
+  const unit = H * 0.8 * scale; // logo height / text cap height at scale 1
+  const gap = unit * 0.25;
+  const logoW = logo ? (unit * logo.width) / Math.max(1, logo.height) : 0;
+  let textW = 0;
+  const text = (opts.text ?? "").trim();
+  if (text) {
+    ctx.font = `700 ${unit * 0.8}px Inter, "Helvetica Neue", Arial, sans-serif`;
+    textW = ctx.measureText(text).width;
+  }
+  const w = logoW + (logoW && textW ? gap : 0) + textW;
+  return { w, h: unit, unit, gap, logoW, textW, text };
+}
+
+/**
+ * Draw the plate color and the artwork group into a context whose coordinate
+ * system is the horizontal frame (INSERT_FRAME, canopy end on the left).
+ */
+export function drawInsertArt(ctx: CanvasRenderingContext2D, opts: HandleInsertOptions, logo?: HTMLImageElement | null) {
+  const { w: W, h: H } = INSERT_FRAME;
+  ctx.fillStyle = opts.color;
+  ctx.fillRect(0, 0, W, H);
+  const m = insertArtSize(ctx, opts, logo);
+  if (!m.w) return;
+  ctx.save();
+  ctx.translate(W / 2 + (opts.artX ?? 0) * W, H / 2 + (opts.artY ?? 0) * H);
+  ctx.rotate(((opts.artRotation ?? 0) * Math.PI) / 180);
+  let x = -m.w / 2;
+  if (logo && m.logoW) {
+    ctx.drawImage(logo, x, -m.h / 2, m.logoW, m.h);
+    x += m.logoW + (m.textW ? m.gap : 0);
+  }
+  if (m.text) {
+    ctx.font = `700 ${m.unit * 0.8}px Inter, "Helvetica Neue", Arial, sans-serif`;
+    ctx.fillStyle = opts.textColor ?? "#ffffff";
+    ctx.textBaseline = "middle";
+    ctx.textAlign = "left";
+    ctx.fillText(m.text, x, 0);
+  }
+  ctx.restore();
+}
+
+/** Paint base color + artwork into the insert texture (vertical, as on the handle). */
 export async function paintInsertTexture(opts: HandleInsertOptions): Promise<THREE.CanvasTexture> {
   const canvas = document.createElement("canvas");
   canvas.width = TEX_W;
   canvas.height = TEX_H;
   const ctx = canvas.getContext("2d")!;
-  ctx.fillStyle = opts.color;
-  ctx.fillRect(0, 0, TEX_W, TEX_H);
-
+  let logo: HTMLImageElement | null = null;
   if (opts.logoSrc) {
     try {
-      const img = await loadImage(opts.logoSrc);
-      // A wide logo runs along the handle (rotated 90°); a tall one stays upright.
-      const rotate = img.width > img.height;
-      const boxW = TEX_W * 0.78;
-      const boxH = TEX_H * 0.8 * (opts.logoScale ?? 0.6);
-      const w = rotate ? img.height : img.width;
-      const h = rotate ? img.width : img.height;
-      const s = Math.min(boxW / w, boxH / h);
-      ctx.save();
-      ctx.translate(TEX_W / 2, TEX_H / 2);
-      if (rotate) ctx.rotate(-Math.PI / 2);
-      const dw = img.width * s, dh = img.height * s;
-      ctx.drawImage(img, -dw / 2, -dh / 2, dw, dh);
-      ctx.restore();
+      logo = await loadImage(opts.logoSrc);
     } catch {
-      /* unreadable logo: keep the plain color */
+      logo = null; // unreadable logo: plate color (+ text) only
     }
   }
+  // Horizontal frame -> vertical texture: rotate 90° clockwise. The frame's
+  // left (canopy end) becomes the top of the insert, its top edge faces the
+  // viewer's right, so artwork reads top-to-bottom on the standing handle and
+  // upright in the horizontal view.
+  ctx.translate(TEX_W, 0);
+  ctx.rotate(Math.PI / 2);
+  drawInsertArt(ctx, opts, logo);
 
   const tex = new THREE.CanvasTexture(canvas);
   tex.colorSpace = THREE.SRGBColorSpace;

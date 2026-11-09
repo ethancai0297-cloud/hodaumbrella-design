@@ -170,8 +170,8 @@ export interface HandleDesignExport {
   flat?: string;
 }
 
-/** Rotate an image 90° clockwise (vertical handle -> horizontal). */
-export async function rotate90cw(dataUrl: string): Promise<string> {
+/** Rotate an image 90° counter-clockwise (standing handle -> lying, canopy end left). */
+export async function rotate90ccw(dataUrl: string): Promise<string> {
   const img = await new Promise<HTMLImageElement>((res, rej) => {
     const i = new Image();
     i.onload = () => res(i);
@@ -182,8 +182,8 @@ export async function rotate90cw(dataUrl: string): Promise<string> {
   c.width = img.height;
   c.height = img.width;
   const ctx = c.getContext("2d")!;
-  ctx.translate(c.width, 0);
-  ctx.rotate(Math.PI / 2);
+  ctx.translate(0, c.height);
+  ctx.rotate(-Math.PI / 2);
   ctx.drawImage(img, 0, 0);
   return c.toDataURL("image/png");
 }

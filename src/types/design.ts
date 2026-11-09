@@ -45,8 +45,21 @@ export interface HandleInsertOptions {
   /** Data URL of the logo printed / engraved on the insert. */
   logoSrc?: string;
   logoFileName?: string;
-  /** Logo size relative to the printable area, 0.2–1. */
+  /** Legacy logo size (0.2–1); superseded by artScale. */
   logoScale?: number;
+  /** Text printed on the insert (with or after the logo). */
+  text?: string;
+  textColor?: string;
+  /**
+   * Artwork placement in the insert's horizontal frame (as in the horizontal
+   * view: canopy end on the left). x/y: offset from centre as a fraction of
+   * the plate's length/width (-0.5..0.5); scale: 1 = fits the plate height;
+   * rotation: degrees, clockwise.
+   */
+  artX?: number;
+  artY?: number;
+  artScale?: number;
+  artRotation?: number;
 }
 
 export const DEFAULT_HANDLE_INSERT: HandleInsertOptions = {

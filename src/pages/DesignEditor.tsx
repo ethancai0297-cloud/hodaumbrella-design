@@ -36,6 +36,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { UmbrellaCanopy } from "@/components/UmbrellaCanopy";
 import { PouchCanvas } from "@/components/PouchCanvas";
+import { InsertArtEditor } from "@/components/editor/InsertArtEditor";
 import { WizardPanel } from "@/components/editor/WizardPanel";
 import { ArtworkProperties } from "@/components/editor/ArtworkProperties";
 import { LanguageToggle } from "@/components/LanguageToggle";
@@ -66,7 +67,7 @@ import {
   exportAiFile,
   exportPdfSummary,
   HandleDesignExport,
-  rotate90cw,
+  rotate90ccw,
   svgPairToPngDataUrl,
   svgToPngDataUrl,
   trimWhite,
@@ -512,7 +513,7 @@ const DesignEditor = () => {
           if (hasHandleDesign) {
             const front = await trimWhite(await api.captureView("handle"));
             const angle = await trimWhite(await api.captureView("handleAngle"));
-            const flat = await rotate90cw(await trimWhite(await api.captureView("handleFlat"), 20));
+            const flat = await rotate90ccw(await trimWhite(await api.captureView("handleFlat"), 20));
             handleDesign = { title: model3d.handle_style, front, angle, flat };
           }
           threeD = {
@@ -940,23 +941,15 @@ const DesignEditor = () => {
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
-                    <Label className="text-xs block">{t("insert.logoSize")}</Label>
-                    <input
-                      type="range"
-                      min={0.2}
-                      max={1}
-                      step={0.05}
-                      value={insert.logoScale ?? 0.6}
-                      onChange={(e) => updateInsert({ logoScale: parseFloat(e.target.value) })}
-                      className="w-full"
-                    />
                   </div>
                 ) : (
                   <Button size="sm" variant="outline" className="w-full" onClick={() => insertLogoInputRef.current?.click()}>
                     <Upload className="h-4 w-4 mr-1" /> {t("insert.uploadLogo")}
                   </Button>
                 )}
-                <p className="text-xs text-muted-foreground mt-3">{t("insert.preview3d")}</p>
+                <div className="mt-4">
+                  <InsertArtEditor value={insert} onChange={updateInsert} />
+                </div>
               </section>
             </>
           )}

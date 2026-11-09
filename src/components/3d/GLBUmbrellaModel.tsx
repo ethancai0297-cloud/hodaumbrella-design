@@ -181,7 +181,7 @@ export function GLBUmbrellaModel({
     return () => {
       cancelled = true;
     };
-  }, [insert, handleInsert?.color, handleInsert?.finish, handleInsert?.logoSrc, handleInsert?.logoScale]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [insert, handleInsert?.color, handleInsert?.finish, handleInsert?.logoSrc, handleInsert?.logoScale, handleInsert?.text, handleInsert?.textColor, handleInsert?.artX, handleInsert?.artY, handleInsert?.artScale, handleInsert?.artRotation]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Handle body (mesh `handle`): own material so its color can change.
   const handleBody = useMemo(() => {

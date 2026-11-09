@@ -115,7 +115,7 @@ const dict: Dict = {
   "insert.logo": { en: "Logo on insert", zh: "盖片 Logo" },
   "insert.uploadLogo": { en: "Upload logo", zh: "上传 Logo" },
   "insert.removeLogo": { en: "Remove logo", zh: "移除 Logo" },
-  "insert.logoSize": { en: "Logo size", zh: "Logo 大小" },
+  "insert.logoSize": { en: "Size", zh: "大小" },
   "insert.logoTooLarge": { en: "Logo must be under 2 MB", zh: "Logo 文件需小于 2 MB" },
   "tab.label": { en: "Design options", zh: "设计选项" },
   "tab.canopy": { en: "Canopy", zh: "伞面设计" },
@@ -129,6 +129,13 @@ const dict: Dict = {
   "mid.accent": { en: "Accent color (rims, button frame, arrows)", zh: "装饰颜色（边条、按钮框、箭头）" },
   "mid.accentFinish": { en: "Accent finish", zh: "装饰色工艺" },
   "mid.sameAsHandle": { en: "Same as handle", zh: "同手柄色" },
+  "insert.text": { en: "Text on insert", zh: "盖片文字" },
+  "insert.textPlaceholder": { en: "Type text, e.g. HODA", zh: "输入文字，如 HODA" },
+  "insert.textColor": { en: "Text color", zh: "文字颜色" },
+  "insert.layout": { en: "Layout (handle lying flat, canopy end left)", zh: "排版（手柄横放，左侧朝伞面）" },
+  "insert.layoutHint": { en: "Drag to move. Use the sliders for size and rotation.", zh: "拖动可移动位置；用下方滑杆调大小和角度。" },
+  "insert.center": { en: "Re-center", zh: "恢复居中" },
+  "insert.rotation": { en: "Rotation", zh: "旋转" },
   "insert.preview3d": { en: "Switch to 3D Preview to see the insert on the handle.", zh: "切换到 3D 预览查看盖片在手柄上的效果。" },
 
   // Fabric

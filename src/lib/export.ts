@@ -176,6 +176,7 @@ export async function exportPdfSummary(
     handle: string;
     displayName: string;
     handleInsert?: string;
+    handleColor?: string;
     midSection?: string;
   }
 ) {
@@ -434,6 +435,7 @@ export async function exportPdfSummary(
       ["Model ID", threeD.modelId],
       ["Top cap style", threeD.topCap],
       ["Handle style", threeD.handle],
+      ...(threeD.handleColor ? ([["Handle color", threeD.handleColor]] as [string, string][]) : []),
       ...(threeD.handleInsert ? ([["Handle insert", threeD.handleInsert]] as [string, string][]) : []),
       ...(threeD.midSection ? ([["Middle section", threeD.midSection]] as [string, string][]) : []),
     ];

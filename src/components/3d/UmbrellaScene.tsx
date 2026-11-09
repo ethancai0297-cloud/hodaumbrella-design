@@ -1,6 +1,6 @@
 import { Canvas, useThree } from "@react-three/fiber";
 import { OrbitControls, Environment, ContactShadows } from "@react-three/drei";
-import { Suspense, forwardRef, useEffect, useImperativeHandle, useMemo, useRef } from "react";
+import { useCallback, Suspense, forwardRef, useEffect, useImperativeHandle, useMemo, useRef } from "react";
 import * as THREE from "three";
 import type { UmbrellaModelConfig } from "@/3d/models/registry";
 import type { HandleInsertOptions, MidSectionOptions } from "@/types/design";
@@ -25,6 +25,7 @@ interface Props {
   capColor?: string;
   handleInsert?: HandleInsertOptions;
   midSection?: MidSectionOptions;
+  handleColor?: string;
   showFrame: boolean;
   textureDeps: unknown[];
   background?: string;
@@ -33,7 +34,7 @@ interface Props {
 }
 
 export const UmbrellaScene = forwardRef<SceneApi, Props>(function UmbrellaScene(
-  { config, svg, fabricColor, capColor, handleInsert, midSection, showFrame, textureDeps, background, debugPanelNumbers, textureFlipY },
+  { config, svg, fabricColor, capColor, handleInsert, midSection, handleColor, showFrame, textureDeps, background, debugPanelNumbers, textureFlipY },
   ref
 ) {
   const useGLB = !!config.model_file && config.model_file.toLowerCase().endsWith(".glb");
@@ -129,6 +130,7 @@ export const UmbrellaScene = forwardRef<SceneApi, Props>(function UmbrellaScene(
               debugPanelNumbers={debugPanelNumbers}
               handleInsert={handleInsert}
               midSection={midSection}
+              handleColor={handleColor}
               flipY={textureFlipY}
             />
           ) : (
@@ -176,8 +178,26 @@ function SceneController({
   useGLB: boolean;
   register: (api: InternalApi) => void;
 }) {
-  const { camera, gl, scene } = useThree();
+  const { camera, gl, scene, size } = useThree();
   const controlsRef = useRef<any>(null);
+
+  // On-screen pan offset in CSS px (see the pan effect below).
+  const panRef = useRef({ x: 0, y: 0 });
+  const applyPan = useCallback(() => {
+    const cam = camera as THREE.PerspectiveCamera;
+    const { x, y } = panRef.current;
+    if (!x && !y) cam.clearViewOffset();
+    else {
+      const w = gl.domElement.clientWidth || 1;
+      const h = gl.domElement.clientHeight || 1;
+      cam.setViewOffset(w, h, -x, -y, w, h);
+    }
+    cam.updateProjectionMatrix();
+  }, [camera, gl]);
+  const resetPan = useCallback(() => {
+    panRef.current = { x: 0, y: 0 };
+    applyPan();
+  }, [applyPan]);
 
   const presets = useMemo<Record<CameraPreset, [THREE.Vector3, THREE.Vector3]>>(() => {
     if (useGLB) {
@@ -214,6 +234,7 @@ function SceneController({
   useEffect(() => {
     const api: InternalApi = {
       setView: (p) => {
+        resetPan();
         const [pos, tgt] = presets[p];
         camera.position.copy(pos);
         camera.lookAt(tgt);
@@ -247,6 +268,10 @@ function SceneController({
         const [pos, tgt] = presets[p];
         const prevPos = camera.position.clone();
         const prevTgt = controlsRef.current?.target?.clone();
+        // Exported views are always centered: drop the on-screen pan while capturing.
+        const prevPan = { ...panRef.current };
+        panRef.current = { x: 0, y: 0 };
+        applyPan();
         camera.position.copy(pos);
         camera.lookAt(tgt);
         camera.updateProjectionMatrix();
@@ -263,12 +288,65 @@ function SceneController({
           controlsRef.current.target.copy(prevTgt);
           controlsRef.current.update();
         }
+        panRef.current = prevPan;
+        applyPan();
         gl.render(scene, camera);
         return url;
       },
     };
     register(api);
-  }, [presets, camera, gl, scene, register]);
+  }, [presets, camera, gl, scene, register, applyPan, resetPan]);
+
+  // Screen-space pan: right-drag (two-finger press-drag on a Mac trackpad) or
+  // Shift + drag slides the whole picture without changing the viewing angle.
+  // Implemented as a camera view offset, so perspective is untouched; orbit and
+  // zoom keep working around the same target.
+  useEffect(() => {
+    const el = gl.domElement;
+    let drag: { id: number; x: number; y: number } | null = null;
+    const isPan = (e: PointerEvent) => e.pointerType === "mouse" && (e.button === 2 || (e.button === 0 && e.shiftKey));
+    const down = (e: PointerEvent) => {
+      if (!isPan(e)) return;
+      e.preventDefault();
+      e.stopImmediatePropagation(); // keep OrbitControls from rotating
+      drag = { id: e.pointerId, x: e.clientX, y: e.clientY };
+      el.setPointerCapture(e.pointerId);
+      el.style.cursor = "grabbing";
+    };
+    const move = (e: PointerEvent) => {
+      if (!drag || e.pointerId !== drag.id) return;
+      e.stopImmediatePropagation();
+      panRef.current = { x: panRef.current.x + (e.clientX - drag.x), y: panRef.current.y + (e.clientY - drag.y) };
+      drag.x = e.clientX;
+      drag.y = e.clientY;
+      applyPan();
+    };
+    const up = (e: PointerEvent) => {
+      if (!drag || e.pointerId !== drag.id) return;
+      e.stopImmediatePropagation();
+      drag = null;
+      el.style.cursor = "";
+      if (el.hasPointerCapture(e.pointerId)) el.releasePointerCapture(e.pointerId);
+    };
+    const noMenu = (e: Event) => e.preventDefault();
+    el.addEventListener("pointerdown", down, { capture: true });
+    el.addEventListener("pointermove", move, { capture: true });
+    el.addEventListener("pointerup", up, { capture: true });
+    el.addEventListener("pointercancel", up, { capture: true });
+    el.addEventListener("contextmenu", noMenu);
+    return () => {
+      el.removeEventListener("pointerdown", down, { capture: true });
+      el.removeEventListener("pointermove", move, { capture: true });
+      el.removeEventListener("pointerup", up, { capture: true });
+      el.removeEventListener("pointercancel", up, { capture: true });
+      el.removeEventListener("contextmenu", noMenu);
+    };
+  }, [gl, applyPan]);
+
+  // Keep the pan offset valid when the canvas is resized.
+  useEffect(() => {
+    applyPan();
+  }, [size.width, size.height, applyPan]);
 
   const orbitTarget: [number, number, number] = useGLB
     ? [0, 0, 0]
@@ -283,7 +361,7 @@ function SceneController({
       enableDamping
       dampingFactor={0.08}
       enableRotate
-      enablePan
+      enablePan={false}
       enableZoom
       minDistance={orbitMin}
       maxDistance={orbitMax}

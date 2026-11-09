@@ -117,6 +117,12 @@ const dict: Dict = {
   "insert.removeLogo": { en: "Remove logo", zh: "移除 Logo" },
   "insert.logoSize": { en: "Logo size", zh: "Logo 大小" },
   "insert.logoTooLarge": { en: "Logo must be under 2 MB", zh: "Logo 文件需小于 2 MB" },
+  "tab.label": { en: "Design options", zh: "设计选项" },
+  "tab.canopy": { en: "Canopy", zh: "伞面设计" },
+  "tab.handle": { en: "Handle", zh: "伞头设计" },
+  "handle.title": { en: "Handle color", zh: "手柄颜色" },
+  "handle.desc": { en: "Main body of the BSS-ST-1 handle. Middle-section zones left unset follow this color.", zh: "BSS-ST-1 手柄主体颜色；中段未单独设置的部分会跟随此颜色。" },
+  "handle.reset": { en: "Default", zh: "恢复默认" },
   "mid.title": { en: "Middle section (open button)", zh: "中段配色（开伞按钮）" },
   "mid.desc": { en: "Two zones, each customizable. Not set = same as the handle.", zh: "两个区域可分别定制，未设置时与手柄同色。" },
   "mid.body": { en: "Body color", zh: "主体颜色" },
@@ -139,6 +145,7 @@ const dict: Dict = {
   "color.Royal Blue": { en: "Royal Blue", zh: "宝蓝" },
   "color.Grey": { en: "Grey", zh: "灰色" },
   "color.Silver": { en: "Silver", zh: "银色" },
+  "color.Brown": { en: "Brown", zh: "棕色" },
   "color.Gold": { en: "Gold", zh: "金色" },
 
   // Canvas overlay

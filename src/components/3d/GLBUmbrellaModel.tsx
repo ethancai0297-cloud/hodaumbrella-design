@@ -23,6 +23,8 @@ interface Props {
   debugPanelNumbers?: boolean;
   /** Customization of the handle insert mesh (`handle_insert`), if the GLB has one. */
   handleInsert?: HandleInsertOptions;
+  /** Handle body color (mesh `handle`); unset keeps the baked color. */
+  handleColor?: string;
   /** Colors of the two-zone middle section (`mid_body` / `mid_accent`), if the GLB has one. */
   midSection?: MidSectionOptions;
   /** Kept for API compatibility; the projection handles orientation. */
@@ -51,6 +53,7 @@ export function GLBUmbrellaModel({
   debugPanelNumbers = false,
   handleInsert,
   midSection,
+  handleColor,
 }: Props) {
   const gltf = useGLTF(config.model_file);
   const texture = useCanopyProjectionTexture(svg, config.category, textureDeps);
@@ -180,13 +183,33 @@ export function GLBUmbrellaModel({
     };
   }, [insert, handleInsert?.color, handleInsert?.finish, handleInsert?.logoSrc, handleInsert?.logoScale]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Handle body (mesh `handle`): own material so its color can change.
+  const handleBody = useMemo(() => {
+    if (!root) return null;
+    let found: { material: THREE.MeshStandardMaterial; baked: THREE.Color } | null = null;
+    root.traverse((o) => {
+      if (found || !(o instanceof THREE.Mesh) || o.name.trim().toLowerCase() !== "handle") return;
+      const src = (Array.isArray(o.material) ? o.material[0] : o.material) as THREE.MeshStandardMaterial;
+      const material = src.clone();
+      o.material = material;
+      found = { material, baked: material.color.clone() };
+    });
+    return found as { material: THREE.MeshStandardMaterial; baked: THREE.Color } | null;
+  }, [root]);
+  useEffect(() => {
+    if (!handleBody) return;
+    if (handleColor) handleBody.material.color.set(handleColor);
+    else handleBody.material.color.copy(handleBody.baked);
+    handleBody.material.needsUpdate = true;
+  }, [handleBody, handleColor]);
+
   // Middle section (中段): two independently colored zones, default = handle color.
   const mid = useMemo(() => (root ? findMidSection(root) : null), [root]);
   useEffect(() => {
     if (!mid) return;
-    applyMidZone(mid.body, midSection?.bodyColor, "matte");
-    applyMidZone(mid.accent, midSection?.accentColor, midSection?.accentFinish ?? "metal");
-  }, [mid, midSection?.bodyColor, midSection?.accentColor, midSection?.accentFinish]);
+    applyMidZone(mid.body, midSection?.bodyColor, "matte", handleColor);
+    applyMidZone(mid.accent, midSection?.accentColor, midSection?.accentFinish ?? "metal", handleColor);
+  }, [mid, midSection?.bodyColor, midSection?.accentColor, midSection?.accentFinish, handleColor]);
 
   // Frame visibility.
   useEffect(() => {

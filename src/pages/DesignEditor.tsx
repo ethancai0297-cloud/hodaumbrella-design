@@ -45,6 +45,7 @@ import {
   DEFAULT_HANDLE_INSERT,
   DesignProject,
   FABRIC_PRESETS,
+  HANDLE_COLOR_PRESETS,
   HANDLE_INSERT_PRESETS,
   HANDLE_INSERT_SIZE_MM,
   HandleInsertFinish,
@@ -122,6 +123,8 @@ const DesignEditor = () => {
   const [dryToggle, setDryToggle] = useState<"auto" | "dry" | "wet">("auto");
   const [artworkHover, setArtworkHover] = useState(false);
   const [viewMode, setViewMode] = useState<"2d" | "3d">("2d");
+  // Design option groups: canopy (伞面) vs handle (伞头, only for models with handle parts)
+  const [designTab, setDesignTab] = useState<"canopy" | "handle">("canopy");
   const [showFrame, setShowFrame] = useState(true);
   const [debugPanelNumbers, setDebugPanelNumbers] = useState(false);
   const [headlessCapture, setHeadlessCapture] = useState<null | {
@@ -267,7 +270,19 @@ const DesignEditor = () => {
   const mid: MidSectionOptions = project.midSection ?? {};
   const updateMid = (patch: Partial<MidSectionOptions>) =>
     updateProject({ midSection: { ...mid, ...patch } });
-  const handleColor = model3d?.handle_color ?? "#1a1a1a";
+  const handleColor = project.handleColor ?? model3d?.handle_color ?? "#1a1a1a";
+  const hasHandleDesign = !!(model3d?.handle_insert || model3d?.mid_section);
+  const showHandleTab = hasHandleDesign && designTab === "handle";
+  const openDesignTab = (tab: "canopy" | "handle") => {
+    setDesignTab(tab);
+    if (tab === "handle") {
+      // The handle only exists in 3D: switch there and frame it.
+      setViewMode("3d");
+      setTimeout(() => sceneRef.current?.setView("handle"), 400);
+    } else if (viewMode === "3d") {
+      sceneRef.current?.setView("perspective");
+    }
+  };
   const insertLogoInputRef = useRef<HTMLInputElement>(null);
   const handleInsertLogo = (file: File) => {
     if (file.size > 2 * 1024 * 1024) {
@@ -465,6 +480,7 @@ const DesignEditor = () => {
             handle: string;
             displayName: string;
             handleInsert?: string;
+            handleColor?: string;
             midSection?: string;
           }
         | undefined;
@@ -491,6 +507,7 @@ const DesignEditor = () => {
                   insert.logoFileName ? ` · logo: ${insert.logoFileName}` : " · no logo"
                 }`
               : undefined,
+            handleColor: hasHandleDesign ? handleColor : undefined,
             midSection: model3d.mid_section
               ? `body ${mid.bodyColor ?? "same as handle"} · accent ${mid.accentColor ?? "same as handle"}${
                   mid.accentColor ? ` (${mid.accentFinish ?? "metal"})` : ""
@@ -578,6 +595,27 @@ const DesignEditor = () => {
       <div className="flex-1 grid grid-cols-[260px_1fr_300px] xl:grid-cols-[280px_1fr_320px] min-h-0">
         {/* Left sidebar */}
         <aside className="border-r border-border bg-card overflow-y-auto p-5">
+          {hasHandleDesign && (
+            <div role="tablist" aria-label={t("tab.label")} className="grid grid-cols-2 gap-1 p-1 mb-5 rounded-lg bg-muted">
+              {(["canopy", "handle"] as const).map((tab) => (
+                <button
+                  key={tab}
+                  role="tab"
+                  aria-selected={designTab === tab}
+                  onClick={() => openDesignTab(tab)}
+                  className={cn(
+                    "h-9 rounded-md text-sm font-medium transition",
+                    designTab === tab ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                  )}
+
+                >
+                  {t(`tab.${tab}`)}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {!showHandleTab && (<>
           <WizardPanel
             category={project.umbrellaCategory}
             ribCount={project.ribCount}
@@ -756,8 +794,54 @@ const DesignEditor = () => {
               />
             </div>
           </section>
+          </>)}
 
-          {model3d?.handle_insert && (
+          {showHandleTab && (
+            <section>
+              <div className="flex items-center justify-between mb-1">
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t("handle.title")}</h3>
+                {project.handleColor && (
+                  <button
+                    onClick={() => updateProject({ handleColor: undefined })}
+                    className="text-xs px-2 py-0.5 rounded border border-border text-muted-foreground hover:bg-muted transition"
+                  >
+                    {t("handle.reset")}
+                  </button>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground mb-3">{t("handle.desc")}</p>
+              <div className="grid grid-cols-4 gap-2">
+                {HANDLE_COLOR_PRESETS.map((c) => (
+                  <button
+                    key={c.value}
+                    onClick={() => updateProject({ handleColor: c.value })}
+                    title={t(`color.${c.name}`)}
+                    aria-label={c.name}
+                    className={cn(
+                      "h-9 rounded-md border-2 transition",
+                      handleColor === c.value ? "border-primary scale-105" : "border-border"
+                    )}
+                    style={{ background: c.value }}
+                  />
+                ))}
+              </div>
+              <div className="mt-2 flex items-center gap-2">
+                <Input
+                  type="color"
+                  value={handleColor}
+                  onChange={(e) => updateProject({ handleColor: e.target.value })}
+                  className="h-9 w-14 p-1"
+                />
+                <Input
+                  value={handleColor}
+                  onChange={(e) => updateProject({ handleColor: e.target.value })}
+                  className="h-9 text-xs"
+                />
+              </div>
+            </section>
+          )}
+
+          {showHandleTab && model3d?.handle_insert && (
             <>
               <Separator className="my-5" />
               <section>
@@ -855,7 +939,7 @@ const DesignEditor = () => {
             </>
           )}
 
-          {model3d?.mid_section && (
+          {showHandleTab && model3d?.mid_section && (
             <>
               <Separator className="my-5" />
               <section>
@@ -1144,6 +1228,7 @@ const DesignEditor = () => {
                     capColor={project.capColor}
                     handleInsert={model3d.handle_insert ? insert : undefined}
                     midSection={model3d.mid_section ? mid : undefined}
+                    handleColor={hasHandleDesign ? project.handleColor : undefined}
                     showFrame={showFrame}
                     debugPanelNumbers={debugPanelNumbers}
                     textureDeps={[
@@ -1242,6 +1327,7 @@ const DesignEditor = () => {
                 capColor={project.capColor}
                 handleInsert={model3d.handle_insert ? insert : undefined}
                 midSection={model3d.mid_section ? mid : undefined}
+                    handleColor={hasHandleDesign ? project.handleColor : undefined}
                 showFrame={showFrame}
                 textureDeps={[project]}
               />

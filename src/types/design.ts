@@ -89,6 +89,18 @@ export const MID_SECTION_PRESETS: { name: string; value: string }[] = [
   { name: "Green", value: "#1f7a4d" },
 ];
 
+/** Handle body colors (BSS-ST-1). Unset = the model's default handle color. */
+export const HANDLE_COLOR_PRESETS: { name: string; value: string }[] = [
+  { name: "Black", value: "#1a1a1a" },
+  { name: "Grey", value: "#5b6068" },
+  { name: "White", value: "#f2f3f5" },
+  { name: "Navy", value: "#1c2a4d" },
+  { name: "Royal Blue", value: "#1f56c3" },
+  { name: "Red", value: "#b3262d" },
+  { name: "Green", value: "#1f6b45" },
+  { name: "Brown", value: "#5a3a22" },
+];
+
 export interface DesignProject {
   id: string;
   projectName: string;
@@ -101,6 +113,8 @@ export interface DesignProject {
   capColor?: string;
   /** Only used by models whose handle has a customizable insert (golf + BSS-ST-1). */
   handleInsert?: HandleInsertOptions;
+  /** Handle body color (golf + BSS-ST-1). Unset = model default. */
+  handleColor?: string;
   /** Only used by models with a customizable middle section (golf + BSS-ST-1). */
   midSection?: MidSectionOptions;
   artworkItems: ArtworkItem[];

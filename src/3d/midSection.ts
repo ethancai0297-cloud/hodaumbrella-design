@@ -40,10 +40,23 @@ export function findMidSection(root: THREE.Object3D, bodyName = "mid_body", acce
   return { body: body as MidSectionZone | null, accent: accent as MidSectionZone | null };
 }
 
-export function applyMidZone(zone: MidSectionZone | null, color?: string, finish?: HandleInsertFinish) {
+/**
+ * @param fallbackColor used when the zone has no color of its own (the
+ *        customer's handle color), keeping the baked handle-like finish.
+ */
+export function applyMidZone(
+  zone: MidSectionZone | null,
+  color?: string,
+  finish?: HandleInsertFinish,
+  fallbackColor?: string
+) {
   if (!zone) return;
   const m = zone.material;
-  if (color) {
+  if (!color && fallbackColor) {
+    m.color.set(fallbackColor);
+    m.metalness = zone.baked.metalness;
+    m.roughness = zone.baked.roughness;
+  } else if (color) {
     m.color.set(color);
     const f = FINISH[finish ?? "matte"] ?? FINISH.matte;
     m.metalness = f.metalness;

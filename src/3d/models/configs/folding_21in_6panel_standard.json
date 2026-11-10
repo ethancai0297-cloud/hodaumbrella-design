@@ -1,0 +1,52 @@
+{
+  "model_id": "folding_21in_6panel_standard",
+  "category": "folding",
+  "display_name": "Folding umbrella · 21\" · 6 panel",
+  "rib_count": 6,
+  "panel_count": 6,
+  "rib_length_inch": 21,
+  "rib_length_cm": 53.5,
+  "canopy_diameter_cm": 100,
+  "canopy_height_cm": 18,
+  "canopy_arc_length_cm": 56,
+  "shaft_length_cm": 47,
+  "shaft_diameter_mm": 12,
+  "shaft_color": "#1a1a1a",
+  "top_cap_style": "rounded_dome",
+  "top_cap_dimensions": {
+    "radius_mm": 9,
+    "height_mm": 12
+  },
+  "top_cap_color": "#111111",
+  "rib_tip_style": "plastic_bead",
+  "rib_tip_dimensions": {
+    "radius_mm": 4
+  },
+  "ferrule_style": "none",
+  "handle_style": "Carabiner auto open/close handle",
+  "handle_material": "TBD",
+  "handle_color": "#1a1a1a",
+  "canopy_material": "190T_polyester",
+  "canopy_layer": "single",
+  "handle_dimensions": {
+    "height_mm": 134.5,
+    "width_mm": 67.7,
+    "depth_mm": 29.6,
+    "top_opening_mm": 26,
+    "insert_width_mm": 15,
+    "insert_length_mm": 45.9,
+    "button_width_mm": 14.7,
+    "button_length_mm": 26.7
+  },
+  "handle_insert": {
+    "mesh": "handle_insert",
+    "width_mm": 15,
+    "length_mm": 45.9
+  },
+  "handle_button": {
+    "mesh": "handle_button"
+  },
+  "handle_camera": "auto",
+  "model_file": "/models/folding_21in_6panel_standard.glb",
+  "uv_template_file": "/models/folding_21in_6panel_standard_uv.png"
+}

@@ -13,7 +13,8 @@ import type { HandleInsertFinish, HandleInsertOptions } from "@/types/design";
 
 export const HANDLE_INSERT_MESH = /^handle_insert$/i;
 
-/** Canvas resolution: 15 × 70 mm at ~20 px/mm. */
+/** Canvas resolution: 20 px/mm. Default plate = BSS-ST-1, 15 × 70 mm. */
+const PX_PER_MM = 20;
 const TEX_W = 300;
 const TEX_H = 1400;
 
@@ -87,12 +88,28 @@ export function loadImage(src: string): Promise<HTMLImageElement> {
   return p;
 }
 
+export interface InsertFrame {
+  w: number;
+  h: number;
+}
+
 /** The insert's horizontal frame: 70 × 15 mm at 20 px/mm (canopy end on the left). */
-export const INSERT_FRAME = { w: TEX_H, h: TEX_W };
+export const INSERT_FRAME: InsertFrame = { w: TEX_H, h: TEX_W };
+
+/** Horizontal frame for a plate of `sizeMm` (w = across, h = along the handle). */
+export function insertFrame(sizeMm?: { w: number; h: number }): InsertFrame {
+  if (!sizeMm) return INSERT_FRAME;
+  return { w: Math.round(sizeMm.h * PX_PER_MM), h: Math.round(sizeMm.w * PX_PER_MM) };
+}
 
 /** Bounding box of the artwork group (logo + text) in frame px, before rotation. */
-export function insertArtSize(ctx: CanvasRenderingContext2D, opts: HandleInsertOptions, logo?: HTMLImageElement | null) {
-  const H = INSERT_FRAME.h;
+export function insertArtSize(
+  ctx: CanvasRenderingContext2D,
+  opts: HandleInsertOptions,
+  logo?: HTMLImageElement | null,
+  frame: InsertFrame = INSERT_FRAME
+) {
+  const H = frame.h;
   const scale = opts.artScale ?? opts.logoScale ?? 0.6;
   const unit = H * 0.8 * scale; // logo height / text cap height at scale 1
   const gap = unit * 0.25;
@@ -111,11 +128,16 @@ export function insertArtSize(ctx: CanvasRenderingContext2D, opts: HandleInsertO
  * Draw the plate color and the artwork group into a context whose coordinate
  * system is the horizontal frame (INSERT_FRAME, canopy end on the left).
  */
-export function drawInsertArt(ctx: CanvasRenderingContext2D, opts: HandleInsertOptions, logo?: HTMLImageElement | null) {
-  const { w: W, h: H } = INSERT_FRAME;
+export function drawInsertArt(
+  ctx: CanvasRenderingContext2D,
+  opts: HandleInsertOptions,
+  logo?: HTMLImageElement | null,
+  frame: InsertFrame = INSERT_FRAME
+) {
+  const { w: W, h: H } = frame;
   ctx.fillStyle = opts.color;
   ctx.fillRect(0, 0, W, H);
-  const m = insertArtSize(ctx, opts, logo);
+  const m = insertArtSize(ctx, opts, logo, frame);
   if (!m.w) return;
   ctx.save();
   ctx.translate(W / 2 + (opts.artX ?? 0) * W, H / 2 + (opts.artY ?? 0) * H);
@@ -136,10 +158,14 @@ export function drawInsertArt(ctx: CanvasRenderingContext2D, opts: HandleInsertO
 }
 
 /** Paint base color + artwork into the insert texture (vertical, as on the handle). */
-export async function paintInsertTexture(opts: HandleInsertOptions): Promise<THREE.CanvasTexture> {
+export async function paintInsertTexture(
+  opts: HandleInsertOptions,
+  sizeMm?: { w: number; h: number }
+): Promise<THREE.CanvasTexture> {
+  const frame = insertFrame(sizeMm);
   const canvas = document.createElement("canvas");
-  canvas.width = TEX_W;
-  canvas.height = TEX_H;
+  canvas.width = frame.h;
+  canvas.height = frame.w;
   const ctx = canvas.getContext("2d")!;
   let logo: HTMLImageElement | null = null;
   if (opts.logoSrc) {
@@ -153,9 +179,9 @@ export async function paintInsertTexture(opts: HandleInsertOptions): Promise<THR
   // left (canopy end) becomes the top of the insert, its top edge faces the
   // viewer's right, so artwork reads top-to-bottom on the standing handle and
   // upright in the horizontal view.
-  ctx.translate(TEX_W, 0);
+  ctx.translate(frame.h, 0);
   ctx.rotate(Math.PI / 2);
-  drawInsertArt(ctx, opts, logo);
+  drawInsertArt(ctx, opts, logo, frame);
 
   const tex = new THREE.CanvasTexture(canvas);
   tex.colorSpace = THREE.SRGBColorSpace;

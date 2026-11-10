@@ -562,7 +562,7 @@ export async function exportPdfSummary(
     pdf.setTextColor(110, 110, 120);
     pdf.setFontSize(9);
     const note =
-      "Colors on screen are indicative. Final handle, insert and middle-section colors are matched to physical samples before production.";
+      "Colors on screen are indicative. Final handle, insert, button and middle-section colors are matched to physical samples before production.";
     pdf.text(pdf.splitTextToSize(note, pageW - 80), 40, Math.min(sy, pageH - 60));
 
     pdf.setDrawColor(220);

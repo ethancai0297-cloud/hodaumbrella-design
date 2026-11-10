@@ -1,23 +1,27 @@
 import { useEffect, useRef, useState } from "react";
 import type { HandleInsertOptions } from "@/types/design";
-import { INSERT_FRAME, drawInsertArt, loadImage } from "@/3d/handleInsert";
+import { drawInsertArt, insertFrame, loadImage } from "@/3d/handleInsert";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/i18n/i18n";
 
 /**
- * Small editor for the BSS-ST-1 insert artwork. Shows the 15 × 70 mm plate
+ * Small editor for the handle insert artwork. Shows the plate (default 15 × 70 mm)
  * lying horizontally (canopy end on the left, as in the PDF's horizontal view).
  * Drag the artwork to move it; sliders set size and rotation.
  */
 export function InsertArtEditor({
   value,
   onChange,
+  sizeMm,
 }: {
   value: HandleInsertOptions;
   onChange: (patch: Partial<HandleInsertOptions>) => void;
+  /** Plate size, mm (w = across, h = along the handle). */
+  sizeMm?: { w: number; h: number };
 }) {
+  const frame = insertFrame(sizeMm);
   const { t } = useI18n();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [logo, setLogo] = useState<HTMLImageElement | null>(null);
@@ -41,12 +45,12 @@ export function InsertArtEditor({
   useEffect(() => {
     const c = canvasRef.current;
     if (!c) return;
-    c.width = INSERT_FRAME.w / 2;
-    c.height = INSERT_FRAME.h / 2;
+    c.width = frame.w / 2;
+    c.height = frame.h / 2;
     const ctx = c.getContext("2d")!;
     ctx.setTransform(0.5, 0, 0, 0.5, 0, 0);
-    drawInsertArt(ctx, value, logo);
-  }, [value, logo]);
+    drawInsertArt(ctx, value, logo, frame);
+  }, [value, logo, frame.w, frame.h]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const clamp = (v: number) => Math.max(-0.5, Math.min(0.5, v));
   const onDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
@@ -113,7 +117,7 @@ export function InsertArtEditor({
           onPointerUp={onUp}
           onPointerCancel={onUp}
           className="w-full rounded-md border border-border cursor-move touch-none"
-          style={{ aspectRatio: `${INSERT_FRAME.w} / ${INSERT_FRAME.h}` }}
+          style={{ aspectRatio: `${frame.w} / ${frame.h}` }}
         />
         <p className="text-[11px] text-muted-foreground mt-1">{t("insert.layoutHint")}</p>
       </div>

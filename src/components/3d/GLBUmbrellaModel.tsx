@@ -1,5 +1,5 @@
 import { useEffect, useMemo } from "react";
-import type { HandleInsertOptions, MidSectionOptions } from "@/types/design";
+import type { HandleButtonOptions, HandleInsertOptions, MidSectionOptions } from "@/types/design";
 import { applyMidZone, findMidSection } from "@/3d/midSection";
 import {
   applyInsertFinish,
@@ -27,6 +27,8 @@ interface Props {
   handleColor?: string;
   /** Colors of the two-zone middle section (`mid_body` / `mid_accent`), if the GLB has one. */
   midSection?: MidSectionOptions;
+  /** Open-button color (mesh `handle_button`), if the GLB has one. Unset = handle color. */
+  handleButton?: HandleButtonOptions;
   /** Kept for API compatibility; the projection handles orientation. */
   flipY?: boolean;
   /** Kept for API compatibility; orientation is now computed automatically
@@ -54,6 +56,7 @@ export function GLBUmbrellaModel({
   handleInsert,
   midSection,
   handleColor,
+  handleButton,
 }: Props) {
   const gltf = useGLTF(config.model_file);
   const texture = useCanopyProjectionTexture(svg, config.category, textureDeps);
@@ -168,7 +171,10 @@ export function GLBUmbrellaModel({
     if (!insert || !handleInsert) return;
     let cancelled = false;
     applyInsertFinish(insert.material, handleInsert.finish);
-    paintInsertTexture(handleInsert).then((tex) => {
+    const size = config.handle_insert
+      ? { w: config.handle_insert.width_mm, h: config.handle_insert.length_mm }
+      : undefined;
+    paintInsertTexture(handleInsert, size).then((tex) => {
       if (cancelled) {
         tex.dispose();
         return;
@@ -181,7 +187,7 @@ export function GLBUmbrellaModel({
     return () => {
       cancelled = true;
     };
-  }, [insert, handleInsert?.color, handleInsert?.finish, handleInsert?.logoSrc, handleInsert?.logoScale, handleInsert?.text, handleInsert?.textColor, handleInsert?.artX, handleInsert?.artY, handleInsert?.artScale, handleInsert?.artRotation]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [insert, handleInsert?.color, handleInsert?.finish, handleInsert?.logoSrc, handleInsert?.logoScale, handleInsert?.text, handleInsert?.textColor, handleInsert?.artX, handleInsert?.artY, handleInsert?.artScale, handleInsert?.artRotation, config.handle_insert?.width_mm, config.handle_insert?.length_mm]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Handle body (mesh `handle`): own material so its color can change.
   const handleBody = useMemo(() => {
@@ -210,6 +216,16 @@ export function GLBUmbrellaModel({
     applyMidZone(mid.body, midSection?.bodyColor, "matte", handleColor);
     applyMidZone(mid.accent, midSection?.accentColor, midSection?.accentFinish === "gloss" ? "gloss" : "matte", handleColor);
   }, [mid, midSection?.bodyColor, midSection?.accentColor, midSection?.accentFinish, handleColor]);
+
+  // Open button (mesh `handle_button`): own color, default = handle color.
+  const button = useMemo(
+    () => (root && config.handle_button ? findMidSection(root, config.handle_button.mesh.toLowerCase(), "\u0000").body : null),
+    [root, config.handle_button],
+  );
+  useEffect(() => {
+    if (!button) return;
+    applyMidZone(button, handleButton?.color, handleButton?.finish === "gloss" ? "gloss" : "matte", handleColor);
+  }, [button, handleButton?.color, handleButton?.finish, handleColor]);
 
   // Frame visibility.
   useEffect(() => {
@@ -262,5 +278,6 @@ export function GLBUmbrellaModel({
 
 // Preload registered GLBs
 useGLTF.preload("/models/folding_21in_8panel_standard.glb");
+useGLTF.preload("/models/folding_21in_6panel_standard.glb");
 useGLTF.preload("/models/straight_23in_8panel_standard.glb");
 useGLTF.preload("/models/golf_30in_8panel_standard.glb");

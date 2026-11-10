@@ -54,6 +54,7 @@ import {
   HandleInsertOptions,
   MID_SECTION_PRESETS,
   MidSectionOptions,
+  HandleButtonOptions,
   POUCH_SIZE_CM,
   PouchView,
   PrintingMethod,
@@ -281,8 +282,15 @@ const DesignEditor = () => {
   const mid: MidSectionOptions = project.midSection ?? {};
   const updateMid = (patch: Partial<MidSectionOptions>) =>
     updateProject({ midSection: { ...mid, ...patch } });
+  // Open button (folding carabiner handle); undefined color = same as handle
+  const button: HandleButtonOptions = project.handleButton ?? {};
+  const updateButton = (patch: Partial<HandleButtonOptions>) =>
+    updateProject({ handleButton: { ...button, ...patch } });
+  const insertSizeMm = model3d?.handle_insert
+    ? { w: model3d.handle_insert.width_mm, h: model3d.handle_insert.length_mm }
+    : HANDLE_INSERT_SIZE_MM;
   const handleColor = project.handleColor ?? model3d?.handle_color ?? "#1a1a1a";
-  const hasHandleDesign = !!(model3d?.handle_insert || model3d?.mid_section);
+  const hasHandleDesign = !!(model3d?.handle_insert || model3d?.mid_section || model3d?.handle_button);
   const showHandleTab = hasHandleDesign && designTab === "handle";
   const openDesignTab = (tab: "canopy" | "handle") => {
     setDesignTab(tab);
@@ -526,7 +534,7 @@ const DesignEditor = () => {
             handle: model3d.handle_style,
             displayName: model3d.display_name,
             handleInsert: model3d.handle_insert
-              ? `${HANDLE_INSERT_SIZE_MM.w}×${HANDLE_INSERT_SIZE_MM.h} mm · ${insert.color} · ${normalizeFinish(insert.finish)}${
+              ? `${insertSizeMm.w}×${insertSizeMm.h} mm · ${insert.color} · ${normalizeFinish(insert.finish)}${
                   insert.logoFileName ? ` · logo: ${insert.logoFileName}` : " · no logo"
                 }`
               : undefined,
@@ -870,7 +878,7 @@ const DesignEditor = () => {
               <section>
                 <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">{t("insert.title")}</h3>
                 <p className="text-xs text-muted-foreground mb-3">
-                  {t("insert.desc")} {HANDLE_INSERT_SIZE_MM.w} × {HANDLE_INSERT_SIZE_MM.h} mm
+                  {t("insert.desc")} {insertSizeMm.w} × {insertSizeMm.h} mm
                 </p>
                 <div className="grid grid-cols-4 gap-2">
                   {HANDLE_INSERT_PRESETS.map((c) => (
@@ -948,7 +956,7 @@ const DesignEditor = () => {
                   </Button>
                 )}
                 <div className="mt-4">
-                  <InsertArtEditor value={insert} onChange={updateInsert} />
+                  <InsertArtEditor value={insert} onChange={updateInsert} sizeMm={insertSizeMm} />
                 </div>
               </section>
             </>
@@ -1027,7 +1035,74 @@ const DesignEditor = () => {
               </section>
             </>
           )}
+          {showHandleTab && model3d?.handle_button && (
+            <>
+              <Separator className="my-5" />
+              <section>
+                <div className="flex items-center justify-between mb-1">
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t("button.title")}</h3>
+                  <button
+                    onClick={() => updateButton({ color: undefined })}
+                    className={cn(
+                      "text-xs px-2 py-0.5 rounded border transition",
+                      button.color ? "border-border text-muted-foreground hover:bg-muted" : "border-primary text-primary"
+                    )}
+                  >
+                    {t("mid.sameAsHandle")}
+                  </button>
+                </div>
+                <p className="text-xs text-muted-foreground mb-3">{t("button.desc")}</p>
+                <div className="grid grid-cols-4 gap-2">
+                  {MID_SECTION_PRESETS.map((c) => (
+                    <button
+                      key={c.value}
+                      onClick={() => updateButton({ color: c.value })}
+                      title={t(`color.${c.name}`)}
+                      aria-label={c.name}
+                      className={cn(
+                        "h-9 rounded-md border-2 transition",
+                        button.color === c.value ? "border-primary scale-105" : "border-border"
+                      )}
+                      style={{ background: c.value }}
+                    />
+                  ))}
+                </div>
+                <div className="mt-2 flex items-center gap-2">
+                  <Input
+                    type="color"
+                    value={button.color ?? handleColor}
+                    onChange={(e) => updateButton({ color: e.target.value })}
+                    className="h-9 w-14 p-1"
+                  />
+                  <Input
+                    value={button.color ?? ""}
+                    placeholder={t("mid.sameAsHandle")}
+                    onChange={(e) => updateButton({ color: e.target.value || undefined })}
+                    className="h-9 text-xs"
+                  />
+                </div>
+                {button.color && (
+                  <>
+                    <Label className="text-xs mt-4 mb-2 block">{t("button.finish")}</Label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {(["matte", "gloss"] as HandleInsertFinish[]).map((f) => (
+                        <Button
+                          key={f}
+                          size="sm"
+                          variant={normalizeFinish(button.finish) === f ? "default" : "outline"}
+                          onClick={() => updateButton({ finish: f })}
+                        >
+                          {t(`insert.finish.${f}`)}
+                        </Button>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </section>
+            </>
+          )}
         </aside>
+
 
         {/* Canvas */}
         <main ref={mainRef} className="relative overflow-hidden bg-gradient-subtle min-h-0">
@@ -1243,6 +1318,7 @@ const DesignEditor = () => {
                     capColor={project.capColor}
                     handleInsert={model3d.handle_insert ? insert : undefined}
                     midSection={model3d.mid_section ? mid : undefined}
+                handleButton={model3d.handle_button ? button : undefined}
                     handleColor={hasHandleDesign ? project.handleColor : undefined}
                     showFrame={showFrame}
                     debugPanelNumbers={debugPanelNumbers}
@@ -1342,6 +1418,7 @@ const DesignEditor = () => {
                 capColor={project.capColor}
                 handleInsert={model3d.handle_insert ? insert : undefined}
                 midSection={model3d.mid_section ? mid : undefined}
+                handleButton={model3d.handle_button ? button : undefined}
                     handleColor={hasHandleDesign ? project.handleColor : undefined}
                 showFrame={showFrame}
                 textureDeps={[project]}

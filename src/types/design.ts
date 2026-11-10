@@ -105,6 +105,15 @@ export const MID_SECTION_PRESETS: { name: string; value: string }[] = [
   { name: "Green", value: "#1f7a4d" },
 ];
 
+/**
+ * Open button on handles that have a separate button mesh (`handle_button`,
+ * e.g. the 21" folding carabiner handle). Unset color = same as the handle.
+ */
+export interface HandleButtonOptions {
+  color?: string;
+  finish?: HandleInsertFinish;
+}
+
 /** Handle body colors (BSS-ST-1). Unset = the model's default handle color. */
 export const HANDLE_COLOR_PRESETS: { name: string; value: string }[] = [
   { name: "Black", value: "#1a1a1a" },
@@ -133,6 +142,8 @@ export interface DesignProject {
   handleColor?: string;
   /** Only used by models with a customizable middle section (golf + BSS-ST-1). */
   midSection?: MidSectionOptions;
+  /** Only used by models with a separate open-button mesh (folding + carabiner handle). */
+  handleButton?: HandleButtonOptions;
   artworkItems: ArtworkItem[];
   hasPouch?: boolean;
   pouchArtwork?: ArtworkItem[];

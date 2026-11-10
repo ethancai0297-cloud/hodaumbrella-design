@@ -3,7 +3,7 @@ import { OrbitControls, Environment, ContactShadows } from "@react-three/drei";
 import { useCallback, Suspense, forwardRef, useEffect, useImperativeHandle, useMemo, useRef } from "react";
 import * as THREE from "three";
 import type { UmbrellaModelConfig } from "@/3d/models/registry";
-import type { HandleInsertOptions, MidSectionOptions } from "@/types/design";
+import type { HandleButtonOptions, HandleInsertOptions, MidSectionOptions } from "@/types/design";
 import { UmbrellaModel } from "./UmbrellaModel";
 import { useCanopyTexture } from "./useCanopyTexture";
 import { GLBUmbrellaModel } from "./GLBUmbrellaModel";
@@ -25,6 +25,7 @@ interface Props {
   capColor?: string;
   handleInsert?: HandleInsertOptions;
   midSection?: MidSectionOptions;
+  handleButton?: HandleButtonOptions;
   handleColor?: string;
   showFrame: boolean;
   textureDeps: unknown[];
@@ -34,7 +35,7 @@ interface Props {
 }
 
 export const UmbrellaScene = forwardRef<SceneApi, Props>(function UmbrellaScene(
-  { config, svg, fabricColor, capColor, handleInsert, midSection, handleColor, showFrame, textureDeps, background, debugPanelNumbers, textureFlipY },
+  { config, svg, fabricColor, capColor, handleInsert, midSection, handleButton, handleColor, showFrame, textureDeps, background, debugPanelNumbers, textureFlipY },
   ref
 ) {
   const useGLB = !!config.model_file && config.model_file.toLowerCase().endsWith(".glb");
@@ -130,6 +131,7 @@ export const UmbrellaScene = forwardRef<SceneApi, Props>(function UmbrellaScene(
               debugPanelNumbers={debugPanelNumbers}
               handleInsert={handleInsert}
               midSection={midSection}
+              handleButton={handleButton}
               handleColor={handleColor}
               flipY={textureFlipY}
             />
@@ -143,6 +145,7 @@ export const UmbrellaScene = forwardRef<SceneApi, Props>(function UmbrellaScene(
             />
           )}
           <ContactShadows
+            name="contact-shadows"
             position={[0, useGLB ? -1.6 : -((config.shaft_length_cm) * 0.1) + (config.canopy_height_cm * 0.1 * 0.3) - 0.05, 0]}
             opacity={0.35}
             scale={radius * 5}
@@ -153,6 +156,7 @@ export const UmbrellaScene = forwardRef<SceneApi, Props>(function UmbrellaScene(
             radius={radius}
             canopyHeight={canopyHeight}
             useGLB={useGLB}
+            autoHandleViews={useGLB && config.handle_camera === "auto"}
             register={(api) => (apiRef.current = api)}
           />
         </Suspense>
@@ -171,11 +175,13 @@ function SceneController({
   radius,
   canopyHeight,
   useGLB,
+  autoHandleViews,
   register,
 }: {
   radius: number;
   canopyHeight: number;
   useGLB: boolean;
+  autoHandleViews?: boolean;
   register: (api: InternalApi) => void;
 }) {
   const { camera, gl, scene, size } = useThree();
@@ -235,11 +241,48 @@ function SceneController({
     };
   }, [radius, canopyHeight, useGLB]);
 
+  // Handle close-ups framed from the handle meshes themselves (models with
+  // handle_camera: "auto"). The insert faces away from the shaft axis; the
+  // 3/4 view turns to the side so the handle's profile (e.g. the carabiner
+  // loop) shows.
+  const resolve = useCallback(
+    (p: CameraPreset): [THREE.Vector3, THREE.Vector3] => {
+      if (!autoHandleViews || !p.startsWith("handle")) return presets[p];
+      let body: THREE.Object3D | null = null;
+      let insert: THREE.Object3D | null = null;
+      scene.traverse((o) => {
+        if (!(o as THREE.Mesh).isMesh) return;
+        const n = o.name.trim().toLowerCase();
+        if (n === "handle") body = o;
+        else if (n === "handle_insert") insert = o;
+      });
+      if (!body || !insert) return presets[p];
+      const hb = new THREE.Box3().setFromObject(body);
+      const ib = new THREE.Box3().setFromObject(insert);
+      const tgt = hb.getCenter(new THREE.Vector3());
+      const ic = ib.getCenter(new THREE.Vector3());
+      const H = hb.max.y - hb.min.y;
+      const out = new THREE.Vector3(ic.x, 0, ic.z);
+      if (out.lengthSq() < 1e-8) out.set(0, 0, 1);
+      out.normalize();
+      const D = Math.max(0.65, H * 2.2);
+      const at = (deg: number, up: number) => {
+        const v = out.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), (deg * Math.PI) / 180);
+        return tgt.clone().addScaledVector(v, D).add(new THREE.Vector3(0, up * D, 0));
+      };
+      if (p === "handleFlat") return [at(0, 0), tgt];
+      if (p === "handleAngle") return [at(-62, 0.12), tgt];
+      // Front: insert and button, turned a little so the handle reads in 3D.
+      return [at(-25, 0.15), tgt];
+    },
+    [autoHandleViews, presets, scene]
+  );
+
   useEffect(() => {
     const api: InternalApi = {
       setView: (p) => {
         resetPan();
-        const [pos, tgt] = presets[p];
+        const [pos, tgt] = resolve(p);
         camera.position.copy(pos);
         camera.lookAt(tgt);
         if (controlsRef.current) {
@@ -269,7 +312,7 @@ function SceneController({
         return true;
       },
       captureView: async (p) => {
-        const [pos, tgt] = presets[p];
+        const [pos, tgt] = resolve(p);
         const prevPos = camera.position.clone();
         const prevTgt = controlsRef.current?.target?.clone();
         // Exported views are always centered: drop the on-screen pan while capturing.
@@ -278,6 +321,14 @@ function SceneController({
         applyPan();
         camera.position.copy(pos);
         camera.lookAt(tgt);
+        // Handle close-ups look across the floor: hide the contact shadow so
+        // the exported shot is the handle on plain white. (ContactShadows
+        // re-shows its group every frame, so hide the plane mesh inside it.)
+        const shadow = p.startsWith("handle")
+          ? (scene.getObjectByName("contact-shadows")?.children.find((c) => (c as THREE.Mesh).isMesh) as THREE.Mesh | undefined)
+          : undefined;
+        const shadowWasVisible = shadow?.visible;
+        if (shadow) shadow.visible = false;
         // Point the controls at the same target, otherwise their next update
         // swings the camera back to the old target (e.g. handle close-ups).
         if (controlsRef.current) {
@@ -293,6 +344,7 @@ function SceneController({
         gl.render(scene, camera);
         const url = gl.domElement.toDataURL("image/png");
         gl.setClearColor(prevClear, prevAlpha);
+        if (shadow) shadow.visible = shadowWasVisible ?? true;
         if (prevPos) camera.position.copy(prevPos);
         if (prevTgt && controlsRef.current) {
           controlsRef.current.target.copy(prevTgt);
@@ -305,7 +357,7 @@ function SceneController({
       },
     };
     register(api);
-  }, [presets, camera, gl, scene, register, applyPan, resetPan]);
+  }, [resolve, camera, gl, scene, register, applyPan, resetPan]);
 
   // Screen-space pan: right-drag (two-finger press-drag on a Mac trackpad) or
   // Shift + drag slides the whole picture without changing the viewing angle.

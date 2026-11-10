@@ -1,5 +1,6 @@
 import type { RibCount, UmbrellaCategory } from "@/types/design";
 import folding from "./configs/folding_21in_8panel_standard.json";
+import folding6 from "./configs/folding_21in_6panel_standard.json";
 import straight from "./configs/straight_23in_8panel_standard.json";
 import golf from "./configs/golf_30in_8panel_standard.json";
 
@@ -34,6 +35,13 @@ export interface UmbrellaModelConfig {
   handle_insert?: { mesh: string; width_mm: number; length_mm: number };
   /** Present when the GLB has the two-zone middle section (中段) above the handle. */
   mid_section?: { body_mesh: string; accent_mesh: string; width_mm: number; height_mm: number };
+  /** Present when the GLB has a separately colorable open button (`handle_button`). */
+  handle_button?: { mesh: string };
+  /**
+   * "auto": handle close-up cameras are computed from the handle meshes in
+   * the loaded model. Unset: the fixed golf / BSS-ST-1 framing.
+   */
+  handle_camera?: "auto";
   runner_below_apex_cm?: number;
   stretcher_length_cm?: number;
   model_file: string;
@@ -41,8 +49,10 @@ export interface UmbrellaModelConfig {
 }
 
 // Golf: 30" 8-panel with the BSS-ST-1 handle (customizable insert).
+// Folding: 21" 6- and 8-panel with the carabiner handle (insert + open button).
 const MODELS: UmbrellaModelConfig[] = [
   folding as UmbrellaModelConfig,
+  folding6 as UmbrellaModelConfig,
   straight as UmbrellaModelConfig,
   golf as UmbrellaModelConfig,
 ];

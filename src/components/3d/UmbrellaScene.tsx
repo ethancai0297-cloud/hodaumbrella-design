@@ -1,5 +1,5 @@
 import { Canvas, useThree } from "@react-three/fiber";
-import { OrbitControls, Environment, ContactShadows } from "@react-three/drei";
+import { OrbitControls, Environment } from "@react-three/drei";
 import { useCallback, Suspense, forwardRef, useEffect, useImperativeHandle, useMemo, useRef } from "react";
 import * as THREE from "three";
 import type { UmbrellaModelConfig } from "@/3d/models/registry";
@@ -8,7 +8,21 @@ import { UmbrellaModel } from "./UmbrellaModel";
 import { useCanopyTexture } from "./useCanopyTexture";
 import { GLBUmbrellaModel } from "./GLBUmbrellaModel";
 
-export type CameraPreset = "perspective" | "hero" | "top" | "front" | "side" | "bottom" | "handle" | "handleAngle" | "handleFlat";
+export type CameraPreset = "perspective" | "hero" | "top" | "front" | "side" | "bottom" | "handle" | "handleAngle" | "handleFlat" | "lowTilt";
+
+/** Camera roll per preset, degrees (positive = picture turns clockwise). */
+const PRESET_ROLL: Partial<Record<CameraPreset, number>> = { lowTilt: -45 };
+
+/** Point the camera at `tgt`, rolled by `rollDeg` around the viewing direction. */
+function aimCamera(camera: THREE.Camera, pos: THREE.Vector3, tgt: THREE.Vector3, rollDeg = 0) {
+  camera.position.copy(pos);
+  camera.up.set(0, 1, 0);
+  if (rollDeg) {
+    const dir = tgt.clone().sub(pos).normalize();
+    camera.up.applyAxisAngle(dir, (rollDeg * Math.PI) / 180);
+  }
+  camera.lookAt(tgt);
+}
 
 export interface SceneApi {
   setView: (preset: CameraPreset) => void;
@@ -147,14 +161,6 @@ export const UmbrellaScene = forwardRef<SceneApi, Props>(function UmbrellaScene(
               showFrame={showFrame}
             />
           )}
-          <ContactShadows
-            name="contact-shadows"
-            position={[0, useGLB ? -1.6 : -((config.shaft_length_cm) * 0.1) + (config.canopy_height_cm * 0.1 * 0.3) - 0.05, 0]}
-            opacity={0.35}
-            scale={radius * 5}
-            blur={3.0}
-            far={radius * 2.5}
-          />
           <SceneController
             radius={radius}
             canopyHeight={canopyHeight}
@@ -214,9 +220,9 @@ function SceneController({
       const target = new THREE.Vector3(0, 0, 0);
       return {
         perspective: [new THREE.Vector3(0, 1.2, 4.2), target],
-        // 3/4 view from above-front-right: shows the printed canopy and the
-        // umbrella's shape at once. Used as the hero shot in exports.
-        hero: [new THREE.Vector3(2.4, 2.9, -3.4), new THREE.Vector3(0, 0.2, 0)],
+        // Canopy view from high above-front: the printed canopy almost face-on.
+        // Used as the hero shot in exports.
+        hero: [new THREE.Vector3(0.83, 4.6, 2.3), new THREE.Vector3(0, 0.25, 0)],
         // Tiny +Z offset (not +X) so lookAt resolves screen-up to world -Z,
         // which makes the top view match the 2D editor orientation exactly.
         top: [new THREE.Vector3(0, 7.5, 0.001), target],
@@ -228,6 +234,9 @@ function SceneController({
         handle: [new THREE.Vector3(0.3, -0.95, 0.9), new THREE.Vector3(0, -1.08, 0)],
         handleAngle: [new THREE.Vector3(0.85, -0.85, 0.35), new THREE.Vector3(0, -1.08, 0)],
         handleFlat: [new THREE.Vector3(0, -1.1, 1.0), new THREE.Vector3(0, -1.1, 0)],
+        // Side view from just below the rim, rolled so the top points up-right
+        // (umbrella tilted 45°): canopy, frame and handle in one shot.
+        lowTilt: [new THREE.Vector3(-1.8, -0.95, 4.9), new THREE.Vector3(0, -0.1, 0)],
       };
     }
     const target = new THREE.Vector3(0, canopyHeight * 0.4, 0);
@@ -241,6 +250,7 @@ function SceneController({
       handle: [new THREE.Vector3(0.001, -radius * 1.9, 0), target],
       handleAngle: [new THREE.Vector3(0.001, -radius * 1.9, 0), target],
       handleFlat: [new THREE.Vector3(0.001, -radius * 1.9, 0), target],
+      lowTilt: [new THREE.Vector3(radius * 0.6, -radius * 1.1, radius * 1.5), target],
     };
   }, [radius, canopyHeight, useGLB]);
 
@@ -292,8 +302,7 @@ function SceneController({
       setView: (p) => {
         resetPan();
         const [pos, tgt] = resolve(p);
-        camera.position.copy(pos);
-        camera.lookAt(tgt);
+        aimCamera(camera, pos, tgt);
         if (controlsRef.current) {
           controlsRef.current.target.copy(tgt);
           controlsRef.current.update();
@@ -328,16 +337,7 @@ function SceneController({
         const prevPan = { ...panRef.current };
         panRef.current = { x: 0, y: 0 };
         applyPan();
-        camera.position.copy(pos);
-        camera.lookAt(tgt);
-        // Handle close-ups look across the floor: hide the contact shadow so
-        // the exported shot is the handle on plain white. (ContactShadows
-        // re-shows its group every frame, so hide the plane mesh inside it.)
-        const shadow = p.startsWith("handle")
-          ? (scene.getObjectByName("contact-shadows")?.children.find((c) => (c as THREE.Mesh).isMesh) as THREE.Mesh | undefined)
-          : undefined;
-        const shadowWasVisible = shadow?.visible;
-        if (shadow) shadow.visible = false;
+        aimCamera(camera, pos, tgt, PRESET_ROLL[p]);
         // Point the controls at the same target, otherwise their next update
         // swings the camera back to the old target (e.g. handle close-ups).
         if (controlsRef.current) {
@@ -353,7 +353,7 @@ function SceneController({
         gl.render(scene, camera);
         const url = gl.domElement.toDataURL("image/png");
         gl.setClearColor(prevClear, prevAlpha);
-        if (shadow) shadow.visible = shadowWasVisible ?? true;
+        camera.up.set(0, 1, 0);
         if (prevPos) camera.position.copy(prevPos);
         if (prevTgt && controlsRef.current) {
           controlsRef.current.target.copy(prevTgt);

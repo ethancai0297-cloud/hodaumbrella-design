@@ -14,6 +14,11 @@ import type { UmbrellaModelConfig } from "@/3d/models/registry";
 import { applyCanopyTexture, measureCanopy } from "@/3d/canopyProjection";
 import { useCanopyProjectionTexture } from "./useCanopyProjectionTexture";
 
+// Share of the canopy color that ignores lighting: keeps the printed color
+// even across the whole canopy (no bright top / dark sides) while the rest
+// still follows the lights, so the shape keeps a little depth.
+const CANOPY_FLAT = 0.75;
+
 interface Props {
   config: UmbrellaModelConfig;
   svg: SVGSVGElement | null;
@@ -82,7 +87,8 @@ export function GLBUmbrellaModel({
     [],
   );
   useEffect(() => {
-    solidMaterial.color.set(fabricColor);
+    solidMaterial.color.set(fabricColor).multiplyScalar(1 - CANOPY_FLAT);
+    solidMaterial.emissive.set(fabricColor).multiplyScalar(CANOPY_FLAT);
     solidMaterial.needsUpdate = true;
   }, [solidMaterial, fabricColor]);
 
@@ -155,6 +161,10 @@ export function GLBUmbrellaModel({
     const mat = texture ? canopyMaterial : solidMaterial;
     if (texture) {
       canopyMaterial.map = texture;
+      canopyMaterial.color.setScalar(1 - CANOPY_FLAT);
+      canopyMaterial.emissive.setScalar(CANOPY_FLAT ? 1 : 0);
+      canopyMaterial.emissiveIntensity = CANOPY_FLAT;
+      canopyMaterial.emissiveMap = CANOPY_FLAT ? texture : null;
       canopyMaterial.needsUpdate = true;
     }
     root.traverse((obj) => {

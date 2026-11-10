@@ -497,6 +497,7 @@ const DesignEditor = () => {
       let threeD:
         | {
             hero: string;
+            lowTilt?: string;
             top: string;
             front: string;
             side: string;
@@ -519,6 +520,7 @@ const DesignEditor = () => {
           const top = await api.captureView("top");
           const front = await api.captureView("front");
           const side = await api.captureView("side");
+          const lowTilt = await trimWhite(await api.captureView("lowTilt"), 20);
           if (hasHandleDesign) {
             const front = await trimWhite(await api.captureView("handle"));
             const angle = await trimWhite(await api.captureView("handleAngle"));
@@ -546,6 +548,7 @@ const DesignEditor = () => {
             top,
             front,
             side,
+            lowTilt,
             modelId: model3d.model_id,
             topCap: model3d.top_cap_style,
             handle: model3d.handle_style,

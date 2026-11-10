@@ -242,6 +242,8 @@ export async function exportPdfSummary(
   innerLayerPngDataUrl?: string,
   threeD?: {
     hero: string;
+    /** Low angle from below, top turned up-right 45°: underside + handle. */
+    lowTilt?: string;
     top: string;
     front: string;
     side: string;
@@ -438,23 +440,36 @@ export async function exportPdfSummary(
     const contentW = pageW - 80;
     const heroH = contentW * 0.62;
     const yHero = 96;
-    try {
-      const props = pdf.getImageProperties(threeD.hero);
-      const ratio = props.height / props.width;
-      let drawW = contentW;
-      let drawH = drawW * ratio;
-      if (drawH > heroH) {
-        drawH = heroH;
-        drawW = drawH / ratio;
-      }
-      pdf.addImage(threeD.hero, "PNG", 40 + (contentW - drawW) / 2, yHero + (heroH - drawH) / 2, drawW, drawH);
-    } catch (e) {
-      // eslint-disable-next-line no-console
-      console.warn("[pdf] hero image failed", e);
-    }
+    // Hero row: the 3/4 view, plus the low-angle view (underside + handle)
+    // beside it when present.
+    const heroCells: [string, string][] = threeD.lowTilt
+      ? [
+          [threeD.hero, "Canopy view"],
+          [threeD.lowTilt, "Tilted side view (with handle)"],
+        ]
+      : [[threeD.hero, "Canopy view"]];
+    const heroGap = 12;
+    const heroW = (contentW - heroGap * (heroCells.length - 1)) / heroCells.length;
     pdf.setFontSize(9);
-    pdf.setTextColor(110, 110, 120);
-    pdf.text("3D rendering (3/4 view)", pageW / 2, yHero + heroH + 14, { align: "center" });
+    heroCells.forEach(([u, label], i) => {
+      const x = 40 + i * (heroW + heroGap);
+      try {
+        const props = pdf.getImageProperties(u);
+        const ratio = props.height / props.width;
+        let drawW = heroW;
+        let drawH = drawW * ratio;
+        if (drawH > heroH) {
+          drawH = heroH;
+          drawW = drawH / ratio;
+        }
+        pdf.addImage(u, "PNG", x + (heroW - drawW) / 2, yHero + (heroH - drawH) / 2, drawW, drawH);
+      } catch (e) {
+        // eslint-disable-next-line no-console
+        console.warn("[pdf] hero image failed", e);
+      }
+      pdf.setTextColor(110, 110, 120);
+      pdf.text(label, x + heroW / 2, yHero + heroH + 14, { align: "center" });
+    });
 
     const gap = 12;
     const cellW = (contentW - gap * 2) / 3;

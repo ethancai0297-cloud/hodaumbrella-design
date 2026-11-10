@@ -42,6 +42,13 @@ export interface UmbrellaModelConfig {
    * the loaded model. Unset: the fixed golf / BSS-ST-1 framing.
    */
   handle_camera?: "auto";
+  /**
+   * Fixed color for the frame hardware (ribs, shaft...): every non-canopy mesh
+   * that is not the handle or a separately colored part. Unset = baked colors.
+   */
+  frame_color?: string;
+  /** Separately colorable small parts (straight 23"): rib tips and top cap. */
+  other_parts?: { tips_mesh?: string; top_cap_mesh?: string };
   runner_below_apex_cm?: number;
   stretcher_length_cm?: number;
   model_file: string;

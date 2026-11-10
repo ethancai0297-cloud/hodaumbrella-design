@@ -29,6 +29,10 @@ interface Props {
   midSection?: MidSectionOptions;
   /** Open-button color (mesh `handle_button`), if the GLB has one. Unset = handle color. */
   handleButton?: HandleButtonOptions;
+  /** Top cap color (models with other_parts.top_cap_mesh). */
+  capColor?: string;
+  /** Rib tip color (models with other_parts.tips_mesh). */
+  tipColor?: string;
   /** Kept for API compatibility; the projection handles orientation. */
   flipY?: boolean;
   /** Kept for API compatibility; orientation is now computed automatically
@@ -57,6 +61,8 @@ export function GLBUmbrellaModel({
   midSection,
   handleColor,
   handleButton,
+  capColor,
+  tipColor,
 }: Props) {
   const gltf = useGLTF(config.model_file);
   const texture = useCanopyProjectionTexture(svg, config.category, textureDeps);
@@ -202,12 +208,51 @@ export function GLBUmbrellaModel({
     });
     return found as { material: THREE.MeshStandardMaterial; baked: THREE.Color } | null;
   }, [root]);
+  // Models with a fixed frame color (straight 23") default the handle to the
+  // configured handle color instead of the baked one.
+  const handleDefault = config.frame_color ? config.handle_color : undefined;
   useEffect(() => {
     if (!handleBody) return;
-    if (handleColor) handleBody.material.color.set(handleColor);
+    const c = handleColor ?? handleDefault;
+    if (c) handleBody.material.color.set(c);
     else handleBody.material.color.copy(handleBody.baked);
     handleBody.material.needsUpdate = true;
-  }, [handleBody, handleColor]);
+  }, [handleBody, handleColor, handleDefault]);
+
+  // Frame hardware in a fixed color (frame_color), with the rib tips and top
+  // cap as separately colored parts (other_parts). Each gets its own material.
+  const parts = useMemo(() => {
+    if (!root || !config.frame_color) return null;
+    const norm = (n: string) => n.trim().toLowerCase().replace(/\s+/g, "_");
+    const tipsName = config.other_parts?.tips_mesh ? norm(config.other_parts.tips_mesh) : null;
+    const capName = config.other_parts?.top_cap_mesh ? norm(config.other_parts.top_cap_mesh) : null;
+    const tips: THREE.MeshStandardMaterial[] = [];
+    const cap: THREE.MeshStandardMaterial[] = [];
+    root.traverse((o) => {
+      if (!(o instanceof THREE.Mesh)) return;
+      const n = norm(o.name);
+      if (/canopy/.test(n) || n.startsWith("handle") || n.startsWith("mid_")) return;
+      const src = (Array.isArray(o.material) ? o.material[0] : o.material) as THREE.MeshStandardMaterial;
+      const m = src.clone();
+      m.color.set(config.frame_color!);
+      m.metalness = 0;
+      m.roughness = 0.6;
+      o.material = m;
+      if (n === tipsName) tips.push(m);
+      else if (n === capName) cap.push(m);
+    });
+    return { tips, cap };
+  }, [root, config.frame_color, config.other_parts]);
+  useEffect(() => {
+    if (!parts) return;
+    const set = (ms: THREE.MeshStandardMaterial[], c?: string) =>
+      ms.forEach((m) => {
+        m.color.set(c || config.frame_color!);
+        m.needsUpdate = true;
+      });
+    set(parts.tips, tipColor);
+    set(parts.cap, capColor);
+  }, [parts, tipColor, capColor, config.frame_color]);
 
   // Middle section (中段): two independently colored zones, default = handle color.
   const mid = useMemo(() => (root ? findMidSection(root) : null), [root]);

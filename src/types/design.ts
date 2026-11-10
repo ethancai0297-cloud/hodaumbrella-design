@@ -144,6 +144,8 @@ export interface DesignProject {
   midSection?: MidSectionOptions;
   /** Only used by models with a separate open-button mesh (folding + carabiner handle). */
   handleButton?: HandleButtonOptions;
+  /** Rib tip (珠尾) color, for models whose tips are customizable (straight 23"). */
+  tipColor?: string;
   artworkItems: ArtworkItem[];
   hasPouch?: boolean;
   pouchArtwork?: ArtworkItem[];

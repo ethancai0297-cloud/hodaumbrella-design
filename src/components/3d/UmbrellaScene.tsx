@@ -27,6 +27,7 @@ interface Props {
   midSection?: MidSectionOptions;
   handleButton?: HandleButtonOptions;
   handleColor?: string;
+  tipColor?: string;
   showFrame: boolean;
   textureDeps: unknown[];
   background?: string;
@@ -35,7 +36,7 @@ interface Props {
 }
 
 export const UmbrellaScene = forwardRef<SceneApi, Props>(function UmbrellaScene(
-  { config, svg, fabricColor, capColor, handleInsert, midSection, handleButton, handleColor, showFrame, textureDeps, background, debugPanelNumbers, textureFlipY },
+  { config, svg, fabricColor, capColor, handleInsert, midSection, handleButton, handleColor, tipColor, showFrame, textureDeps, background, debugPanelNumbers, textureFlipY },
   ref
 ) {
   const useGLB = !!config.model_file && config.model_file.toLowerCase().endsWith(".glb");
@@ -133,6 +134,8 @@ export const UmbrellaScene = forwardRef<SceneApi, Props>(function UmbrellaScene(
               midSection={midSection}
               handleButton={handleButton}
               handleColor={handleColor}
+              capColor={capColor}
+              tipColor={tipColor}
               flipY={textureFlipY}
             />
           ) : (
@@ -256,13 +259,19 @@ function SceneController({
         if (n === "handle") body = o;
         else if (n === "handle_insert") insert = o;
       });
-      if (!body || !insert) return presets[p];
+      if (!body) return presets[p];
       const hb = new THREE.Box3().setFromObject(body);
-      const ib = new THREE.Box3().setFromObject(insert);
       const tgt = hb.getCenter(new THREE.Vector3());
-      const ic = ib.getCenter(new THREE.Vector3());
       const H = hb.max.y - hb.min.y;
-      const out = new THREE.Vector3(ic.x, 0, ic.z);
+      const out = new THREE.Vector3();
+      if (insert) {
+        // Face the insert: it sits away from the shaft axis.
+        const ic = new THREE.Box3().setFromObject(insert).getCenter(new THREE.Vector3());
+        out.set(ic.x, 0, ic.z);
+      } else {
+        // No insert (e.g. J-hook): look across the hook so its profile shows.
+        out.set(tgt.x, 0, tgt.z).cross(new THREE.Vector3(0, 1, 0));
+      }
       if (out.lengthSq() < 1e-8) out.set(0, 0, 1);
       out.normalize();
       const D = Math.max(0.65, H * 2.2);
@@ -404,6 +413,30 @@ function SceneController({
       el.removeEventListener("contextmenu", noMenu);
     };
   }, [gl, applyPan]);
+
+  // Arrow keys pan the picture the same way (angle unchanged); Shift = bigger
+  // steps. Ignored while typing in a field.
+  useEffect(() => {
+    const STEP = 20;
+    const onKey = (e: KeyboardEvent) => {
+      const dir: Record<string, [number, number]> = {
+        ArrowLeft: [-1, 0],
+        ArrowRight: [1, 0],
+        ArrowUp: [0, -1],
+        ArrowDown: [0, 1],
+      };
+      const d = dir[e.key];
+      if (!d || e.altKey || e.ctrlKey || e.metaKey) return;
+      const el = e.target as HTMLElement | null;
+      if (el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName) || el.getAttribute("role") === "slider")) return;
+      e.preventDefault();
+      const s = e.shiftKey ? STEP * 3 : STEP;
+      panRef.current = { x: panRef.current.x + d[0] * s, y: panRef.current.y + d[1] * s };
+      applyPan();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [applyPan]);
 
   // Keep the pan offset valid when the canvas is resized.
   useEffect(() => {

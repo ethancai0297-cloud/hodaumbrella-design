@@ -290,7 +290,8 @@ const DesignEditor = () => {
     ? { w: model3d.handle_insert.width_mm, h: model3d.handle_insert.length_mm }
     : HANDLE_INSERT_SIZE_MM;
   const handleColor = project.handleColor ?? model3d?.handle_color ?? "#1a1a1a";
-  const hasHandleDesign = !!(model3d?.handle_insert || model3d?.mid_section || model3d?.handle_button);
+  const hasHandleDesign = !!(model3d?.handle_insert || model3d?.mid_section || model3d?.handle_button || model3d?.other_parts);
+  const otherParts = model3d?.other_parts;
   const showHandleTab = hasHandleDesign && designTab === "handle";
   const openDesignTab = (tab: "canopy" | "handle") => {
     setDesignTab(tab);
@@ -521,8 +522,24 @@ const DesignEditor = () => {
           if (hasHandleDesign) {
             const front = await trimWhite(await api.captureView("handle"));
             const angle = await trimWhite(await api.captureView("handleAngle"));
-            const flat = await rotate90ccw(await trimWhite(await api.captureView("handleFlat"), 20));
-            handleDesign = { title: model3d.handle_style, front, angle, flat };
+            const flat = model3d.handle_insert
+              ? await rotate90ccw(await trimWhite(await api.captureView("handleFlat"), 20))
+              : undefined;
+            handleDesign = model3d.other_parts
+              ? {
+                  title: model3d.handle_style,
+                  heading: "Handle & Parts",
+                  frontLabel: "Handle",
+                  front,
+                  angle,
+                  colors: [
+                    ["Handle", handleColor],
+                    ["Rib tips", project.tipColor ?? model3d.frame_color ?? "#1a1a1a"],
+                    ["Top cap", project.capColor ?? model3d.frame_color ?? "#1a1a1a"],
+                    ["Ribs & shaft", model3d.frame_color ?? "#1a1a1a"],
+                  ],
+                }
+              : { title: model3d.handle_style, front, angle, flat };
           }
           threeD = {
             hero,
@@ -640,7 +657,7 @@ const DesignEditor = () => {
                   )}
 
                 >
-                  {t(`tab.${tab}`)}
+                  {t(tab === "handle" && otherParts ? "tab.other" : `tab.${tab}`)}
                 </button>
               ))}
             </div>
@@ -793,6 +810,7 @@ const DesignEditor = () => {
             );
           })()}
 
+          {!otherParts && (<>
           <Separator className="my-5" />
 
           <section>
@@ -826,6 +844,7 @@ const DesignEditor = () => {
             </div>
           </section>
           </>)}
+          </>)}
 
           {showHandleTab && (
             <section>
@@ -840,7 +859,7 @@ const DesignEditor = () => {
                   </button>
                 )}
               </div>
-              <p className="text-xs text-muted-foreground mb-3">{t("handle.desc")}</p>
+              <p className="text-xs text-muted-foreground mb-3">{t(otherParts ? "handle.descSimple" : "handle.desc")}</p>
               <div className="grid grid-cols-4 gap-2">
                 {HANDLE_COLOR_PRESETS.map((c) => (
                   <button
@@ -870,6 +889,45 @@ const DesignEditor = () => {
                 />
               </div>
             </section>
+          )}
+
+          {showHandleTab && otherParts && (
+            <>
+              {([
+                ["tips", "tips.title", "tips.desc", project.tipColor, (v?: string) => updateProject({ tipColor: v })],
+                ["cap", "cap.titleTop", null, project.capColor, (v?: string) => updateProject({ capColor: v })],
+              ] as const).map(([key, title, desc, raw, set]) => {
+                const value = raw || model3d?.frame_color || "#1a1a1a";
+                return (
+                  <div key={key}>
+                    <Separator className="my-5" />
+                    <section>
+                      <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">{t(title)}</h3>
+                      {desc && <p className="text-xs text-muted-foreground mb-3">{t(desc)}</p>}
+                      <div className={cn("grid grid-cols-4 gap-2", !desc && "mt-2")}>
+                        {MID_SECTION_PRESETS.map((c) => (
+                          <button
+                            key={c.value}
+                            onClick={() => set(c.value)}
+                            title={t(`color.${c.name}`)}
+                            aria-label={c.name}
+                            className={cn(
+                              "h-9 rounded-md border-2 transition",
+                              value === c.value ? "border-primary scale-105" : "border-border"
+                            )}
+                            style={{ background: c.value }}
+                          />
+                        ))}
+                      </div>
+                      <div className="mt-2 flex items-center gap-2">
+                        <Input type="color" value={value} onChange={(e) => set(e.target.value)} className="h-9 w-14 p-1" />
+                        <Input value={value} onChange={(e) => set(e.target.value)} className="h-9 text-xs" />
+                      </div>
+                    </section>
+                  </div>
+                );
+              })}
+            </>
           )}
 
           {showHandleTab && model3d?.handle_insert && (
@@ -1319,6 +1377,7 @@ const DesignEditor = () => {
                     handleInsert={model3d.handle_insert ? insert : undefined}
                     midSection={model3d.mid_section ? mid : undefined}
                 handleButton={model3d.handle_button ? button : undefined}
+                tipColor={otherParts ? project.tipColor : undefined}
                     handleColor={hasHandleDesign ? project.handleColor : undefined}
                     showFrame={showFrame}
                     debugPanelNumbers={debugPanelNumbers}
@@ -1419,6 +1478,7 @@ const DesignEditor = () => {
                 handleInsert={model3d.handle_insert ? insert : undefined}
                 midSection={model3d.mid_section ? mid : undefined}
                 handleButton={model3d.handle_button ? button : undefined}
+                tipColor={otherParts ? project.tipColor : undefined}
                     handleColor={hasHandleDesign ? project.handleColor : undefined}
                 showFrame={showFrame}
                 textureDeps={[project]}

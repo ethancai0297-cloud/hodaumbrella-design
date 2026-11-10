@@ -168,6 +168,11 @@ export interface HandleDesignExport {
   angle: string;
   /** Straight-on shot rotated to lie horizontally, so the logo reads upright. */
   flat?: string;
+  /** Page heading (default "Handle Design"). */
+  heading?: string;
+  frontLabel?: string;
+  /** Colored parts listed under the shots, e.g. [["Handle", "#1a1a1a"]]. */
+  colors?: [string, string][];
 }
 
 /** Rotate an image 90° counter-clockwise (standing handle -> lying, canopy end left). */
@@ -499,7 +504,7 @@ export async function exportPdfSummary(
     pdf.setTextColor(15, 31, 61);
     pdf.setFont("helvetica", "bold");
     pdf.setFontSize(14);
-    pdf.text("Handle Design", 40, 38);
+    pdf.text(handleDesign.heading ?? "Handle Design", 40, 38);
     pdf.setFont("helvetica", "normal");
     pdf.setFontSize(10);
     pdf.setTextColor(20, 24, 30);
@@ -511,7 +516,7 @@ export async function exportPdfSummary(
     const cellH = 330;
     const yImg = 100;
     const shots: [string, string][] = [
-      [handleDesign.front, "Front (insert & open button)"],
+      [handleDesign.front, handleDesign.frontLabel ?? "Front (insert & open button)"],
       [handleDesign.angle, "3/4 view"],
     ];
     shots.forEach(([u, label], i) => {
@@ -557,12 +562,28 @@ export async function exportPdfSummary(
       sy += fH + 20;
     }
 
+    if (handleDesign.colors?.length) {
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(10);
+      let cx = 40;
+      for (const [label, hex] of handleDesign.colors) {
+        pdf.setDrawColor(200);
+        pdf.setFillColor(hex);
+        pdf.roundedRect(cx, sy - 9, 12, 12, 2, 2, "FD");
+        pdf.setTextColor(20, 24, 30);
+        const txt = `${label} ${hex.toUpperCase()}`;
+        pdf.text(txt, cx + 18, sy);
+        cx += 18 + pdf.getTextWidth(txt) + 24;
+      }
+      sy += 18;
+    }
+
     sy += 16;
     pdf.setFont("helvetica", "italic");
     pdf.setTextColor(110, 110, 120);
     pdf.setFontSize(9);
     const note =
-      "Colors on screen are indicative. Final handle, insert, button and middle-section colors are matched to physical samples before production.";
+      "Colors on screen are indicative. Final colors of the handle and its parts are matched to physical samples before production.";
     pdf.text(pdf.splitTextToSize(note, pageW - 80), 40, Math.min(sy, pageH - 60));
 
     pdf.setDrawColor(220);

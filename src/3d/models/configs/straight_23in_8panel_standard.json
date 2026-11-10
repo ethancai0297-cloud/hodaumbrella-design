@@ -11,18 +11,29 @@
   "canopy_arc_length_cm": 62,
   "shaft_length_cm": 88,
   "shaft_diameter_mm": 16,
-  "shaft_color": "#1f1f1f",
+  "shaft_color": "#1a1a1a",
   "top_cap_style": "rounded_dome",
-  "top_cap_dimensions": { "radius_mm": 10, "height_mm": 14 },
-  "top_cap_color": "#111111",
+  "top_cap_dimensions": {
+    "radius_mm": 10,
+    "height_mm": 14
+  },
+  "top_cap_color": "#1a1a1a",
   "rib_tip_style": "metal_tip",
-  "rib_tip_dimensions": { "radius_mm": 4 },
+  "rib_tip_dimensions": {
+    "radius_mm": 4
+  },
   "ferrule_style": "polished_alloy",
-  "handle_style": "j_hook",
+  "handle_style": "J-hook handle",
   "handle_material": "wood",
-  "handle_color": "#6b3a1a",
+  "handle_color": "#1a1a1a",
   "canopy_material": "190T_pongee",
   "canopy_layer": "single",
+  "frame_color": "#1a1a1a",
+  "other_parts": {
+    "tips_mesh": "ferrule",
+    "top_cap_mesh": "top_cap"
+  },
+  "handle_camera": "auto",
   "model_file": "/models/straight_23in_8panel_standard.glb",
   "uv_template_file": "/models/straight_23in_8panel_standard_uv.png"
 }

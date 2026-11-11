@@ -38,6 +38,8 @@ interface Props {
   dryMode?: boolean;
   // Fires when the cursor enters/leaves any artwork item (used for hover-triggered color reveal).
   onArtworkHoverChange?: (hovered: boolean) => void;
+  /** Panel under the pointer in the 3D editor (dashed outline). */
+  hoverPanel?: number | null;
 }
 
 function panelPath(
@@ -60,7 +62,7 @@ function panelPath(
   return `M ${x1} ${y1} L ${x2} ${y2} L ${x3} ${y3} L ${x4} ${y4} Z`;
 }
 
-function panelCentroid(index: number, count: number, outerR: number, centerR: number) {
+export function panelCentroid(index: number, count: number, outerR: number, centerR: number) {
   const sliceAngle = (Math.PI * 2) / count;
   const mid = -Math.PI / 2 + index * sliceAngle;
   const r = (outerR + centerR) / 2;
@@ -97,6 +99,7 @@ export const UmbrellaCanopy = forwardRef<SVGSVGElement, Props>(function Umbrella
     forceSingleLayer = false,
     dryMode = false,
     onArtworkHoverChange,
+    hoverPanel = null,
   },
   ref
 ) {
@@ -252,7 +255,6 @@ export const UmbrellaCanopy = forwardRef<SVGSVGElement, Props>(function Umbrella
           <polygon points={polyPoints(ribCount, outerR)} fill={fabric} />
           {/* panels */}
           {panels.map((i) => {
-            const selected = selPanels.includes(i);
             const fill = pColors?.[i] || fabric;
             return (
               <path
@@ -263,9 +265,7 @@ export const UmbrellaCanopy = forwardRef<SVGSVGElement, Props>(function Umbrella
                 strokeWidth={1.2}
                 className={onClick ? "cursor-pointer transition-opacity" : ""}
                 onClick={() => onClick?.(i)}
-                style={{
-                  opacity: highlightSelection && selPanels.length && !selected ? 0.92 : 1,
-                }}
+                style={{ opacity: 1 }}
               />
             );
           })}
@@ -374,13 +374,23 @@ export const UmbrellaCanopy = forwardRef<SVGSVGElement, Props>(function Umbrella
               <path
                 key={`${keyPrefix}-sel-${i}`}
                 d={panelPath(i, ribCount, outerR, innerR)}
-                fill="none"
-                stroke="hsl(214 95% 55%)"
+                fill="rgba(47,107,255,0.30)"
+                stroke="#2f6bff"
                 strokeWidth={3}
-                strokeDasharray="6 4"
+                strokeLinejoin="round"
                 pointerEvents="none"
               />
             ))}
+          {highlightSelection && hoverPanel != null && !selPanels.includes(hoverPanel) && interactive && (
+            <path
+              d={panelPath(hoverPanel, ribCount, outerR, innerR)}
+              fill="rgba(120,160,255,0.16)"
+              stroke="#7aa2ff"
+              strokeWidth={4}
+              strokeDasharray="12 8"
+              pointerEvents="none"
+            />
+          )}
           {/* outline */}
           <polygon
             points={polyPoints(ribCount, outerR)}

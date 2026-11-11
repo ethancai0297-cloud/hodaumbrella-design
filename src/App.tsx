@@ -5,6 +5,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import Landing from "./pages/Landing.tsx";
 import DesignEditor from "./pages/DesignEditor.tsx";
+import ModelPicker from "./pages/ModelPicker.tsx";
+import { useSearchParams } from "react-router-dom";
 import Projects from "./pages/Projects.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import CartonIndex from "./pages/carton/Index.tsx";
@@ -17,6 +19,12 @@ import { I18nProvider } from "./i18n/i18n";
 
 const queryClient = new QueryClient();
 
+/** New design: pick the umbrella type first, then open the 3D editor. */
+const NewDesign = () => {
+  const [params] = useSearchParams();
+  return params.get("model") ? <DesignEditor /> : <ModelPicker />;
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <I18nProvider>
@@ -26,7 +34,7 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Landing />} />
-          <Route path="/design" element={<DesignEditor />} />
+          <Route path="/design" element={<NewDesign />} />
           <Route path="/design/:id" element={<DesignEditor />} />
           <Route path="/projects" element={<Projects />} />
           <Route path="/carton" element={<CartonIndex />} />

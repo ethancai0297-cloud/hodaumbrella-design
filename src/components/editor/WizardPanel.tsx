@@ -15,6 +15,8 @@ interface Props {
   onHasPouch: (v: boolean) => void;
   onHasDoubleLayer: (v: boolean) => void;
   onDoubleLayerStyle: (v: DoubleLayerStyle) => void;
+  /** Sections to show (default: all). */
+  only?: ("category" | "ribs" | "method" | "extras")[];
 }
 
 const ribs: RibCount[] = [6, 7, 8, 10];
@@ -32,7 +34,9 @@ export function WizardPanel({
   onHasPouch,
   onHasDoubleLayer,
   onDoubleLayerStyle,
+  only,
 }: Props) {
+  const show = (s: "category" | "ribs" | "method" | "extras") => !only || only.includes(s);
   const { t } = useI18n();
   const cats: { id: UmbrellaCategory; label: string; desc: string }[] = [
     { id: "folding", label: t("wiz.folding"), desc: t("wiz.folding.desc") },
@@ -75,6 +79,7 @@ export function WizardPanel({
 
   return (
     <div className="space-y-6">
+      {show("category") && (
       <section>
         <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">{t("wiz.category")}</h3>
         <div className="grid grid-cols-3 gap-2">
@@ -95,7 +100,9 @@ export function WizardPanel({
           ))}
         </div>
       </section>
+      )}
 
+      {show("ribs") && (
       <section>
         <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">{t("wiz.ribs")}</h3>
         <div className="grid grid-cols-4 gap-2">
@@ -115,7 +122,9 @@ export function WizardPanel({
           ))}
         </div>
       </section>
+      )}
 
+      {show("method") && (
       <section>
         <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">{t("wiz.method")}</h3>
         <div className="grid gap-2">
@@ -151,8 +160,9 @@ export function WizardPanel({
           </button>
         </div>
       </section>
+      )}
 
-      {category === "golf" && (
+      {show("extras") && category === "golf" && (
         <section>
           <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">{t("wiz.doubleLayer")}</h3>
           <Toggle
@@ -183,6 +193,7 @@ export function WizardPanel({
         </section>
       )}
 
+      {show("extras") && (
       <section>
         <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">{t("wiz.pouch")}</h3>
         <Toggle
@@ -192,6 +203,7 @@ export function WizardPanel({
           desc={t("wiz.pouch.desc")}
         />
       </section>
+      )}
     </div>
   );
 }

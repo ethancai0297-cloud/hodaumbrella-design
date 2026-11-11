@@ -1,5 +1,5 @@
-import { Link, useNavigate, useParams } from "react-router-dom";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,6 +23,11 @@ import {
   Eye,
   EyeOff,
   Square,
+  HelpCircle,
+  ChevronDown,
+  MousePointer2,
+  MousePointerClick,
+  CircleDot,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -74,12 +79,19 @@ import {
   trimWhite,
 } from "@/lib/export";
 import { PantoneInput } from "@/components/editor/PantoneInput";
-import { findModel } from "@/3d/models/registry";
+import { findModel, listModels } from "@/3d/models/registry";
 import { UmbrellaScene, type SceneApi, type CameraPreset } from "@/components/3d/UmbrellaScene";
 
 const SILKSCREEN_LIMITS = [1, 2, 4, 8];
 /** Native pixel size of the 2D canopy SVG; it is scaled down to fit the viewport. */
 const CANVAS_SIZE = 620;
+
+/**
+ * Default rotation for new panel artwork: 180° makes it read upright when the
+ * open umbrella is seen from outside (top of the logo toward the top cap),
+ * which is how it shows on the 3D model.
+ */
+const PANEL_UPRIGHT = 180;
 
 const newId = () =>
   typeof crypto !== "undefined" && "randomUUID" in crypto
@@ -90,11 +102,13 @@ const DesignEditor = () => {
   const navigate = useNavigate();
   const { id } = useParams();
   const { t } = useI18n();
+  const [params] = useSearchParams();
+  const pickedCategory = params.get("model") as UmbrellaCategory | null;
   const [project, setProject] = useState<DesignProject>(() => ({
     id: newId(),
     projectName: "Untitled umbrella",
     customerName: "",
-    umbrellaCategory: "straight",
+    umbrellaCategory: pickedCategory ?? "straight",
     ribCount: 8,
     printingMethod: "silkscreen",
     fabricColor: "#0f1f3d",
@@ -134,11 +148,19 @@ const DesignEditor = () => {
   const [activeSurface, setActiveSurface] = useState<"canopy" | "inner" | "pouch">("canopy");
   const [dryToggle, setDryToggle] = useState<"auto" | "dry" | "wet">("auto");
   const [artworkHover, setArtworkHover] = useState(false);
-  const [viewMode, setViewMode] = useState<"2d" | "3d">("2d");
+  // Panel selection mode in the 3D editor: 单片 / 多片 / 全部
+  const [selMode, setSelMode] = useState<"single" | "multi" | "all">("single");
+  const [hoverPanel, setHoverPanel] = useState<number | null>(null);
+  // True while exporting: hides selection / hover highlights from the canopy texture.
+  const [exporting, setExporting] = useState(false);
+  const [methodOpen, setMethodOpen] = useState(false);
+  const [extrasOpen, setExtrasOpen] = useState(false);
+  const [capOpen, setCapOpen] = useState(false);
+  // First-visit coach marks: 0 = hidden, 1..3 = step
+  const [guideStep, setGuideStep] = useState(0);
   // Design option groups: canopy (伞面) vs handle (伞头, only for models with handle parts)
   const [designTab, setDesignTab] = useState<"canopy" | "handle">("canopy");
   const [showFrame, setShowFrame] = useState(true);
-  const [debugPanelNumbers, setDebugPanelNumbers] = useState(false);
   const [headlessCapture, setHeadlessCapture] = useState<null | {
     resolve: (api: SceneApi | null) => void;
   }>(null);
@@ -154,6 +176,15 @@ const DesignEditor = () => {
   const innerOnlySvgRef = useRef<SVGSVGElement>(null);
 
   const model3d = findModel(project.umbrellaCategory, project.ribCount);
+  // The editor is 3D-first: the canopy is always edited on the 3D model. Only
+  // surfaces without a 3D model (pouch, golf inner layer) fall back to flat editing.
+  const viewMode: "2d" | "3d" = model3d && activeSurface === "canopy" ? "3d" : "2d";
+  const ribOptions = listModels()
+    .filter((m) => m.category === project.umbrellaCategory)
+    .map((m) => m.panel_count as RibCount)
+    .sort((a, b) => b - a);
+  /** Panel facing the default camera; new artwork lands here when nothing is selected. */
+  const frontPanel = Math.floor(project.ribCount / 2);
 
   // load existing
   useEffect(() => {
@@ -165,27 +196,6 @@ const DesignEditor = () => {
 
   // (data-version stamping moved into UmbrellaCanopy so it runs in the
   // same paint as the SVG content update — no race with the 3D rasterize.)
-
-  // Debug: log the current design state passed to 3D whenever the user
-  // switches into 3D Preview, so we can verify nothing is missing.
-  useEffect(() => {
-    if (viewMode !== "3d") return;
-    // eslint-disable-next-line no-console
-    console.log("[3D] DesignEditor → 3D state", {
-      category: project.umbrellaCategory,
-      panelCount: project.ribCount,
-      fabricColor: project.fabricColor,
-      panelColors: project.panelColors,
-      printingMethod: project.printingMethod,
-      selectedPanels,
-      artworkCount: project.artworkItems.length,
-      activeSurface,
-      model3d: model3d?.model_id ?? null,
-      svgMounted: !!svgEl,
-      svgOuterHTMLLength: svgEl?.outerHTML?.length ?? 0,
-      svgDataVersion: svgEl?.getAttribute("data-version") ?? null,
-    });
-  }, [viewMode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // history (simple undo/redo)
   const historyRef = useRef<DesignProject[]>([]);
@@ -251,6 +261,19 @@ const DesignEditor = () => {
     setSelectedPanels(Array.from({ length: project.ribCount }, (_, i) => i));
   };
   const clearSelection = () => setSelectedPanels([]);
+  const handlePanelClick = (i: number) => {
+    if (selMode === "single") {
+      setSelectedPanels([i]);
+      return;
+    }
+    if (selMode === "all") setSelMode("multi");
+    togglePanel(i);
+  };
+  const chooseSelMode = (m: "single" | "multi" | "all") => {
+    setSelMode(m);
+    if (m === "all") applySelectAll();
+    else if (m === "single") setSelectedPanels((s) => s.slice(0, 1));
+  };
 
   const DEFAULT_INNER = { fabricColor: "#f5f6f8", panelColors: {}, artworkItems: [] };
 
@@ -295,11 +318,12 @@ const DesignEditor = () => {
   const showHandleTab = hasHandleDesign && designTab === "handle";
   const openDesignTab = (tab: "canopy" | "handle") => {
     setDesignTab(tab);
+    setSelectedItem(null);
     if (tab === "handle") {
-      // The handle only exists in 3D: switch there and frame it.
-      setViewMode("3d");
-      setTimeout(() => sceneRef.current?.setView("handle"), 400);
-    } else if (viewMode === "3d") {
+      // The handle only exists in 3D: frame it.
+      setActiveSurface("canopy");
+      setTimeout(() => sceneRef.current?.setView("handle"), 100);
+    } else {
       sceneRef.current?.setView("perspective");
     }
   };
@@ -335,7 +359,7 @@ const DesignEditor = () => {
       };
       img.src = src;
       const isDigital = project.printingMethod === "digital";
-      const panels = selectedPanels.length ? selectedPanels : [0];
+      const panels = selectedPanels.length ? selectedPanels : [frontPanel];
       const item: ArtworkItem = {
         id: newId(),
         type: isDigital ? "image" : "logo",
@@ -344,7 +368,7 @@ const DesignEditor = () => {
         x: 0,
         y: 0,
         scale: 1,
-        rotation: 0,
+        rotation: PANEL_UPRIGHT,
         panels,
         fitMode: isDigital ? "contain" : "contain",
         printArea: "single",
@@ -371,7 +395,7 @@ const DesignEditor = () => {
         ? selectedPanels
         : isDigital
         ? Array.from({ length: project.ribCount }, (_, i) => i)
-        : [0];
+        : [frontPanel];
       const logoItem: ArtworkItem = {
         id: newId(),
         type: isDigital ? "image" : "logo",
@@ -380,7 +404,7 @@ const DesignEditor = () => {
         x: 0,
         y: -0.25,
         scale: 0.9,
-        rotation: 0,
+        rotation: PANEL_UPRIGHT,
         panels,
         fitMode: "contain",
         printArea: "single",
@@ -395,7 +419,7 @@ const DesignEditor = () => {
         x: 0,
         y: 0.35,
         scale: 1,
-        rotation: 0,
+        rotation: PANEL_UPRIGHT,
         panels,
       };
       setItems((items) => [...items, logoItem, textItem]);
@@ -406,7 +430,7 @@ const DesignEditor = () => {
   };
 
   const addText = () => {
-    const panels = selectedPanels.length ? selectedPanels : [0];
+    const panels = selectedPanels.length ? selectedPanels : [frontPanel];
     const item: ArtworkItem = {
       id: newId(),
       type: "text",
@@ -416,8 +440,8 @@ const DesignEditor = () => {
       color: "#ffffff",
       x: 0,
       y: 0,
-      scale: 1,
-      rotation: 0,
+      scale: 0.6,
+      rotation: PANEL_UPRIGHT,
       panels,
     };
     setItems((items) => [...items, item]);
@@ -449,7 +473,20 @@ const DesignEditor = () => {
     toast({ title: t("editor.saved"), description: t("editor.savedDesc") });
   };
 
-  const handleExportPng = async () => {
+  /** Run an export with selection / hover highlights removed from the canopy. */
+  const withCleanCanvas = async (run: () => Promise<void>) => {
+    setExporting(true);
+    setHoverPanel(null);
+    // let React re-render the SVG and the 3D texture re-rasterize
+    await new Promise((r) => setTimeout(r, 700));
+    try {
+      await run();
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handleExportPng = () => withCleanCanvas(async () => {
     try {
       if (viewMode === "3d" && sceneRef.current) {
         if (showHandleTab) {
@@ -471,7 +508,7 @@ const DesignEditor = () => {
     } catch (e) {
       toast({ title: t("editor.exportFail"), variant: "destructive" });
     }
-  };
+  });
 
   const acquireSceneApi = async (): Promise<SceneApi | null> => {
     if (sceneRef.current && viewMode === "3d") return sceneRef.current;
@@ -481,7 +518,7 @@ const DesignEditor = () => {
     });
   };
 
-  const handleExportPdf = async () => {
+  const handleExportPdf = () => withCleanCanvas(async () => {
     if (!svgRef.current) return;
     try {
       const url = await svgToPngDataUrl(svgRef.current, 2);
@@ -574,8 +611,8 @@ const DesignEditor = () => {
       toast({ title: t("editor.pdfFail"), variant: "destructive" });
       setHeadlessCapture(null);
     }
-  };
-  const handleExportAi = async () => {
+  });
+  const handleExportAi = () => withCleanCanvas(async () => {
     if (!svgRef.current) return;
     try {
       const innerSvg =
@@ -589,7 +626,7 @@ const DesignEditor = () => {
     } catch (e) {
       toast({ title: t("editor.aiFail"), variant: "destructive" });
     }
-  };
+  });
 
   const [resetOpen, setResetOpen] = useState(false);
   const doReset = () => {
@@ -613,12 +650,106 @@ const DesignEditor = () => {
   const digitalWarn = project.printingMethod === "digital";
   const colorChangeHint = project.printingMethod === "color-change";
 
+  // ---------- first-visit guide ----------
+  const GUIDE_KEY = "urs:guideDone";
+  const step1Ref = useRef<HTMLDivElement>(null);
+  const step2Ref = useRef<HTMLDivElement>(null);
+  const step3Ref = useRef<HTMLDivElement>(null);
+  const finishGuide = () => {
+    setGuideStep(0);
+    try {
+      localStorage.setItem(GUIDE_KEY, "1");
+    } catch {
+      /* storage unavailable */
+    }
+  };
+  useEffect(() => {
+    if (id || !model3d) return;
+    let done = false;
+    try {
+      done = localStorage.getItem(GUIDE_KEY) === "1";
+    } catch {
+      /* storage unavailable */
+    }
+    if (!done) setGuideStep(1);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (guideStep === 1 && selectedPanels.length) setGuideStep(2);
+  }, [selectedPanels, guideStep]);
+  const artCount = project.artworkItems.length;
+  const artCountRef = useRef(artCount);
+  useEffect(() => {
+    if (guideStep === 3 && artCount > artCountRef.current) finishGuide();
+    artCountRef.current = artCount;
+  }, [artCount]); // eslint-disable-line react-hooks/exhaustive-deps
+  const [guidePos, setGuidePos] = useState<{ left: number; top: number; hand?: { x: number; y: number } } | null>(null);
+  useLayoutEffect(() => {
+    if (!guideStep) return setGuidePos(null);
+    const place = () => {
+      if (guideStep === 1) {
+        const r = mainRef.current?.getBoundingClientRect();
+        if (!r) return;
+        const hand = { x: r.left + r.width * 0.5, y: r.top + r.height * 0.62 };
+        setGuidePos({ left: hand.x + 70, top: hand.y - 70, hand });
+      } else {
+        const r = (guideStep === 2 ? step2Ref : step3Ref).current?.getBoundingClientRect();
+        if (!r) return;
+        setGuidePos({ left: r.right + 16, top: r.top + 4 });
+      }
+    };
+    place();
+    window.addEventListener("resize", place);
+    return () => window.removeEventListener("resize", place);
+  }, [guideStep]);
+
+  const stepNum = (n: number, on: boolean) => (
+    <span
+      className={cn(
+        "h-[22px] w-[22px] shrink-0 rounded-full text-[12px] font-bold inline-flex items-center justify-center text-white",
+        on ? "bg-primary" : "bg-slate-300"
+      )}
+    >
+      {n}
+    </span>
+  );
+  const cardCls = (on: boolean) =>
+    cn("rounded-xl border p-4 transition", on ? "border-2 border-[#1f56c3] bg-[#f6f9ff]" : "border-border bg-card");
+  const isPouchSurface = activeSurface === "pouch";
+  const noneSelected = selectedPanels.length === 0;
+  const methodKey =
+    project.printingMethod === "digital" ? "wiz.digital" : project.printingMethod === "color-change" ? "wiz.colorChange" : "wiz.silkscreen";
+  const wizardProps = {
+    category: project.umbrellaCategory,
+    ribCount: project.ribCount,
+    method: project.printingMethod,
+    hasPouch: !!project.hasPouch,
+    hasDoubleLayer: !!project.hasDoubleLayer,
+    doubleLayerStyle: project.doubleLayerStyle || ("vented" as const),
+    onCategory: (v: UmbrellaCategory) => updateProject({ umbrellaCategory: v }),
+    onRibs: (v: RibCount) => updateProject({ ribCount: v }),
+    onMethod: (v: PrintingMethod) => updateProject({ printingMethod: v }),
+    onHasPouch: (v: boolean) => {
+      updateProject({ hasPouch: v, pouchArtwork: project.pouchArtwork || [], pouchView: project.pouchView || "spread" });
+      if (!v && activeSurface === "pouch") setActiveSurface("canopy");
+    },
+    onHasDoubleLayer: (v: boolean) => {
+      updateProject((p) => ({
+        ...p,
+        hasDoubleLayer: v,
+        doubleLayerStyle: p.doubleLayerStyle || "vented",
+        innerLayer: p.innerLayer || DEFAULT_INNER,
+      }));
+      if (!v && activeSurface === "inner") setActiveSurface("canopy");
+    },
+    onDoubleLayerStyle: (v: "vented" | "double") => updateProject({ doubleLayerStyle: v }),
+  };
+
   return (
     <div className="h-screen bg-muted/30 flex flex-col overflow-hidden">
       {/* Top bar */}
       <header className="h-14 border-b border-border bg-card flex items-center px-4 gap-3 shrink-0">
-        <Link to="/" className="text-muted-foreground hover:text-foreground transition flex items-center gap-1.5 text-sm">
-          <ArrowLeft className="h-4 w-4" /> {t("nav.home")}
+        <Link to="/design" className="text-muted-foreground hover:text-foreground transition flex items-center gap-1.5 text-sm whitespace-nowrap">
+          <ArrowLeft className="h-4 w-4" /> {t("ed.changeModel")}
         </Link>
         <Separator orientation="vertical" className="h-6" />
         <Input
@@ -634,6 +765,18 @@ const DesignEditor = () => {
         />
         <div className="ml-auto flex items-center gap-2">
           <LanguageToggle />
+          {model3d && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                openDesignTab("canopy");
+                setGuideStep(1);
+              }}
+            >
+              <HelpCircle className="h-4 w-4 mr-1" /> {t("ed.help")}
+            </Button>
+          )}
           <Button size="sm" variant="ghost" onClick={undo}><RotateCcw className="h-4 w-4 mr-1" /> {t("editor.undo")}</Button>
           <Button size="sm" variant="ghost" onClick={() => setResetOpen(true)} className="text-destructive hover:text-destructive"><Trash2 className="h-4 w-4 mr-1" /> {t("editor.reset")}</Button>
           <Button size="sm" variant="outline" onClick={handleSave}><Save className="h-4 w-4 mr-1" /> {t("editor.save")}</Button>
@@ -643,7 +786,7 @@ const DesignEditor = () => {
         </div>
       </header>
 
-      <div className="flex-1 grid grid-cols-[260px_1fr_300px] xl:grid-cols-[280px_1fr_320px] min-h-0">
+      <div className="flex-1 grid grid-cols-[320px_1fr] xl:grid-cols-[340px_1fr] min-h-0">
         {/* Left sidebar */}
         <aside className="border-r border-border bg-card overflow-y-auto p-5">
           {hasHandleDesign && (
@@ -666,43 +809,79 @@ const DesignEditor = () => {
             </div>
           )}
 
-          {!showHandleTab && (<>
-          <WizardPanel
-            category={project.umbrellaCategory}
-            ribCount={project.ribCount}
-            method={project.printingMethod}
-            hasPouch={!!project.hasPouch}
-            hasDoubleLayer={!!project.hasDoubleLayer}
-            doubleLayerStyle={project.doubleLayerStyle || "vented"}
-            onCategory={(v) => {
-              updateProject((p) => ({
-                ...p,
-                umbrellaCategory: v,
-                hasDoubleLayer: v === "golf" ? p.hasDoubleLayer : false,
-              }));
-              if (v !== "golf" && activeSurface === "inner") setActiveSurface("canopy");
-            }}
-            onRibs={(v) => updateProject({ ribCount: v })}
-            onMethod={(v) => updateProject({ printingMethod: v })}
-            onHasPouch={(v) => {
-              updateProject({ hasPouch: v, pouchArtwork: project.pouchArtwork || [], pouchView: project.pouchView || "spread" });
-              if (!v && activeSurface === "pouch") setActiveSurface("canopy");
-            }}
-            onHasDoubleLayer={(v) => {
-              updateProject((p) => ({
-                ...p,
-                hasDoubleLayer: v,
-                doubleLayerStyle: p.doubleLayerStyle || "vented",
-                innerLayer: p.innerLayer || DEFAULT_INNER,
-              }));
-              if (!v && activeSurface === "inner") setActiveSurface("canopy");
-            }}
-            onDoubleLayerStyle={(v) => updateProject({ doubleLayerStyle: v })}
-          />
+          {!showHandleTab && (<div className="space-y-3">
+          {ribOptions.length > 1 && (
+            <div className="flex items-center justify-between text-xs text-muted-foreground pb-1">
+              <span>{t("ed.ribs")}</span>
+              <div className="flex bg-muted rounded-md p-0.5">
+                {ribOptions.map((n) => (
+                  <button
+                    key={n}
+                    onClick={() => updateProject({ ribCount: n })}
+                    className={cn(
+                      "px-3 py-1 rounded transition",
+                      project.ribCount === n ? "bg-card shadow-sm text-foreground font-medium" : "hover:text-foreground"
+                    )}
+                  >
+                    {t(n === 8 ? "ed.ribsStandard" : "ed.ribsN").replace("{n}", String(n))}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
+          {!isPouchSurface && (
+            <div ref={step1Ref} className={cardCls(noneSelected || guideStep === 1)}>
+              <div className="flex items-center gap-2 font-semibold text-sm">{stepNum(1, true)}{t("ed.step1")}</div>
+              <div className="grid grid-cols-3 gap-2 mt-3">
+                {(["single", "multi", "all"] as const).map((m) => {
+                  const Icon = m === "single" ? MousePointer2 : m === "multi" ? MousePointerClick : CircleDot;
+                  return (
+                    <button
+                      key={m}
+                      onClick={() => chooseSelMode(m)}
+                      className={cn(
+                        "rounded-lg bg-card py-2 text-center transition",
+                        selMode === m
+                          ? "border-2 border-[#1f56c3] text-[#1f56c3]"
+                          : "border border-border text-muted-foreground hover:border-[#1f56c3]/50"
+                      )}
+                    >
+                      <Icon className="h-4 w-4 mx-auto" />
+                      <div className="text-xs mt-1 font-medium">{t(`ed.mode.${m}`)}</div>
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-xs text-muted-foreground mt-3 leading-relaxed">{t(`ed.mode.${selMode}.tip`)}</p>
+              <div className="flex items-center gap-2 mt-3">
+                <span
+                  className={cn(
+                    "px-2.5 py-1 rounded-full text-xs font-medium",
+                    noneSelected ? "bg-card border border-border text-muted-foreground" : "bg-[#e8f0ff] text-[#1f56c3]"
+                  )}
+                >
+                  {noneSelected
+                    ? t("ed.noneSelected")
+                    : t("ed.selected").replace("{n}", String(selectedPanels.length)).replace("{t}", String(project.ribCount))}
+                </span>
+                {!noneSelected && (
+                  <button
+                    onClick={() => {
+                      clearSelection();
+                      if (selMode === "all") setSelMode("multi");
+                    }}
+                    className="ml-auto text-xs text-muted-foreground hover:text-foreground"
+                  >
+                    {t("ed.clear")}
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
 
-          <Separator className="my-5" />
-
+          <div ref={step2Ref} className={cardCls(guideStep === 2)}>
+          <div className="flex items-center gap-2 font-semibold text-sm mb-3">{stepNum(2, !noneSelected || isPouchSurface)}{t("ed.step2")}</div>
           {(() => {
             const isInner = activeSurface === "inner";
             const isPouch = activeSurface === "pouch";
@@ -715,6 +894,7 @@ const DesignEditor = () => {
             const hasPanelOverrides = !!layerPanelColors && Object.keys(layerPanelColors).length > 0;
 
             const applyColor = (hex: string) => {
+              if (guideStep === 2) setGuideStep(3);
               if (isPouch) {
                 updateProject({ fabricColor: hex });
                 return;
@@ -758,24 +938,21 @@ const DesignEditor = () => {
 
             return (
               <section>
-                <div className="flex items-baseline justify-between mb-3">
-                  <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    {t("fabric.title")}
-                    {isInner && <span className="ml-1 text-primary normal-case">· {t("surface.inner")}</span>}
-                  </h3>
+                <div className="flex items-baseline justify-between gap-2 mb-2">
+                  <p className="text-[11px] text-muted-foreground">
+                    {isInner && <span className="text-primary">{t("surface.inner")} · </span>}
+                    {isPouch
+                      ? t("fabric.applyToAll")
+                      : selectedPanels.length
+                      ? t("fabric.applyToSelected").replace("{n}", String(selectedPanels.length))
+                      : t("ed.step2.locked")}
+                  </p>
                   {hasPanelOverrides && !isPouch && (
-                    <button onClick={resetPanels} className="text-[11px] text-primary hover:underline">
+                    <button onClick={resetPanels} className="text-[11px] text-primary hover:underline whitespace-nowrap">
                       {t("fabric.resetPanels")}
                     </button>
                   )}
                 </div>
-                <p className="text-[11px] text-muted-foreground mb-2">
-                  {isPouch
-                    ? t("fabric.applyToAll")
-                    : selectedPanels.length
-                    ? t("fabric.applyToSelected").replace("{n}", String(selectedPanels.length))
-                    : t("fabric.applyToAll")}
-                </p>
                 <div className="grid grid-cols-4 gap-2">
                   {FABRIC_PRESETS.map((c) => (
                     <button
@@ -813,11 +990,16 @@ const DesignEditor = () => {
             );
           })()}
 
-          {!otherParts && (<>
-          <Separator className="my-5" />
+          {!otherParts && !isPouchSurface && (<>
+          <Separator className="my-4" />
 
           <section>
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">{t("cap.title")}</h3>
+            <button className="w-full flex items-center gap-2 text-xs font-semibold text-muted-foreground" onClick={() => setCapOpen((o) => !o)}>
+              {t("cap.title")}
+              <span className="ml-auto h-4 w-4 rounded border border-border" style={{ background: project.capColor || "#111111" }} />
+              <ChevronDown className={cn("h-4 w-4 transition", capOpen && "rotate-180")} />
+            </button>
+            {capOpen && (<div className="mt-2">
             <div className="grid grid-cols-4 gap-2">
               {FABRIC_PRESETS.map((c) => (
                 <button
@@ -845,9 +1027,113 @@ const DesignEditor = () => {
                 className="h-9 text-xs"
               />
             </div>
+            </div>)}
           </section>
           </>)}
-          </>)}
+          </div>
+
+          <div ref={step3Ref} className={cardCls(guideStep === 3)}>
+            <div className="flex items-center gap-2 font-semibold text-sm">{stepNum(3, true)}{t("ed.step3")}</div>
+            <p className="text-xs text-muted-foreground mt-1 mb-3 leading-relaxed">{t("ed.step3.tip")}</p>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/png,image/jpeg,image/svg+xml,application/pdf"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) handleUpload(f);
+                e.target.value = "";
+              }}
+            />
+            <input
+              ref={comboFileInputRef}
+              type="file"
+              accept="image/png,image/jpeg,image/svg+xml"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) handleUploadCombo(f);
+                e.target.value = "";
+              }}
+            />
+            <div className="grid grid-cols-2 gap-2">
+              <Button variant="outline" size="sm" className="bg-card" onClick={() => fileInputRef.current?.click()}>
+                <Upload className="h-4 w-4 mr-1" /> {t("art.upload")}
+              </Button>
+              <Button variant="outline" size="sm" className="bg-card" onClick={addText}>
+                <Plus className="h-4 w-4 mr-1" /> {t("art.addText")}
+              </Button>
+            </div>
+            <Button
+              variant="default"
+              size="sm"
+              className="w-full mt-2 bg-gradient-hero"
+              onClick={() => comboFileInputRef.current?.click()}
+            >
+              <Upload className="h-4 w-4 mr-1" /> {t("art.combo")}
+            </Button>
+            <p className="text-[11px] text-muted-foreground mt-2">{t("art.uploadTip")}</p>
+            {currentItems.length > 0 && (
+              <div className="mt-4">
+                <ArtworkProperties
+                  method={activeSurface === "pouch" ? "silkscreen" : project.printingMethod}
+                  items={currentItems}
+                  selectedItemId={selectedItem}
+                  onSelect={setSelectedItem}
+                  onUpdate={updateItem}
+                  onDelete={deleteItem}
+                  onDuplicate={duplicateItem}
+                  onCenter={centerItem}
+                  selectedPanels={activeSurface === "pouch" ? [] : selectedPanels}
+                  ribCount={activeSurface === "pouch" ? 1 : project.ribCount}
+                />
+              </div>
+            )}
+          </div>
+
+          <div className="rounded-xl border border-border bg-card p-4">
+            <button className="w-full flex items-center gap-2 font-semibold text-sm" onClick={() => setMethodOpen((o) => !o)}>
+              {stepNum(4, true)}
+              {t("ed.step4")}
+              <span className="ml-auto text-xs font-normal text-muted-foreground">{t(methodKey)}</span>
+              <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition", methodOpen && "rotate-180")} />
+            </button>
+            {methodOpen && (
+              <div className="mt-4">
+                <WizardPanel {...wizardProps} only={["method"]} />
+                {(silkscreenWarn || digitalWarn) && (
+                  <div className="mt-3 rounded-lg border border-warning/40 bg-warning/10 text-foreground text-[11px] px-3 py-2 space-y-1">
+                    <div>
+                      <span className="font-semibold text-warning">{t("canvas.note")} </span>
+                      {silkscreenWarn ? t("canvas.warn.silk") : t("canvas.warn.digital")}
+                    </div>
+                    {colorChangeHint && <div className="text-muted-foreground">{t("canvas.colorChangeHint")}</div>}
+                  </div>
+                )}
+                <div className="mt-3 text-[11px] text-muted-foreground space-y-1">
+                  <p>• {t("notes.1")}</p>
+                  <p>• {t("notes.2")}</p>
+                  <p>• {t("notes.3")}</p>
+                  <p>• {t("notes.4")}</p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="rounded-xl border border-border bg-card p-4">
+            <button className="w-full flex items-center gap-2 font-semibold text-sm" onClick={() => setExtrasOpen((o) => !o)}>
+              {stepNum(5, true)}
+              {t("ed.step5")}
+              <ChevronDown className={cn("ml-auto h-4 w-4 text-muted-foreground transition", extrasOpen && "rotate-180")} />
+            </button>
+            {extrasOpen && (
+              <div className="mt-4">
+                <WizardPanel {...wizardProps} only={["extras"]} />
+              </div>
+            )}
+          </div>
+          </div>)}
 
           {showHandleTab && (
             <section>
@@ -1167,60 +1453,16 @@ const DesignEditor = () => {
 
         {/* Canvas */}
         <main ref={mainRef} className="relative overflow-hidden bg-gradient-subtle min-h-0">
-          <div className="absolute top-4 left-4 right-4 flex items-center gap-2 z-10">
-            <div className="rounded-lg bg-card border border-border shadow-soft px-3 py-2 text-xs flex items-center gap-3">
-              <span className="text-muted-foreground">{t("canvas.panels")}</span>
-              <span className="font-semibold">{selectedPanels.length}/{project.ribCount}</span>
-              <Separator orientation="vertical" className="h-4" />
-              <button onClick={applySelectAll} className="text-primary hover:underline">{t("canvas.all")}</button>
-              <button onClick={clearSelection} className="text-muted-foreground hover:text-foreground">{t("canvas.clear")}</button>
-              {(project.printingMethod === "silkscreen" || project.printingMethod === "color-change") && (
-                <>
-                  <Separator orientation="vertical" className="h-4" />
-                  {SILKSCREEN_LIMITS.filter((n) => n <= project.ribCount).map((n) => (
-                    <button
-                      key={n}
-                      onClick={() => {
-                        const step = Math.floor(project.ribCount / n);
-                        setSelectedPanels(Array.from({ length: n }, (_, i) => i * step));
-                      }}
-                      className="rounded px-1.5 py-0.5 bg-muted hover:bg-accent text-foreground"
-                    >
-                      {n}p
-                    </button>
-                  ))}
-                </>
-              )}
-            </div>
-            <div className="ml-auto rounded-lg bg-card border border-border shadow-soft p-1 flex items-center gap-1">
-              <button
-                onClick={() => setViewMode("2d")}
-                className={cn(
-                  "px-2.5 py-1 rounded-md text-xs transition flex items-center gap-1",
-                  viewMode === "2d" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
-                )}
-              >
-                <Square className="h-3.5 w-3.5" /> {t("view.2d")}
-              </button>
-              <button
-                onClick={() => setViewMode("3d")}
-                className={cn(
-                  "px-2.5 py-1 rounded-md text-xs transition flex items-center gap-1",
-                  viewMode === "3d" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
-                )}
-              >
-                <Box className="h-3.5 w-3.5" /> {t("view.3d")}
-              </button>
-            </div>
-            <div className="rounded-lg bg-card border border-border shadow-soft p-1 flex items-center gap-1">
+          {viewMode === "2d" && (
+            <div className="absolute top-4 right-4 z-10 rounded-lg bg-card border border-border shadow-soft p-1 flex items-center gap-1">
               <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setZoom((z) => Math.max(0.5, z - 0.1))}><ZoomOut className="h-3.5 w-3.5" /></Button>
               <span className="text-xs w-10 text-center">{Math.round(zoom * 100)}%</span>
               <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setZoom((z) => Math.min(2, z + 0.1))}><ZoomIn className="h-3.5 w-3.5" /></Button>
             </div>
-          </div>
+          )}
 
           {project.printingMethod === "color-change" && activeSurface !== "pouch" && (
-            <div className="absolute top-16 right-4 z-10 rounded-lg bg-card border border-border shadow-soft p-1 flex items-center gap-1 text-xs">
+            <div className="absolute top-16 right-4 z-20 rounded-lg bg-card border border-border shadow-soft p-1 flex items-center gap-1 text-xs">
               {(["auto", "dry", "wet"] as const).map((m) => (
                 <button
                   key={m}
@@ -1237,9 +1479,9 @@ const DesignEditor = () => {
           )}
 
           {(project.hasPouch || (project.hasDoubleLayer && project.umbrellaCategory === "golf")) && (
-            <div className="absolute top-16 left-1/2 -translate-x-1/2 z-10 rounded-lg bg-card border border-border shadow-soft p-1 flex items-center gap-1 text-xs">
+            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 rounded-lg bg-card border border-border shadow-soft p-1 flex items-center gap-1 text-xs">
               <button
-                onClick={() => { setActiveSurface("canopy"); setSelectedItem(null); setSelectedPanels([]); }}
+                onClick={() => { setActiveSurface("canopy"); setSelectedItem(null); setSelectedPanels([]); setDesignTab("canopy"); }}
                 className={cn(
                   "px-3 py-1.5 rounded-md transition",
                   activeSurface === "canopy" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
@@ -1249,7 +1491,7 @@ const DesignEditor = () => {
               </button>
               {project.hasDoubleLayer && project.umbrellaCategory === "golf" && (
                 <button
-                  onClick={() => { setActiveSurface("inner"); setSelectedItem(null); setSelectedPanels([]); }}
+                  onClick={() => { setActiveSurface("inner"); setSelectedItem(null); setSelectedPanels([]); setDesignTab("canopy"); }}
                   className={cn(
                     "px-3 py-1.5 rounded-md transition",
                     activeSurface === "inner" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
@@ -1260,7 +1502,7 @@ const DesignEditor = () => {
               )}
               {project.hasPouch && (
                 <button
-                  onClick={() => { setActiveSurface("pouch"); setSelectedItem(null); setSelectedPanels([]); }}
+                  onClick={() => { setActiveSurface("pouch"); setSelectedItem(null); setSelectedPanels([]); setDesignTab("canopy"); }}
                   className={cn(
                     "px-3 py-1.5 rounded-md transition",
                     activeSurface === "pouch" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
@@ -1314,7 +1556,9 @@ const DesignEditor = () => {
                   capColor={project.capColor}
                   artwork={project.artworkItems}
                   selectedPanels={activeSurface === "canopy" ? selectedPanels : []}
-                  onPanelClick={activeSurface === "canopy" ? togglePanel : undefined}
+                  onPanelClick={activeSurface === "canopy" ? handlePanelClick : undefined}
+                  hoverPanel={viewMode === "3d" && !showHandleTab ? hoverPanel : null}
+                  highlightSelection={!exporting && !showHandleTab}
                   onItemSelect={(id) => setSelectedItem(id)}
                   onItemChange={(id, patch) =>
                     activeSurface === "canopy" && updateItem(id, patch)
@@ -1337,7 +1581,7 @@ const DesignEditor = () => {
                   }
                   doubleLayerStyle={project.doubleLayerStyle || "vented"}
                   activeLayer={activeSurface === "inner" ? "inner" : "outer"}
-                  onInnerPanelClick={activeSurface === "inner" ? togglePanel : undefined}
+                  onInnerPanelClick={activeSurface === "inner" ? handlePanelClick : undefined}
                   onInnerItemSelect={(id) => setSelectedItem(id)}
                   onInnerItemChange={(id, patch) =>
                     activeSurface === "inner" && updateItem(id, patch)
@@ -1368,7 +1612,7 @@ const DesignEditor = () => {
 
           {/* 3D preview */}
           {viewMode === "3d" && (
-            <div className="absolute inset-0 top-16">
+            <div className="absolute inset-0">
               {model3d ? (
                 <>
                   <UmbrellaScene
@@ -1383,7 +1627,20 @@ const DesignEditor = () => {
                 tipColor={otherParts ? project.tipColor : undefined}
                     handleColor={hasHandleDesign ? project.handleColor : undefined}
                     showFrame={showFrame}
-                    debugPanelNumbers={debugPanelNumbers}
+                    interaction={
+                      showHandleTab
+                        ? undefined
+                        : {
+                            category: project.umbrellaCategory,
+                            ribCount: project.ribCount,
+                            items: project.artworkItems,
+                            selectedItemId: selectedItem,
+                            onPanelClick: handlePanelClick,
+                            onHoverPanel: setHoverPanel,
+                            onItemSelect: setSelectedItem,
+                            onItemChange: updateItem,
+                          }
+                    }
                     textureDeps={[
                       project.fabricColor,
                       project.capColor,
@@ -1398,12 +1655,13 @@ const DesignEditor = () => {
                       dryToggle,
                       selectedPanels,
                       activeSurface,
+                      hoverPanel,
+                      exporting,
+                      showHandleTab,
                     ]}
                   />
-                  <div className="absolute top-2 left-1/2 -translate-x-1/2 z-10 rounded-lg bg-card border border-border shadow-soft p-1 flex items-center gap-1 text-xs">
-                    {(
-                      ["perspective", "top", "front", "side", "bottom", ...(model3d.handle_insert ? ["handle"] : [])] as CameraPreset[]
-                    ).map((p) => (
+                  <div className="absolute top-4 right-4 z-10 rounded-lg bg-card/95 border border-border shadow-soft p-1 flex items-center gap-1 text-xs">
+                    {(["perspective", "top", "front", "side", ...(hasHandleDesign ? ["handle"] : [])] as CameraPreset[]).map((p) => (
                       <button
                         key={p}
                         onClick={() => sceneRef.current?.setView(p)}
@@ -1420,30 +1678,24 @@ const DesignEditor = () => {
                       {showFrame ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
                       {showFrame ? t("threeD.hideFrame") : t("threeD.showFrame")}
                     </button>
-                    {model3d && (
-                      <button
-                        onClick={() => setDebugPanelNumbers((v) => !v)}
-                        className={cn(
-                          "px-2.5 py-1 rounded-md transition flex items-center gap-1",
-                          debugPanelNumbers
-                            ? "bg-primary text-primary-foreground"
-                            : "text-muted-foreground hover:bg-muted"
-                        )}
-                        title={debugPanelNumbers ? "Hide panel numbers" : "Show panel numbers"}
-                      >
-                        {debugPanelNumbers ? "Hide #1–8" : "Show #1–8"}
-                      </button>
-                    )}
-                    <button
-                      onClick={async () => {
-                        const url = await sceneRef.current?.captureView("hero");
-                        if (url) downloadDataUrl(url, `${project.projectName.replace(/\s+/g, "_")}_3d.png`);
-                      }}
-                      className="px-2.5 py-1 rounded-md text-muted-foreground hover:bg-muted transition flex items-center gap-1"
-                    >
-                      <Camera className="h-3.5 w-3.5" /> {t("threeD.screenshot")}
-                    </button>
                   </div>
+                  {!showHandleTab && (
+                    <>
+                      <span
+                        className={cn(
+                          "absolute top-4 left-4 z-10 px-3 py-1.5 rounded-full text-xs font-medium shadow-sm",
+                          noneSelected ? "bg-card border border-border text-muted-foreground" : "bg-[#e8f0ff] text-[#1f56c3]"
+                        )}
+                      >
+                        {noneSelected
+                          ? t("ed.noneSelected")
+                          : t("ed.selected").replace("{n}", String(selectedPanels.length)).replace("{t}", String(project.ribCount))}
+                      </span>
+                      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 bg-card/95 border border-border rounded-full px-5 py-2 text-xs text-muted-foreground shadow-sm whitespace-nowrap pointer-events-none">
+                        {t(selectedItem ? "ed.hintItem" : "ed.hint")}
+                      </div>
+                    </>
+                  )}
                 </>
               ) : (
                 <div className="h-full grid place-items-center p-12">
@@ -1533,96 +1785,43 @@ const DesignEditor = () => {
 
 
 
-          {(silkscreenWarn || digitalWarn) && (
-            <div className="absolute bottom-4 left-4 right-4 rounded-lg border border-warning/40 bg-warning/10 text-foreground text-xs px-3 py-2 flex flex-col gap-1">
-              <div className="flex items-start gap-2">
-                <span className="font-semibold text-warning">{t("canvas.note")}</span>
-                <span>{silkscreenWarn ? t("canvas.warn.silk") : t("canvas.warn.digital")}</span>
-              </div>
-              {colorChangeHint && (
-                <div className="text-muted-foreground">{t("canvas.colorChangeHint")}</div>
-              )}
-            </div>
-          )}
         </main>
 
-        {/* Right sidebar */}
-        <aside className="border-l border-border bg-card overflow-y-auto p-5">
-          <section>
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">{t("art.add")}</h3>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/png,image/jpeg,image/svg+xml,application/pdf"
-              className="hidden"
-              onChange={(e) => {
-                const f = e.target.files?.[0];
-                if (f) handleUpload(f);
-                e.target.value = "";
-              }}
-            />
-            <input
-              ref={comboFileInputRef}
-              type="file"
-              accept="image/png,image/jpeg,image/svg+xml"
-              className="hidden"
-              onChange={(e) => {
-                const f = e.target.files?.[0];
-                if (f) handleUploadCombo(f);
-                e.target.value = "";
-              }}
-            />
-            <div className="grid grid-cols-2 gap-2">
-              <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
-                <Upload className="h-4 w-4 mr-1" /> {t("art.upload")}
-              </Button>
-              <Button variant="outline" size="sm" onClick={addText}>
-                <Plus className="h-4 w-4 mr-1" /> {t("art.addText")}
-              </Button>
-            </div>
-            <Button
-              variant="default"
-              size="sm"
-              className="w-full mt-2 bg-gradient-hero"
-              onClick={() => comboFileInputRef.current?.click()}
-            >
-              <Upload className="h-4 w-4 mr-1" /> {t("art.combo")}
-            </Button>
-            <p className="text-[11px] text-muted-foreground mt-2">
-              {t("art.uploadTip")}
-            </p>
-            <p className="text-[11px] text-muted-foreground mt-1">
-              {t("art.comboTip")}
-            </p>
-          </section>
-
-          <Separator className="my-5" />
-
-          <ArtworkProperties
-            method={activeSurface === "pouch" ? "silkscreen" : project.printingMethod}
-            items={currentItems}
-            selectedItemId={selectedItem}
-            onSelect={setSelectedItem}
-            onUpdate={updateItem}
-            onDelete={deleteItem}
-            onDuplicate={duplicateItem}
-            onCenter={centerItem}
-            selectedPanels={activeSurface === "pouch" ? [] : selectedPanels}
-            ribCount={activeSurface === "pouch" ? 1 : project.ribCount}
-          />
-
-
-          <Separator className="my-5" />
-
-          <section className="text-[11px] text-muted-foreground space-y-1.5">
-            <div className="font-semibold text-foreground uppercase tracking-wider text-xs mb-1">{t("notes.title")}</div>
-            <p>• {t("notes.1")}</p>
-            <p>• {t("notes.2")}</p>
-            <p>• {t("notes.3")}</p>
-            <p>• {t("notes.4")}</p>
-          </section>
-        </aside>
       </div>
+
+      {guideStep > 0 && guidePos && (
+        <div className="fixed inset-0 z-50 pointer-events-none">
+          {guidePos.hand && (
+            <div className="absolute" style={{ left: guidePos.hand.x, top: guidePos.hand.y }}>
+              <span className="absolute w-12 h-12 -left-6 -top-6 rounded-full bg-[#1f56c3]/40 animate-ping" />
+              <span className="absolute w-5 h-5 -left-2.5 -top-2.5 rounded-full bg-[#1f56c3] border-2 border-white shadow" />
+              <MousePointer2 className="absolute left-1 top-1 h-8 w-8 text-[#0f2a5c] fill-white drop-shadow" />
+            </div>
+          )}
+          <div
+            className="absolute pointer-events-auto bg-[#0f2a5c] text-white rounded-xl shadow-lg px-4 py-3 w-[270px]"
+            style={{ left: guidePos.left, top: guidePos.top }}
+          >
+            <div className="absolute -left-2 top-6 w-4 h-4 bg-[#0f2a5c] rotate-45" />
+            <div className="relative">
+              <div className="text-[11px] text-white/60">{t("guide.of").replace("{n}", String(guideStep))}</div>
+              <div className="font-semibold mt-0.5">{t(`guide.${guideStep}.title`)}</div>
+              <div className="text-xs text-white/80 mt-1">{t(`guide.${guideStep}.body`)}</div>
+              <div className="flex justify-between items-center mt-3 text-xs">
+                <button className="text-white/60 hover:text-white" onClick={finishGuide}>
+                  {t("guide.skip")}
+                </button>
+                <button
+                  className="px-3 py-1 rounded-md bg-white text-[#0f2a5c] font-medium"
+                  onClick={() => (guideStep >= 3 ? finishGuide() : setGuideStep(guideStep + 1))}
+                >
+                  {t("guide.ok")}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <AlertDialog open={resetOpen} onOpenChange={setResetOpen}>
         <AlertDialogContent>

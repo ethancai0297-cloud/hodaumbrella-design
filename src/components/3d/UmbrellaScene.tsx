@@ -7,6 +7,7 @@ import type { HandleButtonOptions, HandleInsertOptions, MidSectionOptions } from
 import { UmbrellaModel } from "./UmbrellaModel";
 import { useCanopyTexture } from "./useCanopyTexture";
 import { GLBUmbrellaModel } from "./GLBUmbrellaModel";
+import { CanopyInteraction, type CanopyInteractionProps } from "./CanopyInteraction";
 
 export type CameraPreset = "perspective" | "hero" | "top" | "front" | "side" | "bottom" | "handle" | "handleAngle" | "handleFlat" | "lowTilt";
 
@@ -47,16 +48,19 @@ interface Props {
   background?: string;
   debugPanelNumbers?: boolean;
   textureFlipY?: boolean;
+  /** Edit directly on the 3D canopy (select panels, move / scale / rotate artwork). */
+  interaction?: Omit<CanopyInteractionProps, "overlay">;
 }
 
 export const UmbrellaScene = forwardRef<SceneApi, Props>(function UmbrellaScene(
-  { config, svg, fabricColor, capColor, handleInsert, midSection, handleButton, handleColor, tipColor, showFrame, textureDeps, background, debugPanelNumbers, textureFlipY },
+  { config, svg, fabricColor, capColor, handleInsert, midSection, handleButton, handleColor, tipColor, showFrame, textureDeps, background, debugPanelNumbers, textureFlipY, interaction },
   ref
 ) {
   const useGLB = !!config.model_file && config.model_file.toLowerCase().endsWith(".glb");
   // Legacy procedural texture (used only for procedural fallback path)
   const texture = useCanopyTexture(svg, textureDeps);
   const apiRef = useRef<InternalApi | null>(null);
+  const overlayRef = useRef<HTMLDivElement>(null);
 
   useImperativeHandle(ref, () => ({
     setView: (p) => apiRef.current?.setView(p),
@@ -96,11 +100,11 @@ export const UmbrellaScene = forwardRef<SceneApi, Props>(function UmbrellaScene(
   const radius = useGLB ? 1.6 : (config.canopy_diameter_cm / 2) * 0.1;
   const canopyHeight = useGLB ? 1.2 : config.canopy_height_cm * 0.1;
   const initialCamera: [number, number, number] = useGLB
-    ? [0, 1.2, 4.2]
+    ? [0, 3.0, 3.6]
     : [radius * 1.45, radius * 0.4, radius * 1.1];
 
   return (
-    <div className="w-full h-full bg-gradient-subtle">
+    <div className="w-full h-full bg-gradient-subtle relative">
       <Canvas
         shadows
         dpr={[1, 2]}
@@ -168,8 +172,10 @@ export const UmbrellaScene = forwardRef<SceneApi, Props>(function UmbrellaScene(
             autoHandleViews={useGLB && config.handle_camera === "auto"}
             register={(api) => (apiRef.current = api)}
           />
+          {useGLB && interaction && <CanopyInteraction {...interaction} overlay={overlayRef} />}
         </Suspense>
       </Canvas>
+      <div ref={overlayRef} className="absolute inset-0 pointer-events-none overflow-hidden" />
     </div>
   );
 });
@@ -219,7 +225,8 @@ function SceneController({
       // Normalized GLB model: longest dim ~3.2, centered at origin.
       const target = new THREE.Vector3(0, 0, 0);
       return {
-        perspective: [new THREE.Vector3(0, 1.2, 4.2), target],
+        // Editor default: from above-front so the canopy panels face the user.
+        perspective: [new THREE.Vector3(0, 3.0, 3.6), target],
         // Canopy view from high above-front: the printed canopy almost face-on.
         // Used as the hero shot in exports.
         hero: [new THREE.Vector3(0.83, 4.6, 2.3), new THREE.Vector3(0, 0.25, 0)],

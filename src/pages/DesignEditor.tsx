@@ -190,7 +190,8 @@ const DesignEditor = () => {
   useEffect(() => {
     if (id) {
       const p = getProject(id);
-      if (p) setProject(p);
+      // Golf double layer was retired; old projects open as single layer.
+      if (p) setProject({ ...p, hasDoubleLayer: false });
     }
   }, [id]);
 

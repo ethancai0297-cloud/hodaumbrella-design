@@ -144,7 +144,7 @@ const dict: Dict = {
   "ed.step2": { en: "Canopy color", zh: "伞面颜色" },
   "ed.step3": { en: "Add logo / text", zh: "加 logo / 文字" },
   "ed.step4": { en: "Printing method", zh: "印刷方式" },
-  "ed.step5": { en: "Pouch & double layer", zh: "伞套 / 双层" },
+  "ed.step5": { en: "Pouch", zh: "伞套" },
   "ed.mode.single": { en: "One", zh: "单片" },
   "ed.mode.multi": { en: "Several", zh: "多片" },
   "ed.mode.all": { en: "All", zh: "全部" },

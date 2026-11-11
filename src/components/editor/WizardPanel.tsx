@@ -162,37 +162,6 @@ export function WizardPanel({
       </section>
       )}
 
-      {show("extras") && category === "golf" && (
-        <section>
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">{t("wiz.doubleLayer")}</h3>
-          <Toggle
-            on={hasDoubleLayer}
-            onClick={() => onHasDoubleLayer(!hasDoubleLayer)}
-            title={t("wiz.doubleLayer.add")}
-            desc={t("wiz.doubleLayer.desc")}
-          />
-          {hasDoubleLayer && (
-            <div className="mt-3 grid gap-2">
-              {(["vented", "double"] as DoubleLayerStyle[]).map((s) => (
-                <button
-                  key={s}
-                  onClick={() => onDoubleLayerStyle(s)}
-                  className={cn(
-                    "rounded-lg border px-3 py-2 text-left transition",
-                    doubleLayerStyle === s
-                      ? "border-primary bg-accent"
-                      : "border-border bg-card hover:border-primary/40"
-                  )}
-                >
-                  <div className="font-display font-semibold text-xs">{t(`wiz.layerStyle.${s}`)}</div>
-                  <div className="text-[10px] text-muted-foreground mt-0.5">{t(`wiz.layerStyle.${s}.desc`)}</div>
-                </button>
-              ))}
-            </div>
-          )}
-        </section>
-      )}
-
       {show("extras") && (
       <section>
         <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">{t("wiz.pouch")}</h3>

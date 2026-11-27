@@ -3,61 +3,86 @@
 @tailwind utilities;
 
 @layer base {
+  /*
+   * 墨与纸 Ink & paper.
+   * Warm paper neutrals and ink-black actions keep the interface quiet, so the
+   * umbrella's own colors carry the screen. The logo orange is used only for
+   * selection and guidance (--highlight).
+   */
   :root {
-    --background: 210 40% 99%;
-    --foreground: 222 47% 11%;
+    --background: 40 23% 95%;
+    --foreground: 30 8% 11%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
+    --card: 40 33% 99%;
+    --card-foreground: 30 8% 11%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
+    --popover: 40 33% 99%;
+    --popover-foreground: 30 8% 11%;
 
-    --primary: 218 80% 22%;
-    --primary-foreground: 210 40% 98%;
-    --primary-glow: 214 95% 55%;
+    --primary: 30 6% 13%;
+    --primary-foreground: 40 30% 97%;
+    --primary-glow: 14 70% 44%;
 
-    --secondary: 210 40% 96%;
-    --secondary-foreground: 222 47% 11%;
+    --secondary: 38 18% 91%;
+    --secondary-foreground: 30 8% 11%;
 
-    --muted: 210 30% 95%;
-    --muted-foreground: 215 16% 45%;
+    --muted: 38 18% 91%;
+    --muted-foreground: 30 5% 40%;
 
-    --accent: 214 95% 93%;
-    --accent-foreground: 218 80% 22%;
+    --accent: 36 20% 89%;
+    --accent-foreground: 30 8% 11%;
 
-    --destructive: 0 78% 52%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 356 60% 44%;
+    --destructive-foreground: 0 0% 100%;
 
-    --warning: 38 92% 50%;
+    --warning: 36 80% 42%;
     --warning-foreground: 0 0% 100%;
 
-    --success: 152 65% 38%;
+    --success: 148 38% 32%;
     --success-foreground: 0 0% 100%;
 
-    --border: 215 25% 89%;
-    --input: 215 25% 89%;
-    --ring: 218 80% 22%;
+    --border: 36 15% 85%;
+    --input: 36 15% 82%;
+    --ring: 14 70% 44%;
+
+    /* Selection / active state (selected panels, chosen mode, 3D handles). */
+    --highlight: 14 70% 44%;
+    --highlight-foreground: 0 0% 100%;
+    --highlight-soft: 22 62% 94.5%;
+    --highlight-subtle: 30 55% 97%;
+
+    /* First-run guide bubble. */
+    --guide: 30 8% 13%;
+    --guide-foreground: 40 30% 97%;
+
+    /* Sampled from the Hoda & Tuzh logo. */
+    --brand-red: 9 73% 49%;
+    --brand-orange: 15 74% 54%;
+    --brand-amber: 35 89% 66%;
+    --brand-steel: 197 32% 65%;
+    --brand-silver: 203 12% 78%;
 
     --radius: 0.625rem;
 
-    --gradient-hero: linear-gradient(135deg, hsl(218 80% 22%) 0%, hsl(214 95% 35%) 100%);
-    --gradient-subtle: linear-gradient(180deg, hsl(210 40% 99%) 0%, hsl(214 95% 96%) 100%);
-    --gradient-accent: linear-gradient(135deg, hsl(214 95% 55%) 0%, hsl(218 80% 35%) 100%);
+    /* Kept as utilities for existing markup; flat on purpose. */
+    --gradient-hero: linear-gradient(hsl(var(--primary)), hsl(var(--primary)));
+    --gradient-accent: linear-gradient(hsl(var(--primary)), hsl(var(--primary)));
+    /* Near-neutral studio backdrop so canopy colors read true. */
+    --gradient-subtle: linear-gradient(180deg, hsl(40 12% 96%) 0%, hsl(38 9% 91%) 100%);
 
-    --shadow-sm: 0 1px 2px hsl(218 80% 22% / 0.04);
-    --shadow-md: 0 4px 12px -2px hsl(218 80% 22% / 0.08);
-    --shadow-lg: 0 20px 50px -10px hsl(218 80% 22% / 0.18);
-    --shadow-glow: 0 0 60px hsl(214 95% 55% / 0.25);
+    --shadow-sm: 0 1px 2px hsl(30 10% 10% / 0.05);
+    --shadow-md: 0 1px 2px hsl(30 10% 10% / 0.04), 0 4px 14px -6px hsl(30 10% 10% / 0.12);
+    --shadow-lg: 0 18px 40px -18px hsl(30 10% 10% / 0.28);
+    --shadow-glow: 0 0 0 0 transparent;
 
-    --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 222 47% 11%;
-    --sidebar-primary: 218 80% 22%;
-    --sidebar-primary-foreground: 210 40% 98%;
-    --sidebar-accent: 210 40% 96%;
-    --sidebar-accent-foreground: 218 80% 22%;
-    --sidebar-border: 215 25% 89%;
-    --sidebar-ring: 218 80% 22%;
+    --sidebar-background: 40 33% 99%;
+    --sidebar-foreground: 30 8% 11%;
+    --sidebar-primary: 30 6% 13%;
+    --sidebar-primary-foreground: 40 30% 97%;
+    --sidebar-accent: 38 18% 91%;
+    --sidebar-accent-foreground: 30 8% 11%;
+    --sidebar-border: 36 15% 85%;
+    --sidebar-ring: 14 70% 44%;
   }
 
   .dark {
@@ -95,6 +120,8 @@
   body {
     @apply bg-background text-foreground antialiased;
     font-feature-settings: "cv11", "ss01";
+    /* Native sliders, checkboxes and radios follow the palette instead of browser blue. */
+    accent-color: hsl(var(--primary));
   }
   html {
     scroll-behavior: smooth;
@@ -113,9 +140,9 @@
 
 /* === Carton Mark Pro additions === */
 :root {
-  --surface: 0 0% 100%;
-  --surface-muted: 210 16% 96%;
-  --section-border: 214 20% 90%;
+  --surface: 40 33% 99%;
+  --surface-muted: 38 18% 93%;
+  --section-border: 36 15% 87%;
 }
 
 /* Carton mark visual styling — strict B/W, bold, print-friendly */

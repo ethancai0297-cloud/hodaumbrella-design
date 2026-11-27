@@ -270,18 +270,18 @@ export function CanopyInteraction(props: CanopyInteractionProps) {
     svg.style.cssText = "position:absolute;inset:0;overflow:visible";
     const poly = document.createElementNS(svgNS, "polygon");
     poly.setAttribute("fill", "none");
-    poly.setAttribute("stroke", "#2f6bff");
+    poly.style.stroke = "hsl(var(--highlight))";
     poly.setAttribute("stroke-width", "2");
     poly.setAttribute("stroke-dasharray", "6 4");
     const stem = document.createElementNS(svgNS, "line");
-    stem.setAttribute("stroke", "#2f6bff");
+    stem.style.stroke = "hsl(var(--highlight))";
     stem.setAttribute("stroke-width", "2");
     svg.append(poly, stem);
     root.append(svg);
     const mk = (round: boolean, cursor: string, title: string) => {
       const d = document.createElement("div");
       d.title = title;
-      d.style.cssText = `position:absolute;width:14px;height:14px;margin:-7px 0 0 -7px;background:#fff;border:2.5px solid #2f6bff;border-radius:${
+      d.style.cssText = `position:absolute;width:14px;height:14px;margin:-7px 0 0 -7px;background:#fff;border:2.5px solid hsl(var(--highlight));border-radius:${
         round ? "50%" : "2px"
       };pointer-events:auto;cursor:${cursor};touch-action:none;box-shadow:0 1px 3px rgba(0,0,0,.25)`;
       root.append(d);

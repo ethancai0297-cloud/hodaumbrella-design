@@ -63,7 +63,7 @@ export interface HandleInsertOptions {
 }
 
 export const DEFAULT_HANDLE_INSERT: HandleInsertOptions = {
-  color: "#8a8d93",
+  color: "#8a8d8f",
   finish: "matte",
   logoScale: 0.6,
 };
@@ -71,15 +71,28 @@ export const DEFAULT_HANDLE_INSERT: HandleInsertOptions = {
 /** Printable area of the insert, millimetres. */
 export const HANDLE_INSERT_SIZE_MM = { w: 15, h: 70 };
 
-export const HANDLE_INSERT_PRESETS: { name: string; value: string }[] = [
-  { name: "Silver", value: "#8a8d93" },
-  { name: "Black", value: "#111418" },
-  { name: "White", value: "#f5f6f8" },
-  { name: "Gold", value: "#b8964b" },
-  { name: "Red", value: "#c0252c" },
-  { name: "Navy", value: "#0f1f3d" },
-  { name: "Royal Blue", value: "#1f56c3" },
-  { name: "Green", value: "#1f7a4d" },
+/**
+ * A preset color swatch. `pantone` is the Pantone Solid Coated code the hex
+ * comes from; the hex is the same one lib/pantone.ts returns for that code,
+ * so picking the swatch and typing the code give the same color.
+ * Hex values are lowercase to match what <input type="color"> reports.
+ */
+export interface ColorPreset {
+  name: string;
+  value: string;
+  pantone?: string;
+}
+
+/** Handle insert and middle-section colors (plastic or plated parts). */
+export const HANDLE_INSERT_PRESETS: ColorPreset[] = [
+  { name: "Silver", value: "#8a8d8f", pantone: "877 C" },
+  { name: "Gold", value: "#b9975b", pantone: "465 C" },
+  { name: "Black", value: "#101820", pantone: "Black 6 C" },
+  { name: "White", value: "#f5f5f3" },
+  { name: "Navy", value: "#0c2340", pantone: "289 C" },
+  { name: "Royal Blue", value: "#0033a0", pantone: "286 C" },
+  { name: "Red", value: "#c8102e", pantone: "186 C" },
+  { name: "Dark Green", value: "#154734", pantone: "3435 C" },
 ];
 
 /**
@@ -94,16 +107,7 @@ export interface MidSectionOptions {
   accentFinish?: HandleInsertFinish;
 }
 
-export const MID_SECTION_PRESETS: { name: string; value: string }[] = [
-  { name: "Gold", value: "#c9a250" },
-  { name: "Silver", value: "#b9bcc2" },
-  { name: "Black", value: "#111418" },
-  { name: "White", value: "#f5f6f8" },
-  { name: "Navy", value: "#25335a" },
-  { name: "Red", value: "#c0252c" },
-  { name: "Royal Blue", value: "#1f56c3" },
-  { name: "Green", value: "#1f7a4d" },
-];
+export const MID_SECTION_PRESETS: ColorPreset[] = HANDLE_INSERT_PRESETS;
 
 /**
  * Open button on handles that have a separate button mesh (`handle_button`,
@@ -115,15 +119,15 @@ export interface HandleButtonOptions {
 }
 
 /** Handle body colors (BSS-ST-1). Unset = the model's default handle color. */
-export const HANDLE_COLOR_PRESETS: { name: string; value: string }[] = [
-  { name: "Black", value: "#1a1a1a" },
-  { name: "Grey", value: "#5b6068" },
-  { name: "White", value: "#f2f3f5" },
-  { name: "Navy", value: "#1c2a4d" },
-  { name: "Royal Blue", value: "#1f56c3" },
-  { name: "Red", value: "#b3262d" },
-  { name: "Green", value: "#1f6b45" },
-  { name: "Brown", value: "#5a3a22" },
+export const HANDLE_COLOR_PRESETS: ColorPreset[] = [
+  { name: "Black", value: "#101820", pantone: "Black 6 C" },
+  { name: "Charcoal", value: "#333f48", pantone: "432 C" },
+  { name: "Grey", value: "#707372", pantone: "424 C" },
+  { name: "White", value: "#f5f5f3" },
+  { name: "Navy", value: "#0c2340", pantone: "289 C" },
+  { name: "Red", value: "#c8102e", pantone: "186 C" },
+  { name: "Dark Green", value: "#154734", pantone: "3435 C" },
+  { name: "Brown", value: "#693f23", pantone: "469 C" },
 ];
 
 export interface DesignProject {
@@ -163,15 +167,20 @@ export const POUCH_SIZE_CM: Record<UmbrellaCategory, { w: number; h: number }> =
   golf: { w: 8, h: 102 },
 };
 
-export const FABRIC_PRESETS: { name: string; value: string }[] = [
-  { name: "Black", value: "#111418" },
-  { name: "Navy", value: "#0f1f3d" },
-  { name: "White", value: "#f5f6f8" },
-  { name: "Red", value: "#c0252c" },
-  { name: "Yellow", value: "#f2c14e" },
-  { name: "Green", value: "#1f7a4d" },
-  { name: "Royal Blue", value: "#1f56c3" },
-  { name: "Grey", value: "#6b7280" },
+/** Canopy fabric colors that are commonly ordered, as Pantone Solid Coated codes. */
+export const FABRIC_PRESETS: ColorPreset[] = [
+  { name: "Black", value: "#101820", pantone: "Black 6 C" },
+  { name: "Grey", value: "#707372", pantone: "424 C" },
+  { name: "White", value: "#f5f5f3" },
+  { name: "Navy", value: "#0c2340", pantone: "289 C" },
+  { name: "Royal Blue", value: "#0033a0", pantone: "286 C" },
+  { name: "Sky Blue", value: "#62b5e5", pantone: "2915 C" },
+  { name: "Dark Green", value: "#154734", pantone: "3435 C" },
+  { name: "Green", value: "#007a33", pantone: "356 C" },
+  { name: "Red", value: "#c8102e", pantone: "186 C" },
+  { name: "Burgundy", value: "#8a1538", pantone: "202 C" },
+  { name: "Orange", value: "#ff671f", pantone: "165 C" },
+  { name: "Yellow", value: "#ffcd00", pantone: "116 C" },
 ];
 
 export const PANEL_LENGTH_CM: Record<UmbrellaCategory, number> = {

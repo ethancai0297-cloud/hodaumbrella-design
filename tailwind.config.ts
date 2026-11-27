@@ -51,6 +51,23 @@ export default {
           DEFAULT: "hsl(var(--success))",
           foreground: "hsl(var(--success-foreground))",
         },
+        highlight: {
+          DEFAULT: "hsl(var(--highlight))",
+          foreground: "hsl(var(--highlight-foreground))",
+          soft: "hsl(var(--highlight-soft))",
+          subtle: "hsl(var(--highlight-subtle))",
+        },
+        guide: {
+          DEFAULT: "hsl(var(--guide))",
+          foreground: "hsl(var(--guide-foreground))",
+        },
+        brand: {
+          red: "hsl(var(--brand-red))",
+          orange: "hsl(var(--brand-orange))",
+          amber: "hsl(var(--brand-amber))",
+          steel: "hsl(var(--brand-steel))",
+          silver: "hsl(var(--brand-silver))",
+        },
         popover: {
           DEFAULT: "hsl(var(--popover))",
           foreground: "hsl(var(--popover-foreground))",

@@ -51,6 +51,7 @@ import {
   DEFAULT_HANDLE_INSERT,
   DesignProject,
   FABRIC_PRESETS,
+  type ColorPreset,
   HANDLE_COLOR_PRESETS,
   HANDLE_INSERT_PRESETS,
   HANDLE_INSERT_SIZE_MM,
@@ -111,7 +112,7 @@ const DesignEditor = () => {
     umbrellaCategory: pickedCategory ?? "straight",
     ribCount: 8,
     printingMethod: "silkscreen",
-    fabricColor: "#0f1f3d",
+    fabricColor: "#0c2340",
     panelColors: {},
     capColor: "#111111",
     artworkItems: [],
@@ -707,14 +708,16 @@ const DesignEditor = () => {
     <span
       className={cn(
         "h-[22px] w-[22px] shrink-0 rounded-full text-[12px] font-bold inline-flex items-center justify-center text-white",
-        on ? "bg-primary" : "bg-slate-300"
+        on ? "bg-primary" : "bg-muted-foreground/40"
       )}
     >
       {n}
     </span>
   );
   const cardCls = (on: boolean) =>
-    cn("rounded-xl border p-4 transition", on ? "border-2 border-[#1f56c3] bg-[#f6f9ff]" : "border-border bg-card");
+    cn("rounded-xl border p-4 transition", on ? "border-2 border-highlight bg-highlight-subtle" : "border-border bg-card");
+  /** Swatch tooltip / caption, e.g. "Navy · PMS 289 C". */
+  const swatchTitle = (c: ColorPreset) => t(`color.${c.name}`) + (c.pantone ? ` · PMS ${c.pantone}` : "");
   const isPouchSurface = activeSurface === "pouch";
   const noneSelected = selectedPanels.length === 0;
   const methodKey =
@@ -783,7 +786,7 @@ const DesignEditor = () => {
           <Button size="sm" variant="outline" onClick={handleSave}><Save className="h-4 w-4 mr-1" /> {t("editor.save")}</Button>
           <Button size="sm" variant="outline" onClick={handleExportPng}><FileImage className="h-4 w-4 mr-1" /> {t("editor.png")}</Button>
           <Button size="sm" variant="outline" onClick={handleExportAi}><FileCode className="h-4 w-4 mr-1" /> {t("editor.ai")}</Button>
-          <Button size="sm" className="bg-gradient-hero" onClick={handleExportPdf}><FileText className="h-4 w-4 mr-1" /> {t("editor.pdf")}</Button>
+          <Button size="sm" onClick={handleExportPdf}><FileText className="h-4 w-4 mr-1" /> {t("editor.pdf")}</Button>
         </div>
       </header>
 
@@ -844,8 +847,8 @@ const DesignEditor = () => {
                       className={cn(
                         "rounded-lg bg-card py-2 text-center transition",
                         selMode === m
-                          ? "border-2 border-[#1f56c3] text-[#1f56c3]"
-                          : "border border-border text-muted-foreground hover:border-[#1f56c3]/50"
+                          ? "border-2 border-highlight text-highlight"
+                          : "border border-border text-muted-foreground hover:border-highlight/50"
                       )}
                     >
                       <Icon className="h-4 w-4 mx-auto" />
@@ -859,7 +862,7 @@ const DesignEditor = () => {
                 <span
                   className={cn(
                     "px-2.5 py-1 rounded-full text-xs font-medium",
-                    noneSelected ? "bg-card border border-border text-muted-foreground" : "bg-[#e8f0ff] text-[#1f56c3]"
+                    noneSelected ? "bg-card border border-border text-muted-foreground" : "bg-highlight-soft text-highlight"
                   )}
                 >
                   {noneSelected
@@ -959,15 +962,19 @@ const DesignEditor = () => {
                     <button
                       key={c.value}
                       onClick={() => applyColor(c.value)}
-                      title={t(`color.${c.name}`)}
+                      title={swatchTitle(c)}
                       className={cn(
                         "h-9 rounded-md border-2 transition",
-                        activeColor === c.value ? "border-primary scale-105" : "border-border"
+                        activeColor === c.value ? "border-card ring-2 ring-highlight ring-offset-2 ring-offset-card" : "border-border"
                       )}
                       style={{ background: c.value }}
                     />
                   ))}
                 </div>
+                {(() => {
+                  const preset = FABRIC_PRESETS.find((c) => c.value === activeColor?.toLowerCase());
+                  return preset ? <p className="mt-1.5 text-[11px] text-muted-foreground">{swatchTitle(preset)}</p> : null;
+                })()}
                 <div className="mt-2 flex items-center gap-2">
                   <Input
                     type="color"
@@ -984,7 +991,7 @@ const DesignEditor = () => {
                 <div className="mt-2">
                   <PantoneInput
                     label={t("fabric.pantone") || "Pantone code"}
-                    onChange={(hex) => applyColor(hex)}
+                    onChange={(hex) => applyColor(hex.toLowerCase())}
                   />
                 </div>
               </section>
@@ -1006,10 +1013,10 @@ const DesignEditor = () => {
                 <button
                   key={c.value}
                   onClick={() => updateProject({ capColor: c.value })}
-                  title={t(`color.${c.name}`)}
+                  title={swatchTitle(c)}
                   className={cn(
                     "h-9 rounded-md border-2 transition",
-                    (project.capColor || "#111111") === c.value ? "border-primary scale-105" : "border-border"
+                    (project.capColor || "#111111") === c.value ? "border-card ring-2 ring-highlight ring-offset-2 ring-offset-card" : "border-border"
                   )}
                   style={{ background: c.value }}
                 />
@@ -1069,7 +1076,7 @@ const DesignEditor = () => {
             <Button
               variant="default"
               size="sm"
-              className="w-full mt-2 bg-gradient-hero"
+              className="w-full mt-2"
               onClick={() => comboFileInputRef.current?.click()}
             >
               <Upload className="h-4 w-4 mr-1" /> {t("art.combo")}
@@ -1155,11 +1162,11 @@ const DesignEditor = () => {
                   <button
                     key={c.value}
                     onClick={() => updateProject({ handleColor: c.value })}
-                    title={t(`color.${c.name}`)}
+                    title={swatchTitle(c)}
                     aria-label={c.name}
                     className={cn(
                       "h-9 rounded-md border-2 transition",
-                      handleColor === c.value ? "border-primary scale-105" : "border-border"
+                      handleColor === c.value ? "border-card ring-2 ring-highlight ring-offset-2 ring-offset-card" : "border-border"
                     )}
                     style={{ background: c.value }}
                   />
@@ -1199,11 +1206,11 @@ const DesignEditor = () => {
                           <button
                             key={c.value}
                             onClick={() => set(c.value)}
-                            title={t(`color.${c.name}`)}
+                            title={swatchTitle(c)}
                             aria-label={c.name}
                             className={cn(
                               "h-9 rounded-md border-2 transition",
-                              value === c.value ? "border-primary scale-105" : "border-border"
+                              value === c.value ? "border-card ring-2 ring-highlight ring-offset-2 ring-offset-card" : "border-border"
                             )}
                             style={{ background: c.value }}
                           />
@@ -1233,11 +1240,11 @@ const DesignEditor = () => {
                     <button
                       key={c.value}
                       onClick={() => updateInsert({ color: c.value })}
-                      title={t(`color.${c.name}`)}
+                      title={swatchTitle(c)}
                       aria-label={c.name}
                       className={cn(
                         "h-9 rounded-md border-2 transition",
-                        insert.color === c.value ? "border-primary scale-105" : "border-border"
+                        insert.color === c.value ? "border-card ring-2 ring-highlight ring-offset-2 ring-offset-card" : "border-border"
                       )}
                       style={{ background: c.value }}
                     />
@@ -1340,11 +1347,11 @@ const DesignEditor = () => {
                           <button
                             key={c.value}
                             onClick={() => updateMid({ [key]: c.value })}
-                            title={t(`color.${c.name}`)}
+                            title={swatchTitle(c)}
                             aria-label={c.name}
                             className={cn(
                               "h-9 rounded-md border-2 transition",
-                              value === c.value ? "border-primary scale-105" : "border-border"
+                              value === c.value ? "border-card ring-2 ring-highlight ring-offset-2 ring-offset-card" : "border-border"
                             )}
                             style={{ background: c.value }}
                           />
@@ -1405,11 +1412,11 @@ const DesignEditor = () => {
                     <button
                       key={c.value}
                       onClick={() => updateButton({ color: c.value })}
-                      title={t(`color.${c.name}`)}
+                      title={swatchTitle(c)}
                       aria-label={c.name}
                       className={cn(
                         "h-9 rounded-md border-2 transition",
-                        button.color === c.value ? "border-primary scale-105" : "border-border"
+                        button.color === c.value ? "border-card ring-2 ring-highlight ring-offset-2 ring-offset-card" : "border-border"
                       )}
                       style={{ background: c.value }}
                     />
@@ -1685,7 +1692,7 @@ const DesignEditor = () => {
                       <span
                         className={cn(
                           "absolute top-4 left-4 z-10 px-3 py-1.5 rounded-full text-xs font-medium shadow-sm",
-                          noneSelected ? "bg-card border border-border text-muted-foreground" : "bg-[#e8f0ff] text-[#1f56c3]"
+                          noneSelected ? "bg-card border border-border text-muted-foreground" : "bg-highlight-soft text-highlight"
                         )}
                       >
                         {noneSelected
@@ -1794,26 +1801,26 @@ const DesignEditor = () => {
         <div className="fixed inset-0 z-50 pointer-events-none">
           {guidePos.hand && (
             <div className="absolute" style={{ left: guidePos.hand.x, top: guidePos.hand.y }}>
-              <span className="absolute w-12 h-12 -left-6 -top-6 rounded-full bg-[#1f56c3]/40 animate-ping" />
-              <span className="absolute w-5 h-5 -left-2.5 -top-2.5 rounded-full bg-[#1f56c3] border-2 border-white shadow" />
-              <MousePointer2 className="absolute left-1 top-1 h-8 w-8 text-[#0f2a5c] fill-white drop-shadow" />
+              <span className="absolute w-12 h-12 -left-6 -top-6 rounded-full bg-highlight/40 animate-ping" />
+              <span className="absolute w-5 h-5 -left-2.5 -top-2.5 rounded-full bg-highlight border-2 border-white shadow" />
+              <MousePointer2 className="absolute left-1 top-1 h-8 w-8 text-guide fill-white drop-shadow" />
             </div>
           )}
           <div
-            className="absolute pointer-events-auto bg-[#0f2a5c] text-white rounded-xl shadow-lg px-4 py-3 w-[270px]"
+            className="absolute pointer-events-auto bg-guide text-guide-foreground rounded-xl shadow-lg px-4 py-3 w-[270px]"
             style={{ left: guidePos.left, top: guidePos.top }}
           >
-            <div className="absolute -left-2 top-6 w-4 h-4 bg-[#0f2a5c] rotate-45" />
+            <div className="absolute -left-2 top-6 w-4 h-4 bg-guide rotate-45" />
             <div className="relative">
-              <div className="text-[11px] text-white/60">{t("guide.of").replace("{n}", String(guideStep))}</div>
+              <div className="text-[11px] text-guide-foreground/60">{t("guide.of").replace("{n}", String(guideStep))}</div>
               <div className="font-semibold mt-0.5">{t(`guide.${guideStep}.title`)}</div>
-              <div className="text-xs text-white/80 mt-1">{t(`guide.${guideStep}.body`)}</div>
+              <div className="text-xs text-guide-foreground/80 mt-1">{t(`guide.${guideStep}.body`)}</div>
               <div className="flex justify-between items-center mt-3 text-xs">
-                <button className="text-white/60 hover:text-white" onClick={finishGuide}>
+                <button className="text-guide-foreground/60 hover:text-guide-foreground" onClick={finishGuide}>
                   {t("guide.skip")}
                 </button>
                 <button
-                  className="px-3 py-1 rounded-md bg-white text-[#0f2a5c] font-medium"
+                  className="px-3 py-1 rounded-md bg-guide-foreground text-guide font-medium"
                   onClick={() => (guideStep >= 3 ? finishGuide() : setGuideStep(guideStep + 1))}
                 >
                   {t("guide.ok")}

@@ -1,5 +1,6 @@
 import { ArtworkItem, DoubleLayerStyle, RibCount, UmbrellaCategory } from "@/types/design";
 import { forwardRef, useImperativeHandle, useLayoutEffect, useMemo, useRef } from "react";
+import { themeColor } from "@/lib/utils";
 
 /** Canopy outer radius in SVG viewBox units (viewBox is -300 -300 600 600). Shared with the 3D projection. */
 export const canopy2DRadius = (category: string) =>
@@ -374,8 +375,8 @@ export const UmbrellaCanopy = forwardRef<SVGSVGElement, Props>(function Umbrella
               <path
                 key={`${keyPrefix}-sel-${i}`}
                 d={panelPath(i, ribCount, outerR, innerR)}
-                fill="rgba(47,107,255,0.30)"
-                stroke="#2f6bff"
+                fill={themeColor("--highlight", 0.3)}
+                stroke={themeColor("--highlight")}
                 strokeWidth={3}
                 strokeLinejoin="round"
                 pointerEvents="none"
@@ -384,8 +385,8 @@ export const UmbrellaCanopy = forwardRef<SVGSVGElement, Props>(function Umbrella
           {highlightSelection && hoverPanel != null && !selPanels.includes(hoverPanel) && interactive && (
             <path
               d={panelPath(hoverPanel, ribCount, outerR, innerR)}
-              fill="rgba(120,160,255,0.16)"
-              stroke="#7aa2ff"
+              fill={themeColor("--highlight", 0.16)}
+              stroke={themeColor("--highlight", 0.6)}
               strokeWidth={4}
               strokeDasharray="12 8"
               pointerEvents="none"

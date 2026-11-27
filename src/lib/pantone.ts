@@ -42,6 +42,9 @@ const PANTONE_MAP: Record<string, string> = {
   "871": "#85714D", "872": "#85754E", "873": "#866D4B",
   "874": "#8B6F4E", "875": "#876447", "876": "#80572E",
   "877": "#8A8D8F",
+  // Used by the swatch presets in types/design.ts.
+  "289": "#0C2340", "2915": "#62B5E5", "3435": "#154734",
+  "465": "#B9975B", "469": "#693F23",
 };
 
 export function normalizePantone(input: string): string {

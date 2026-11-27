@@ -29,7 +29,7 @@ const Projects = () => {
           <div className="ml-auto flex items-center gap-3">
             <LanguageToggle />
             <Link to="/design">
-              <Button size="sm" className="bg-gradient-hero"><Plus className="h-4 w-4 mr-1" /> {t("proj.new")}</Button>
+              <Button size="sm"><Plus className="h-4 w-4 mr-1" /> {t("proj.new")}</Button>
             </Link>
           </div>
         </div>
@@ -38,7 +38,7 @@ const Projects = () => {
         {projects.length === 0 ? (
           <div className="rounded-xl border border-dashed border-border bg-card p-16 text-center">
             <p className="text-muted-foreground">{t("proj.empty")}</p>
-            <Link to="/design"><Button className="mt-4 bg-gradient-hero">{t("proj.createFirst")}</Button></Link>
+            <Link to="/design"><Button className="mt-4">{t("proj.createFirst")}</Button></Link>
           </div>
         ) : (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">

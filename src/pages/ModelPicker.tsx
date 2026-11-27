@@ -63,7 +63,7 @@ const ModelPicker = () => {
                       </span>
                     ))}
                 </div>
-                <Button asChild className="mt-6 w-full bg-gradient-hero pointer-events-none">
+                <Button asChild className="mt-6 w-full pointer-events-none">
                   <span>
                     {t("picker.start")} <ArrowRight className="ml-1 h-4 w-4" />
                   </span>

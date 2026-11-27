@@ -209,6 +209,11 @@ const dict: Dict = {
   "color.Silver": { en: "Silver", zh: "银色" },
   "color.Brown": { en: "Brown", zh: "棕色" },
   "color.Gold": { en: "Gold", zh: "金色" },
+  "color.Charcoal": { en: "Charcoal", zh: "炭灰" },
+  "color.Sky Blue": { en: "Sky Blue", zh: "天蓝" },
+  "color.Dark Green": { en: "Dark Green", zh: "墨绿" },
+  "color.Burgundy": { en: "Burgundy", zh: "酒红" },
+  "color.Orange": { en: "Orange", zh: "橙色" },
 
   // Canvas overlay
   "canvas.panels": { en: "Panels", zh: "面板" },

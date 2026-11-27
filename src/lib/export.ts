@@ -6,6 +6,12 @@ import logoUrl from "@/assets/hoda-tuzh-logo.png";
 const COMPANY_NAME = "Hoda Umbrella · Tuzh Umbrella";
 const COMPANY_TAGLINE = "Umbrella Design Generator";
 
+// Export colors follow the site palette (ink & paper, see index.css).
+const INK: [number, number, number] = [30, 28, 26]; // #1E1C1A
+const INK_MUTED: [number, number, number] = [107, 102, 97]; // #6B6661
+const PAPER_BAND: [number, number, number] = [237, 233, 227]; // #EDE9E3
+const INK_HEX = "#1e1c1a";
+
 function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -52,7 +58,7 @@ export async function svgToPngDataUrl(svg: SVGSVGElement, scale = 2): Promise<st
     } catch {}
 
     // Company name text
-    ctx.fillStyle = "#0f1f3d";
+    ctx.fillStyle = INK_HEX;
     ctx.textBaseline = "middle";
     ctx.font = `600 ${Math.round(18 * scale)}px Inter, sans-serif`;
     ctx.textAlign = "right";
@@ -105,7 +111,7 @@ export async function svgPairToPngDataUrl(
     ctx.fillStyle = "#ffffff";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    ctx.fillStyle = "#0f1f3d";
+    ctx.fillStyle = INK_HEX;
     ctx.font = `600 ${Math.round(18 * scale)}px Inter, sans-serif`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
@@ -123,7 +129,7 @@ export async function svgPairToPngDataUrl(
       const logoW = (logo.width / logo.height) * logoH;
       ctx.drawImage(logo, 20 * scale, h + (footerH - logoH) / 2, logoW, logoH);
     } catch {}
-    ctx.fillStyle = "#0f1f3d";
+    ctx.fillStyle = INK_HEX;
     ctx.textBaseline = "middle";
     ctx.textAlign = "right";
     ctx.font = `600 ${Math.round(18 * scale)}px Inter, sans-serif`;
@@ -261,7 +267,7 @@ export async function exportPdfSummary(
   const pageW = pdf.internal.pageSize.getWidth();
 
   // Header band
-  pdf.setFillColor(186, 220, 240);
+  pdf.setFillColor(...PAPER_BAND);
   pdf.rect(0, 0, pageW, 90, "F");
 
   const logo = await imageToDataUrl(logoUrl);
@@ -273,7 +279,7 @@ export async function exportPdfSummary(
     } catch {}
   }
 
-  pdf.setTextColor(15, 31, 61);
+  pdf.setTextColor(...INK);
   pdf.setFont("helvetica", "bold");
   pdf.setFontSize(18);
   pdf.text(COMPANY_NAME, pageW - 30, 45, { align: "right" });
@@ -281,14 +287,14 @@ export async function exportPdfSummary(
   pdf.setFont("helvetica", "normal");
   pdf.text(COMPANY_TAGLINE + " — Sales preview & quotation", pageW - 30, 65, { align: "right" });
 
-  pdf.setTextColor(20, 24, 30);
+  pdf.setTextColor(...INK);
   pdf.setFont("helvetica", "bold");
   pdf.setFontSize(16);
   pdf.text(project.projectName, 40, 125);
   if (project.customerName) {
     pdf.setFont("helvetica", "normal");
     pdf.setFontSize(11);
-    pdf.setTextColor(110, 110, 120);
+    pdf.setTextColor(...INK_MUTED);
     pdf.text(`Customer: ${project.customerName}`, 40, 142);
   }
 
@@ -302,7 +308,7 @@ export async function exportPdfSummary(
     ["Rib length", `${ribIn}" (${ribCm} cm)`],
   ];
 
-  pdf.setTextColor(20, 24, 30);
+  pdf.setTextColor(...INK);
   pdf.setFontSize(12);
   pdf.setFont("helvetica", "bold");
   pdf.text("Specification", 40, y);
@@ -310,9 +316,9 @@ export async function exportPdfSummary(
   pdf.setFont("helvetica", "normal");
   pdf.setFontSize(10);
   rows.forEach(([k, v]) => {
-    pdf.setTextColor(110, 110, 120);
+    pdf.setTextColor(...INK_MUTED);
     pdf.text(k, 40, y);
-    pdf.setTextColor(20, 24, 30);
+    pdf.setTextColor(...INK);
     pdf.text(String(v), 180, y);
     y += 16;
   });
@@ -322,7 +328,7 @@ export async function exportPdfSummary(
   if (project.hasDoubleLayer && project.umbrellaCategory === "golf") {
     pdf.setFont("helvetica", "bold");
     pdf.setFontSize(11);
-    pdf.setTextColor(20, 24, 30);
+    pdf.setTextColor(...INK);
     pdf.text("Outside view (outer canopy)", 40, y);
     y += 14;
   }
@@ -343,7 +349,7 @@ export async function exportPdfSummary(
   y += imgH + 18;
 
   pdf.setFont("helvetica", "italic");
-  pdf.setTextColor(110, 110, 120);
+  pdf.setTextColor(...INK_MUTED);
   pdf.setFontSize(9);
   const note =
     "Note: This is a sales preview rendering by " +
@@ -364,14 +370,14 @@ export async function exportPdfSummary(
   if (pouchPngDataUrl && project.hasPouch) {
     pdf.addPage();
     const ps = POUCH_SIZE_CM[project.umbrellaCategory];
-    pdf.setFillColor(186, 220, 240);
+    pdf.setFillColor(...PAPER_BAND);
     pdf.rect(0, 0, pageW, 60, "F");
-    pdf.setTextColor(15, 31, 61);
+    pdf.setTextColor(...INK);
     pdf.setFont("helvetica", "bold");
     pdf.setFontSize(14);
     pdf.text("Pouch artwork — spread layout", 40, 38);
 
-    pdf.setTextColor(20, 24, 30);
+    pdf.setTextColor(...INK);
     pdf.setFont("helvetica", "normal");
     pdf.setFontSize(10);
     pdf.text(`Front face: ${ps.w} × ${ps.h} cm   ·   Spread: ${ps.w * 2} × ${ps.h} cm`, 40, 90);
@@ -394,14 +400,14 @@ export async function exportPdfSummary(
   // Optional inner-layer page (double-layer golf)
   if (innerLayerPngDataUrl && project.hasDoubleLayer && project.umbrellaCategory === "golf") {
     pdf.addPage();
-    pdf.setFillColor(186, 220, 240);
+    pdf.setFillColor(...PAPER_BAND);
     pdf.rect(0, 0, pageW, 60, "F");
-    pdf.setTextColor(15, 31, 61);
+    pdf.setTextColor(...INK);
     pdf.setFont("helvetica", "bold");
     pdf.setFontSize(14);
     pdf.text("Inside view (inner layer) — full canopy", 40, 38);
 
-    pdf.setTextColor(20, 24, 30);
+    pdf.setTextColor(...INK);
     pdf.setFont("helvetica", "normal");
     pdf.setFontSize(10);
     pdf.text(`Fabric: ${project.innerLayer?.fabricColor || "—"}`, 40, 90);
@@ -424,14 +430,14 @@ export async function exportPdfSummary(
   // Optional 3D Sales Preview page
   if (threeD) {
     pdf.addPage();
-    pdf.setFillColor(186, 220, 240);
+    pdf.setFillColor(...PAPER_BAND);
     pdf.rect(0, 0, pageW, 60, "F");
-    pdf.setTextColor(15, 31, 61);
+    pdf.setTextColor(...INK);
     pdf.setFont("helvetica", "bold");
     pdf.setFontSize(14);
     pdf.text("3D Sales Preview", 40, 38);
 
-    pdf.setTextColor(20, 24, 30);
+    pdf.setTextColor(...INK);
     pdf.setFont("helvetica", "normal");
     pdf.setFontSize(10);
     pdf.text(threeD.displayName, 40, 84);
@@ -467,7 +473,7 @@ export async function exportPdfSummary(
         // eslint-disable-next-line no-console
         console.warn("[pdf] hero image failed", e);
       }
-      pdf.setTextColor(110, 110, 120);
+      pdf.setTextColor(...INK_MUTED);
       pdf.text(label, x + heroW / 2, yHero + heroH + 14, { align: "center" });
     });
 
@@ -496,7 +502,7 @@ export async function exportPdfSummary(
     let sy = yImg + cellH + 40;
     sy += 8;
     pdf.setFont("helvetica", "italic");
-    pdf.setTextColor(110, 110, 120);
+    pdf.setTextColor(...INK_MUTED);
     pdf.setFontSize(9);
     const disclaimer =
       "The 3D preview is for sales visualization only. Final production details, materials, dimensions and finishing must be confirmed by the factory designer.";
@@ -514,15 +520,15 @@ export async function exportPdfSummary(
   // Optional handle (伞头) design page: two close-ups + spec table with swatches
   if (handleDesign) {
     pdf.addPage();
-    pdf.setFillColor(186, 220, 240);
+    pdf.setFillColor(...PAPER_BAND);
     pdf.rect(0, 0, pageW, 60, "F");
-    pdf.setTextColor(15, 31, 61);
+    pdf.setTextColor(...INK);
     pdf.setFont("helvetica", "bold");
     pdf.setFontSize(14);
     pdf.text(handleDesign.heading ?? "Handle Design", 40, 38);
     pdf.setFont("helvetica", "normal");
     pdf.setFontSize(10);
-    pdf.setTextColor(20, 24, 30);
+    pdf.setTextColor(...INK);
     pdf.text(handleDesign.title, 40, 84);
 
     const contentW = pageW - 80;
@@ -550,7 +556,7 @@ export async function exportPdfSummary(
         pdf.addImage(u, "PNG", x + (cellW - drawW) / 2, yImg + (cellH - drawH) / 2, drawW, drawH);
       } catch {}
       pdf.setFontSize(9);
-      pdf.setTextColor(110, 110, 120);
+      pdf.setTextColor(...INK_MUTED);
       pdf.text(label, x + cellW / 2, yImg + cellH + 14, { align: "center" });
     });
 
@@ -572,7 +578,7 @@ export async function exportPdfSummary(
         pdf.addImage(handleDesign.flat, "PNG", 40 + (contentW - drawW) / 2, sy + (fH - drawH) / 2, drawW, drawH);
       } catch {}
       pdf.setFontSize(9);
-      pdf.setTextColor(110, 110, 120);
+      pdf.setTextColor(...INK_MUTED);
       pdf.text("Horizontal view (logo upright)", pageW / 2, sy + fH + 14, { align: "center" });
       sy += fH + 20;
     }
@@ -585,7 +591,7 @@ export async function exportPdfSummary(
         pdf.setDrawColor(200);
         pdf.setFillColor(hex);
         pdf.roundedRect(cx, sy - 9, 12, 12, 2, 2, "FD");
-        pdf.setTextColor(20, 24, 30);
+        pdf.setTextColor(...INK);
         const txt = `${label} ${hex.toUpperCase()}`;
         pdf.text(txt, cx + 18, sy);
         cx += 18 + pdf.getTextWidth(txt) + 24;
@@ -595,7 +601,7 @@ export async function exportPdfSummary(
 
     sy += 16;
     pdf.setFont("helvetica", "italic");
-    pdf.setTextColor(110, 110, 120);
+    pdf.setTextColor(...INK_MUTED);
     pdf.setFontSize(9);
     const note =
       "Colors on screen are indicative. Final colors of the handle and its parts are matched to physical samples before production.";
@@ -652,14 +658,14 @@ export async function exportAiFile(
   const footerY = margin + height + 18;
   pdf.setFont("helvetica", "bold");
   pdf.setFontSize(11);
-  pdf.setTextColor(20, 24, 30);
+  pdf.setTextColor(...INK);
   const outerTitle = project.hasDoubleLayer && project.umbrellaCategory === "golf"
     ? `${project.projectName} — outside view (outer canopy)`
     : project.projectName;
   pdf.text(outerTitle, margin, footerY);
   pdf.setFont("helvetica", "normal");
   pdf.setFontSize(9);
-  pdf.setTextColor(80, 80, 90);
+  pdf.setTextColor(...INK_MUTED);
   const specLine = `${project.umbrellaCategory} · ${project.ribCount} ribs · rib length ${ribIn}" (${ribCm} cm) · ${project.printingMethod}`;
   pdf.text(specLine, margin, footerY + 14);
   pdf.setTextColor(140);
@@ -680,11 +686,11 @@ export async function exportAiFile(
     const fY = margin + ph + 18;
     pdf.setFont("helvetica", "bold");
     pdf.setFontSize(11);
-    pdf.setTextColor(20, 24, 30);
+    pdf.setTextColor(...INK);
     pdf.text(`${project.projectName} — pouch`, margin, fY);
     pdf.setFont("helvetica", "normal");
     pdf.setFontSize(9);
-    pdf.setTextColor(80, 80, 90);
+    pdf.setTextColor(...INK_MUTED);
     pdf.text(`front ${ps.w} × ${ps.h} cm · spread ${ps.w * 2} × ${ps.h} cm`, margin, fY + 14);
     pdf.setTextColor(140);
     pdf.text(COMPANY_NAME, margin, fY + 28);
@@ -703,11 +709,11 @@ export async function exportAiFile(
     const fY = margin + ih + 18;
     pdf.setFont("helvetica", "bold");
     pdf.setFontSize(11);
-    pdf.setTextColor(20, 24, 30);
+    pdf.setTextColor(...INK);
     pdf.text(`${project.projectName} — inside view (inner layer)`, margin, fY);
     pdf.setFont("helvetica", "normal");
     pdf.setFontSize(9);
-    pdf.setTextColor(80, 80, 90);
+    pdf.setTextColor(...INK_MUTED);
     pdf.text(`golf · ${project.ribCount} ribs · inner fabric ${project.innerLayer?.fabricColor || "—"}`, margin, fY + 14);
     pdf.setTextColor(140);
     pdf.text(COMPANY_NAME, margin, fY + 28);
